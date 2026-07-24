@@ -456,8 +456,9 @@ function pollPM(){
       }
       return Promise.all(picks.map(function(p){
         return Promise.all([
-          fetchJSON(CONFIG.CLOB+'/price?token_id='+p.toks[0]+'&side=buy',7000),
-          fetchJSON(CONFIG.CLOB+'/price?token_id='+p.toks[1]+'&side=buy',7000)
+          // side=sell liefert den ASK (Kaufpreis, den du zahlst) — nicht den Bid!
+          fetchJSON(CONFIG.CLOB+'/price?token_id='+p.toks[0]+'&side=sell',7000),
+          fetchJSON(CONFIG.CLOB+'/price?token_id='+p.toks[1]+'&side=sell',7000)
         ]).then(function(a){
           var a0=parseFloat(a[0].price), a1=parseFloat(a[1].price);
           if(!(a0>0&&a0<1)||!(a1>0&&a1<1))return null;
