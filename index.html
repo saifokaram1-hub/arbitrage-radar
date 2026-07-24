@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Arbitrage Radar — Live</title>
 <meta name="description" content="Live-Surebet-Scanner: Polymarket (echte Daten) ⇄ Orbit-Broker">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <style>
   :root{
     --void:#060704; --void2:#0a0b07;
@@ -268,6 +270,34 @@
 </style>
 </head>
 <body>
+<div id="authGate" style="position:fixed;inset:0;z-index:9999;background:#060704;display:grid;place-items:center;color:#8b8c7c;font-family:ui-monospace,Consolas,monospace;font-size:12px;letter-spacing:.1em">Anmeldung wird geprüft …</div>
+<script>
+(async function(){
+  var auth = await window.arRequireAuth();      // leitet zu login.html, falls nicht angemeldet / gebannt
+  if(!auth) return;
+  var sb = auth.sb, prof = auth.profile;
+  // Tracking-Schnittstelle für die App
+  window.__ar = {
+    logConn:function(book,label){ try{ sb.rpc('log_connection',{p_book:book,p_label:(label||'').slice(0,120)}); }catch(e){} },
+    logAct:function(kind,market,amount,roi){ try{ sb.rpc('log_activity',{p_kind:kind,p_market:(market||'').slice(0,140),p_amount:amount||0,p_roi:roi||0}); }catch(e){} }
+  };
+  // Heartbeat (Online-Zeit + „wann online")
+  try{ sb.rpc('heartbeat',{add_seconds:0}); }catch(e){}
+  setInterval(function(){ try{ sb.rpc('heartbeat',{add_seconds:30}); }catch(e){} }, 30000);
+  // User-Chip in die Topbar
+  var tools=document.querySelector('.cmd .tools');
+  if(tools){
+    var chip=document.createElement('div');
+    chip.style.cssText='display:flex;align-items:center;gap:8px;margin-right:6px;font-family:var(--mono);font-size:11px;color:var(--muted)';
+    chip.innerHTML='<span title="'+prof.email+'" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+prof.email+'</span>'+
+      (prof.role==='admin'?'<a href="admin.html" style="color:#e7d882;border:1px solid #7f7130;padding:6px 9px;text-decoration:none;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px">Admin</a>':'')+
+      '<a href="#" id="arLogout" style="color:#8b8c7c;border:1px solid #2f2b18;padding:6px 9px;text-decoration:none;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px">Logout</a>';
+    tools.insertBefore(chip, tools.firstChild);
+    document.getElementById('arLogout').onclick=async function(e){ e.preventDefault(); await sb.auth.signOut(); location.replace('login.html'); };
+  }
+  var g=document.getElementById('authGate'); if(g) g.remove();
+})();
+</script>
 <div class="app">
   <header class="cmd">
     <div class="brand">
@@ -472,6 +502,7 @@ function pollPM(){
       var fresh=res.filter(Boolean);
       if(fresh.length){ mergeMarkets(fresh); state.lastUpd=Date.now(); }
       state.accounts.pm.status='live'; state.pmErr='';
+      if(!state._pmLogged){ state._pmLogged=true; if(window.__ar)window.__ar.logConn('pm','polymarket'); }
     })
     .catch(function(e){ state.accounts.pm.status='error'; state.pmErr=String(e&&e.message||e); })
     .finally(function(){ state.polling=false; });
@@ -630,6 +661,7 @@ function placeDemo(v,S,auto){
   if(!(S>0)){actToast(false,v.m.ev,'Betrag eingeben');return;}
   var r=routing(v,S); state.placed++; state.secured+=r.profit;
   actToast(true,v.m.ev,(auto?'Auto-Pilot · ':'')+'+'+eur(r.profit)+' gesichert (Demo)'); beep();
+  if(window.__ar)window.__ar.logAct('secured',v.m.ev,r.profit,v.roi);
   updateAccountsUI();
 }
 function openMarket(mk){ if(mk.slug){window.open('https://polymarket.com/event/'+mk.slug,'_blank','noopener');} else {window.open('https://polymarket.com/markets','_blank','noopener');} }
@@ -769,7 +801,7 @@ bindToggle('#tgOpp','onlyOpp',render);
 bindToggle('#tgAuto','autopilot');
 $('#balPm').addEventListener('input',function(e){state.balPm=Math.max(0,+e.target.value||0);updateAccountsUI();if(!state.ticketDirty)renderTicket();});
 $('#balOb').addEventListener('input',function(e){state.balOb=Math.max(0,+e.target.value||0);updateAccountsUI();if(!state.ticketDirty)renderTicket();});
-$('#obProxy').addEventListener('change',function(e){state.obProxy=e.target.value.trim();if(!state.obProxy)state.accounts.ob.status='offline';});
+$('#obProxy').addEventListener('change',function(e){state.obProxy=e.target.value.trim();if(!state.obProxy)state.accounts.ob.status='offline';else if(window.__ar)window.__ar.logConn('ob',state.obProxy);});
 $('#stdStake').addEventListener('input',function(e){state.stdStake=Math.max(0,Math.floor(+e.target.value||0));if(!state.ticketDirty)renderTicket();});
 
 $('#rows').addEventListener('click',function(e){
@@ -783,7 +815,7 @@ $('#tkBody').addEventListener('click',function(e){
   var m=state.ticketId&&mkMap.get(state.ticketId); if(!m)return; var v=evalMarket(m);
   var q=e.target.closest('.qchip');
   if(q){ state.ticketDirty=true; if(q.dataset.q==='max')state.ticketStake=Math.floor(feasibleMax(v)); else state.ticketStake=Math.floor((state.ticketStake||0)+ +q.dataset.q); renderTicket(); return; }
-  if(e.target.closest('#tkPlace')){ if(state.mode==='demo')placeDemo(v,state.ticketStake,false); else openMarket(m); }
+  if(e.target.closest('#tkPlace')){ if(state.mode==='demo')placeDemo(v,state.ticketStake,false); else { if(window.__ar){var rr=routing(v,state.ticketStake);window.__ar.logAct('placed',m.ev,rr.profit,v.roi);} openMarket(m); } }
 });
 
 $('#soundBtn').addEventListener('click',function(e){state.sound=!state.sound;e.currentTarget.classList.toggle('on',state.sound);if(state.sound){try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();actx.resume();}catch(x){}beep();}});

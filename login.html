@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arbitrage Radar — Anmelden</title>
+<style>
+  :root{--void:#060704;--panel:#0d0f0a;--line:#211f12;--line2:#2f2b18;--line3:#41391f;--txt:#f2f1e7;--muted:#8b8c7c;--dim:#5c5d50;--gold:#c7b24c;--gold-b:#e7d882;--gold-d:#7f7130;--pos:#9fbf3b;--neg:#b0402e;--mono:ui-monospace,"Cascadia Code",Consolas,monospace;--sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Arial,sans-serif}
+  *{box-sizing:border-box}html,body{margin:0;padding:0}
+  body{background:var(--void);color:var(--txt);font-family:var(--sans);min-height:100vh;display:grid;place-items:center;
+    background-image:radial-gradient(120% 80% at 100% 0%, rgba(199,178,76,.06), transparent 55%)}
+  .card{width:380px;max-width:calc(100vw - 32px);border:1px solid var(--line2);background:linear-gradient(180deg,#0b0c07,#080905)}
+  .top{padding:24px 26px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+  .mark{width:36px;height:36px;position:relative;border:1px solid var(--gold-d);background:#0a0b06;flex:none}
+  .mark::before,.mark::after{content:"";position:absolute;background:var(--gold)}
+  .mark::before{left:11px;top:17px;width:14px;height:1px;box-shadow:0 -5px 0 var(--gold-d),0 5px 0 var(--gold-d)}
+  .mark::after{left:17px;top:11px;width:1px;height:14px;box-shadow:-5px 0 0 var(--gold-d),5px 0 0 var(--gold-d)}
+  .mark i{position:absolute;left:15px;top:15px;width:6px;height:6px;background:var(--gold-b);box-shadow:0 0 10px var(--gold)}
+  h1{margin:0;font-size:14px;letter-spacing:.28em;text-transform:uppercase;font-weight:700}
+  small{display:block;font-size:9px;letter-spacing:.22em;color:var(--muted);text-transform:uppercase;margin-top:2px}
+  .tabs{display:flex;border-bottom:1px solid var(--line)}
+  .tabs button{flex:1;padding:12px;background:none;border:0;color:var(--muted);font:inherit;font-size:11px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent}
+  .tabs button.active{color:var(--gold-b);border-bottom-color:var(--gold)}
+  form{padding:22px 26px 26px;display:flex;flex-direction:column;gap:14px}
+  label{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block}
+  input{width:100%;height:40px;padding:0 12px;background:#0b0c07;border:1px solid var(--line2);color:var(--txt);font-size:14px;font-family:var(--mono)}
+  input:focus{outline:2px solid var(--gold);outline-offset:1px}
+  .btn{height:44px;border:1px solid var(--gold-d);background:linear-gradient(180deg,#1a1808,#100e05);color:var(--gold-b);font:inherit;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:.12s}
+  .btn:hover{background:#24200a;box-shadow:0 0 20px rgba(199,178,76,.2)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .msg{font-size:12px;font-family:var(--mono);padding:10px 12px;border:1px solid var(--line2);display:none}
+  .msg.show{display:block}
+  .msg.err{border-color:#6e2c22;color:#d98c7c;background:rgba(176,64,46,.06)}
+  .msg.ok{border-color:#5e7420;color:var(--pos);background:rgba(159,191,59,.06)}
+  .hint{font-size:10px;color:var(--dim);text-align:center;line-height:1.5}
+  a{color:var(--gold)}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="top"><div class="mark"><i></i></div><div><h1>Arbitrage&nbsp;Radar</h1><small>Anmeldung erforderlich</small></div></div>
+    <div class="tabs"><button id="tabLogin" class="active">Anmelden</button><button id="tabSignup">Registrieren</button></div>
+    <form id="form">
+      <div><label>E-Mail</label><input id="email" type="email" autocomplete="email" required placeholder="du@beispiel.de"></div>
+      <div><label>Passwort</label><input id="pw" type="password" autocomplete="current-password" required minlength="6" placeholder="mind. 6 Zeichen"></div>
+      <div class="msg" id="msg"></div>
+      <button class="btn" id="submit" type="submit">Anmelden</button>
+      <div class="hint" id="hint">Noch kein Konto? Oben auf „Registrieren".</div>
+    </form>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+(function(){
+  var sb = window.arClient();
+  var mode = 'login';
+  var email=document.getElementById('email'), pw=document.getElementById('pw');
+  var submit=document.getElementById('submit'), msg=document.getElementById('msg'), hint=document.getElementById('hint');
+  function setMode(m){
+    mode=m;
+    document.getElementById('tabLogin').classList.toggle('active',m==='login');
+    document.getElementById('tabSignup').classList.toggle('active',m==='signup');
+    submit.textContent = m==='login'?'Anmelden':'Konto erstellen';
+    pw.setAttribute('autocomplete', m==='login'?'current-password':'new-password');
+    hint.textContent = m==='login'?'Noch kein Konto? Oben auf „Registrieren".':'Schon registriert? Oben auf „Anmelden".';
+    show('','');
+  }
+  function show(cls,text){ msg.className='msg'+(text?' show '+cls:''); msg.textContent=text; }
+  document.getElementById('tabLogin').onclick=function(){setMode('login');};
+  document.getElementById('tabSignup').onclick=function(){setMode('signup');};
+
+  // Wenn schon angemeldet -> weiter zur App
+  sb.auth.getSession().then(function(r){ if(r.data.session) location.replace('index.html'); });
+
+  document.getElementById('form').addEventListener('submit', async function(e){
+    e.preventDefault(); submit.disabled=true; show('','');
+    var em=email.value.trim().toLowerCase(), p=pw.value;
+    try{
+      if(mode==='login'){
+        var { data, error } = await sb.auth.signInWithPassword({ email:em, password:p });
+        if(error) throw error;
+        // Ban-Check
+        var prof = (await sb.rpc('my_profile')).data;
+        if(prof && prof.banned){ await sb.auth.signOut(); throw new Error('Dieser Account wurde gesperrt.'); }
+        location.replace('index.html');
+      } else {
+        var res = await sb.auth.signUp({ email:em, password:p });
+        if(res.error) throw res.error;
+        if(res.data.session){ location.replace('index.html'); }
+        else { show('ok','Konto erstellt. Falls E-Mail-Bestätigung aktiv ist: bitte Postfach prüfen, dann anmelden.'); setMode('login'); }
+      }
+    }catch(err){
+      var m=(err&&err.message)||String(err);
+      if(/Email not confirmed/i.test(m)) m='E-Mail noch nicht bestätigt — Postfach prüfen (oder Admin deaktiviert die Bestätigung).';
+      if(/Invalid login credentials/i.test(m)) m='E-Mail oder Passwort falsch.';
+      show('err', m);
+    }finally{ submit.disabled=false; }
+  });
+})();
+</script>
+</body>
+</html>
