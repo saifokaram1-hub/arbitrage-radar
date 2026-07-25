@@ -393,6 +393,8 @@
           <div id="acctList"></div>
           <div class="summary"><span>Platziert<b class="num" id="plCount">0</b></span><span>Gesichert<b class="sv num" id="plSecured">+0,00 €</b></span></div>
           <div class="field"><label>Guthaben Polymarket (€)</label><input class="inp num" id="balPm" type="number" step="50" min="0" value="0" placeholder="0"></div>
+          <div class="field"><label>Polygon-Wallet (read-only · live USDC)</label><input class="inp" id="walletAddr" placeholder="0x… (deine Polymarket-Einzahl-Adresse)" autocomplete="off" spellcheck="false" style="font-family:var(--mono);font-size:11px"></div>
+          <div id="walletBal" style="font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-top:-6px">Adresse eingeben → Live-Guthaben</div>
           <div class="field"><label>Guthaben Orbit-Broker (€)</label><input class="inp num" id="balOb" type="number" step="50" min="0" value="0" placeholder="0"></div>
           <div class="field"><label>Brokergebühr % — Polymarket / Orbit</label>
             <div style="display:flex;gap:10px">
@@ -524,6 +526,7 @@ var state={
   accounts:{pm:{status:'…'}, ob:{status:'offline'}}, srcOn:{pm:true, ob:true},
   balPm:0, balOb:0, feePm:0, feeOb:3, obProxy:'https://noexklrgtqveiclijdwp.supabase.co/functions/v1/ob-proxy', stdStake:100, autopilot:false, placed:0, secured:0,
   ticketId:null, ticketStake:100, ticketDirty:false,
+  walletAddr:'',
   lastUpd:0, polling:false, pmErr:''
 };
 var mkMap=new Map();          // id -> market {ask0,ask1,ob?,since,wasHit,...}
@@ -699,6 +702,39 @@ $('#acctList').addEventListener('click',function(e){
   if(window.__ar&&window.__ar.savePrefs&&window.__collectPrefs)window.__ar.savePrefs(window.__collectPrefs());
   cycle();
 });
+
+/* ---- Wallet-Guthaben (read-only, live USDC auf Polygon) ---- */
+var RPCS=['https://1rpc.io/matic','https://polygon-bor-rpc.publicnode.com','https://polygon.drpc.org'];
+var USDC_TOKENS=['0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174','0x3c499c542cEF5E3811e1192ce70d8cc03d5c3359']; // USDC.e + natives USDC
+function validAddr(a){ return /^0x[0-9a-fA-F]{40}$/.test(a||''); }
+function callBal(rpc,token,addr){
+  var data='0x70a08231000000000000000000000000'+addr.slice(2).toLowerCase();
+  var c=new AbortController(); var t=setTimeout(function(){c.abort();},7000);
+  return fetch(rpc,{method:'POST',signal:c.signal,headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_call',params:[{to:token,data:data},'latest']})})
+    .then(function(r){return r.json();}).then(function(j){ if(!j.result)throw new Error('rpc'); return parseInt(j.result,16)/1e6; }).finally(function(){clearTimeout(t);});
+}
+function fetchWallet(addr){
+  function tryRpc(i){ if(i>=RPCS.length)return Promise.reject(new Error('offline'));
+    return Promise.all(USDC_TOKENS.map(function(tk){return callBal(RPCS[i],tk,addr);}))
+      .then(function(b){return b.reduce(function(x,y){return x+y;},0);})
+      .catch(function(){return tryRpc(i+1);});
+  }
+  return tryRpc(0);
+}
+function refreshWallet(){
+  var el=$('#walletBal'), a=state.walletAddr;
+  if(!validAddr(a)){ el.innerHTML='Adresse eingeben → Live-Guthaben'; return; }
+  el.innerHTML='lese Guthaben …';
+  fetchWallet(a).then(function(bal){
+    el.innerHTML='<b style="color:var(--pos)">'+bal.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' USDC</b> live · <a href="#" id="useBal" style="color:var(--gold);text-transform:uppercase;letter-spacing:.06em;font-size:10px">als Einsatz-Guthaben</a>';
+    var ub=document.getElementById('useBal'); if(ub)ub.onclick=function(e){ e.preventDefault(); state.balPm=Math.floor(bal); $('#balPm').value=state.balPm; updateAccountsUI(); if(!state.ticketDirty)renderTicket(); if(window.__ar&&window.__ar.savePrefs&&window.__collectPrefs)window.__ar.savePrefs(window.__collectPrefs()); };
+  }).catch(function(){ el.innerHTML='<span style="color:var(--neg)">Guthaben gerade nicht abrufbar</span>'; });
+}
+$('#walletAddr').addEventListener('change',function(e){
+  state.walletAddr=e.target.value.trim(); refreshWallet();
+  if(window.__ar&&window.__ar.savePrefs&&window.__collectPrefs)window.__ar.savePrefs(window.__collectPrefs());
+});
+setInterval(function(){ if(validAddr(state.walletAddr))refreshWallet(); }, 45000);
 
 /* ---- Einsatz-Aufteilung ---- */
 function routing(v,S){
@@ -972,7 +1008,7 @@ function cycle(){
   chain.then(function(){ processSignals(); render(); });
 }
 /* ---- Präferenzen (pro User gespeichert) ---- */
-window.__collectPrefs=function(){ return {src:state.src,sort:state.sort,minRoi:state.minRoi,hitTh:state.hitTh,stdStake:state.stdStake,feePm:state.feePm,feeOb:state.feeOb,balPm:state.balPm,balOb:state.balOb,obProxy:state.obProxy,srcOn:state.srcOn}; };
+window.__collectPrefs=function(){ return {src:state.src,sort:state.sort,minRoi:state.minRoi,hitTh:state.hitTh,stdStake:state.stdStake,feePm:state.feePm,feeOb:state.feeOb,balPm:state.balPm,balOb:state.balOb,obProxy:state.obProxy,srcOn:state.srcOn,walletAddr:state.walletAddr}; };
 window.__applyPrefs=function(p){
   if(!p||typeof p!=='object')return;
   if(p.src){ state.src=p.src; document.querySelectorAll('#srcChips .chip').forEach(function(x){x.classList.toggle('active',x.dataset.src===p.src);}); }
@@ -985,6 +1021,7 @@ window.__applyPrefs=function(p){
   if(p.balPm!=null){ state.balPm=+p.balPm; $('#balPm').value=p.balPm; }
   if(p.balOb!=null){ state.balOb=+p.balOb; $('#balOb').value=p.balOb; }
   if(p.obProxy){ state.obProxy=p.obProxy; $('#obProxy').value=p.obProxy; }
+  if(p.walletAddr){ state.walletAddr=p.walletAddr; $('#walletAddr').value=p.walletAddr; refreshWallet(); }
   if(p.srcOn&&typeof p.srcOn==='object'){ if(typeof p.srcOn.pm==='boolean')state.srcOn.pm=p.srcOn.pm; if(typeof p.srcOn.ob==='boolean')state.srcOn.ob=p.srcOn.ob; }
   updateAccountsUI(); render();
 };
