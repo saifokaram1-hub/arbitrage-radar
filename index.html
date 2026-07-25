@@ -295,6 +295,54 @@
     tools.insertBefore(chip, tools.firstChild);
     document.getElementById('arLogout').onclick=async function(e){ e.preventDefault(); await sb.auth.signOut(); location.replace('login.html'); };
   }
+  // ---- Verlauf & Analyse (Diagramm) ----
+  function eur2(x){ return (+x||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+  function statBox(l,v,c){ return '<div style="border:1px solid #211f12;background:#0a0b06;padding:10px 12px"><div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#8b8c7c">'+l+'</div><div style="font-family:ui-monospace,Consolas,monospace;font-size:17px;margin-top:4px;color:'+c+'">'+v+'</div></div>'; }
+  function renderHistory(acts){
+    var body=document.getElementById('histBody');
+    if(!acts || !acts.length){ body.innerHTML='<div style="color:#5c5d50;font-family:ui-monospace,monospace;font-size:12px;padding:26px;text-align:center;line-height:1.7">Noch keine Aktivität.<br>Sobald du im Ticket setzt (oder im Demo-Modus übst), erscheint hier dein Verlauf mit Diagramm und Analyse.</div>'; return; }
+    var cum=0, pts=acts.map(function(a){ cum+=(+a.amount||0); return {t:new Date(a.created_at).getTime(), y:cum}; });
+    var total=cum, n=acts.length;
+    var rois=acts.map(function(a){return +a.roi||0;}).filter(function(x){return x;});
+    var avgRoi=rois.length? rois.reduce(function(s,x){return s+x;},0)/rois.length : 0;
+    var best=Math.max.apply(null, acts.map(function(a){return +a.amount||0;}).concat([0]));
+    var W=680,H=200,pad=28;
+    var xs=pts.map(function(p){return p.t;}), ys=pts.map(function(p){return p.y;});
+    var minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs); if(maxX===minX)maxX=minX+1;
+    var minY=Math.min.apply(null,ys.concat([0])), maxY=Math.max.apply(null,ys.concat([0])); if(maxY===minY)maxY=minY+1;
+    function X(t){return pad+(t-minX)/(maxX-minX)*(W-2*pad);}
+    function Y(v){return H-pad-(v-minY)/(maxY-minY)*(H-2*pad);}
+    var d=pts.map(function(p,i){return (i?'L':'M')+X(p.t).toFixed(1)+' '+Y(p.y).toFixed(1);}).join(' ');
+    var baseY=Y(minY<0?0:minY);
+    var area=d+' L'+X(pts[pts.length-1].t).toFixed(1)+' '+baseY.toFixed(1)+' L'+X(pts[0].t).toFixed(1)+' '+baseY.toFixed(1)+' Z';
+    var zeroY=Y(0);
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+
+      '<line x1="'+pad+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-pad)+'" y2="'+zeroY.toFixed(1)+'" stroke="#2f2b18" stroke-width="1" stroke-dasharray="3 3"/>'+
+      '<path d="'+area+'" fill="rgba(199,178,76,.12)"/>'+
+      '<path d="'+d+'" fill="none" stroke="#c7b24c" stroke-width="2"/>'+
+      '<circle cx="'+X(pts[pts.length-1].t).toFixed(1)+'" cy="'+Y(pts[pts.length-1].y).toFixed(1)+'" r="3.5" fill="#e7d882"/>'+
+      '</svg>';
+    var stats='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">'+
+      statBox('Kumulierter Gewinn', eur2(total), total>=0?'#9fbf3b':'#b0402e')+
+      statBox('Aktionen', n, '#e7d882')+
+      statBox('Ø Rendite', avgRoi.toFixed(2)+' %', '#f2f1e7')+
+      statBox('Bester Einzel', eur2(best), '#f2f1e7')+'</div>';
+    var list='<div style="border:1px solid #211f12;background:#0a0b06;max-height:220px;overflow-y:auto">'+
+      acts.slice().reverse().slice(0,60).map(function(a){return '<div style="display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid #1a1810;font-family:ui-monospace,monospace;font-size:11px"><span style="color:#8b8c7c;min-width:132px">'+new Date(a.created_at).toLocaleString('de-DE')+'</span><span style="flex:1;color:#f2f1e7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a.kind||'')+' · '+(a.market||'')+'</span><span style="color:#9fbf3b">'+eur2(a.amount)+'</span></div>';}).join('')+'</div>';
+    body.innerHTML=stats+'<div style="border:1px solid #211f12;background:#0a0b06;padding:14px;margin-bottom:16px"><div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#8b8c7c;margin-bottom:8px">Gewinnentwicklung (kumuliert, netto)</div>'+svg+'</div>'+list;
+  }
+  var histBtn=document.getElementById('histBtn'), histPop=document.getElementById('histPop');
+  if(histBtn && histPop){
+    histBtn.onclick=async function(){
+      histPop.style.display='flex';
+      document.getElementById('histBody').innerHTML='<div style="color:#5c5d50;padding:30px;text-align:center;font-family:ui-monospace,monospace">Lade Verlauf …</div>';
+      var r=await sb.from('activity').select('*').order('created_at',{ascending:true});
+      renderHistory(r.data||[]);
+    };
+    document.getElementById('histClose').onclick=function(){ histPop.style.display='none'; };
+    histPop.addEventListener('click',function(e){ if(e.target===histPop) histPop.style.display='none'; });
+  }
+
   var g=document.getElementById('authGate'); if(g) g.remove();
 })();
 </script>
@@ -316,6 +364,7 @@
         <button data-mode="demo">Demo</button>
       </div>
       <button class="iconbtn on" id="soundBtn" title="Ton bei Hit" aria-label="Ton"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></button>
+      <button class="iconbtn" id="histBtn" title="Mein Verlauf & Analyse" aria-label="Verlauf"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 3 4-6"/></svg></button>
       <button class="iconbtn" id="bellBtn" title="Hit-Verlauf" aria-label="Log"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="badge" id="bellBadge">0</span></button>
       <button class="scanbtn" id="scanBtn"><span class="glyph" id="scanGlyph"></span><span id="scanBtnTxt">Pause</span></button>
     </div>
@@ -338,6 +387,11 @@
           <div class="summary"><span>Platziert<b class="num" id="plCount">0</b></span><span>Gesichert<b class="sv num" id="plSecured">+0,00 €</b></span></div>
           <div class="field"><label>Guthaben Polymarket (€)</label><input class="inp num" id="balPm" type="number" step="50" min="0" value="0" placeholder="0"></div>
           <div class="field"><label>Guthaben Orbit-Broker (€)</label><input class="inp num" id="balOb" type="number" step="50" min="0" value="0" placeholder="0"></div>
+          <div class="field"><label>Brokergebühr % — Polymarket / Orbit</label>
+            <div style="display:flex;gap:10px">
+              <input class="inp num" id="feePm" type="number" step="0.5" min="0" value="0" title="Polymarket-Gebühr %">
+              <input class="inp num" id="feeOb" type="number" step="0.5" min="0" value="3" title="Orbit-Gebühr % (Betfair-Kommission)">
+            </div></div>
           <div class="field"><label>Orbit-Proxy-URL (für Live-Kurse)</label><input class="inp" id="obProxy" placeholder="https://dein-proxy… (leer = aus)" autocomplete="off"></div>
           <div class="field"><label>Standard-Einsatz (empfohlen)</label><input class="inp num" id="stdStake" type="number" step="25" min="0" value="100"></div>
           <label class="toggle" id="tgAuto" tabindex="0" role="switch" aria-checked="false"><span>Auto-Pilot<small>nur im Demo-Modus — setzt bei Hit automatisch</small></span><span class="sw"></span></label>
@@ -375,6 +429,7 @@
             <div class="field"><label>Quote 1</label><input class="inp num" id="cQ1" type="number" step="0.01" value="2.20"></div>
             <div class="field"><label>Quote 2</label><input class="inp num" id="cQ2" type="number" step="0.01" value="2.10"></div>
             <div class="field full"><label>Gesamteinsatz S (€)</label><input class="inp num" id="cS" type="number" step="10" value="1000"></div>
+            <div class="field full"><label>Brokergebühr % (auf Gewinn, beide Seiten)</label><input class="inp num" id="cFee" type="number" step="0.5" min="0" value="0"></div>
           </div>
           <div class="verdict" id="cVerdict"><span class="tag">–</span><span class="pct num" id="cArb">–</span></div>
           <div class="calc-out">
@@ -412,13 +467,23 @@
         <div class="rows" id="rows"><div class="empty">Verbinde mit Polymarket …</div></div>
       </div>
       <div class="footnote" id="foot">
-        <b>Datenquellen:</b> Polymarket = <b>echte Live-Kurse</b> über die öffentliche API (Arb-% = Summe der Kaufpreise beider Ausgänge · 100; unter 100 % = echter Vorteil). Echte Surebets innerhalb eines Buches sind selten — die großen Chancen entstehen <b>zwischen</b> Polymarket und Orbit; dafür Orbit-Proxy verbinden (siehe README im Repo). Orbit-Broker (Betfair-Exchange) braucht einen eigenen Proxy, da keine Browser-API. Kein Automatik-Echtgeld: das Ticket zeigt die exakte Aufteilung und öffnet den Markt zum manuellen Setzen. Läuft, solange dieser Tab offen ist.
+        <b>Datenquellen:</b> Polymarket = <b>echte Live-Kurse</b> über die öffentliche API (Arb-% = Summe der Kaufpreise beider Ausgänge · 100; unter 100 % = echter Vorteil). Echte Surebets innerhalb eines Buches sind selten — die großen Chancen entstehen <b>zwischen</b> Polymarket und Orbit; dafür Orbit-Proxy verbinden (siehe README im Repo). Orbit-Broker (Betfair-Exchange) braucht einen eigenen Proxy, da keine Browser-API. Kein Automatik-Echtgeld: das Ticket zeigt die exakte Aufteilung und öffnet den Markt zum manuellen Setzen. <b>Arb-% und Rendite sind netto</b> — die eingestellte Brokergebühr (Polymarket/Orbit) ist eingerechnet. Läuft, solange dieser Tab offen ist.
       </div>
     </main>
   </div>
 
   <div class="logpop" id="logPop"><div class="lh"><b>Hit-Verlauf</b><button id="logClear">Leeren</button></div><div class="loglist" id="logList"><div class="logempty">Noch keine Hits.</div></div></div>
   <div class="toasts" id="toasts"></div>
+
+  <div id="histPop" style="position:fixed;inset:0;z-index:70;background:rgba(4,5,3,.74);display:none;align-items:center;justify-content:center;padding:20px">
+    <div style="width:720px;max-width:100%;max-height:88vh;overflow-y:auto;border:1px solid var(--line3);background:linear-gradient(180deg,#0c0d08,#070804)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid var(--line2)">
+        <b style="font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)">Mein Verlauf &amp; Analyse</b>
+        <button id="histClose" style="background:none;border:0;color:var(--dim);font-size:20px;cursor:pointer;line-height:1">✕</button>
+      </div>
+      <div id="histBody" style="padding:18px 20px"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -447,7 +512,7 @@ var state={
   cat:'Alle', src:'all', sort:'arb', search:'', minRoi:0, onlyOpp:false, hitTh:0.5,
   hits:0, closed:0, log:[], unread:0,
   accounts:{pm:{status:'…'}, ob:{status:'offline'}},
-  balPm:0, balOb:0, obProxy:'', stdStake:100, autopilot:false, placed:0, secured:0,
+  balPm:0, balOb:0, feePm:0, feeOb:3, obProxy:'', stdStake:100, autopilot:false, placed:0, secured:0,
   ticketId:null, ticketStake:100, ticketDirty:false,
   lastUpd:0, polling:false, pmErr:''
 };
@@ -528,17 +593,19 @@ function pollOB(){
   }).catch(function(){ state.accounts.ob.status='error'; });
 }
 
-/* ---- Bewertung: beste Quote je Ausgang, Arb-%, ROI ---- */
+/* ---- Bewertung: beste Quote je Ausgang, Arb-%, ROI — NETTO nach Brokergebühr ---- */
+function feeOf(src){ return (src==='ob'? (+state.feeOb||0) : (+state.feePm||0))/100; }
+// Effektivquote nach Kommission auf den Gewinn: q_eff = 1 + (q-1)*(1-Gebühr)
+function effOdds(q,src){ return 1 + (q-1)*(1-feeOf(src)); }
 function evalMarket(mk){
-  var s1={ask:mk.ask0, src:'pm', odds:1/mk.ask0};
-  var s2={ask:mk.ask1, src:'pm', odds:1/mk.ask1};
-  if(mk.ob && mk.ob.o1>1 && mk.ob.o2>1){
-    var oa1=1/mk.ob.o1, oa2=1/mk.ob.o2;
-    if(oa1<s1.ask)s1={ask:oa1,src:'ob',odds:mk.ob.o1};
-    if(oa2<s2.ask)s2={ask:oa2,src:'ob',odds:mk.ob.o2};
-  }
-  var sum=s1.ask+s2.ask;
-  return {m:mk,s1:s1,s2:s2,arbPct:sum*100,roi:(1/sum-1)*100,ok:sum<1,cross:s1.src!==s2.src};
+  var c1=[{src:'pm',q:1/mk.ask0}], c2=[{src:'pm',q:1/mk.ask1}];
+  if(mk.ob && mk.ob.o1>1 && mk.ob.o2>1){ c1.push({src:'ob',q:mk.ob.o1}); c2.push({src:'ob',q:mk.ob.o2}); }
+  function pick(cs){ var b=cs[0], be=effOdds(cs[0].q,cs[0].src);
+    for(var i=1;i<cs.length;i++){ var e=effOdds(cs[i].q,cs[i].src); if(e>be){b=cs[i];be=e;} }
+    return {src:b.src, odds:b.q, oddsEff:be}; }
+  var s1=pick(c1), s2=pick(c2);
+  var invE=1/s1.oddsEff + 1/s2.oddsEff;   // Netto-Summe (Gebühr eingerechnet)
+  return {m:mk,s1:s1,s2:s2,arbPct:invE*100,roi:(1/invE-1)*100,ok:invE<1,cross:s1.src!==s2.src};
 }
 
 /* ---- Demo-Modus (klar gekennzeichnet, simuliert) ---- */
@@ -605,13 +672,14 @@ function updateAccountsUI(){
 
 /* ---- Einsatz-Aufteilung ---- */
 function routing(v,S){
-  var q1=v.s1.odds,q2=v.s2.odds,inv=1/q1+1/q2, E1=S*(1/q1)/inv, E2=S*(1/q2)/inv;
+  // Effektivquoten (nach Gebühr) bestimmen die Aufteilung -> gleiche NETTO-Auszahlung
+  var q1=v.s1.oddsEff,q2=v.s2.oddsEff,inv=1/q1+1/q2, E1=S*(1/q1)/inv, E2=S*(1/q2)/inv;
   var legs={pm:0,ob:0}; legs[v.s1.src]+=E1; legs[v.s2.src]+=E2;
   return {legs:legs,E1:E1,E2:E2,profit:(S/inv-S),roi:(1/inv-1)*100};
 }
 function feasibleMax(v){
   var A={pm:state.balPm,ob:state.balOb};
-  var q1=v.s1.odds,q2=v.s2.odds,inv=1/q1+1/q2, f1=(1/q1)/inv, f2=(1/q2)/inv;
+  var q1=v.s1.oddsEff,q2=v.s2.oddsEff,inv=1/q1+1/q2, f1=(1/q1)/inv, f2=(1/q2)/inv;
   var need={}; need[v.s1.src]=1; need[v.s2.src]=1;
   var anyBal=false; Object.keys(need).forEach(function(s){ if(A[s]>0)anyBal=true; });
   if(!anyBal)return 1e9; // kein Guthaben eingetragen -> keine Begrenzung (nur Anzeige)
@@ -779,11 +847,12 @@ function render(){
 
 /* ---- Rechner ---- */
 function updateCalc(){
-  var q1=parseFloat($('#cQ1').value),q2=parseFloat($('#cQ2').value),S=parseFloat($('#cS').value);
+  var q1=parseFloat($('#cQ1').value),q2=parseFloat($('#cQ2').value),S=parseFloat($('#cS').value),fee=parseFloat($('#cFee').value)||0;
   var V=$('#cVerdict'),tag=V.querySelector('.tag');
   if(!(q1>1)||!(q2>1)||!(S>0)){ V.className='verdict';tag.textContent='–';$('#cArb').textContent='–';['cE1','cE2','cPay','cProfit','cRoi'].forEach(function(id){$('#'+id).textContent='–';});return; }
-  var c=calcArb(q1,q2,S);
-  V.className='verdict '+(c.ok?'ok':'no'); tag.textContent=c.ok?'Arbitrage möglich':'Kein Arbitrage';
+  var f=1-fee/100, q1e=1+(q1-1)*f, q2e=1+(q2-1)*f;   // Effektivquoten nach Gebühr
+  var c=calcArb(q1e,q2e,S);
+  V.className='verdict '+(c.ok?'ok':'no'); tag.textContent=c.ok?(fee>0?'Arbitrage (netto)':'Arbitrage möglich'):'Kein Arbitrage';
   $('#cArb').textContent=pct(c.arbPct,2); $('#cE1').textContent=eur(c.E1); $('#cE2').textContent=eur(c.E2);
   $('#cPay').textContent=eur(c.pay); $('#cProfit').textContent=(c.profit>=0?'+':'')+eur(c.profit); $('#cRoi').textContent=(c.roi>=0?'+':'')+pct(c.roi,2);
 }
@@ -801,6 +870,8 @@ bindToggle('#tgOpp','onlyOpp',render);
 bindToggle('#tgAuto','autopilot');
 $('#balPm').addEventListener('input',function(e){state.balPm=Math.max(0,+e.target.value||0);updateAccountsUI();if(!state.ticketDirty)renderTicket();});
 $('#balOb').addEventListener('input',function(e){state.balOb=Math.max(0,+e.target.value||0);updateAccountsUI();if(!state.ticketDirty)renderTicket();});
+$('#feePm').addEventListener('input',function(e){state.feePm=Math.max(0,+e.target.value||0);render();});
+$('#feeOb').addEventListener('input',function(e){state.feeOb=Math.max(0,+e.target.value||0);render();});
 $('#obProxy').addEventListener('change',function(e){state.obProxy=e.target.value.trim();if(!state.obProxy)state.accounts.ob.status='offline';else if(window.__ar)window.__ar.logConn('ob',state.obProxy);});
 $('#stdStake').addEventListener('input',function(e){state.stdStake=Math.max(0,Math.floor(+e.target.value||0));if(!state.ticketDirty)renderTicket();});
 
@@ -824,7 +895,7 @@ $('#bellBtn').addEventListener('click',function(e){e.stopPropagation();logPop.cl
 document.addEventListener('click',function(e){if(!logPop.contains(e.target)&&!e.target.closest('#bellBtn')){logPop.classList.remove('show');$('#bellBtn').classList.remove('on');}});
 $('#logClear').addEventListener('click',function(){state.log=[];renderLog();});
 $('#desktopBtn').addEventListener('click',function(){ if(!('Notification'in window)){$('#desktopBtn').textContent='Nicht unterstützt';return;} Notification.requestPermission().then(function(p){state.desktop=(p==='granted');$('#desktopBtn').textContent=state.desktop?'Desktop-Benachrichtigungen: aktiv ✓':'Abgelehnt – im Browser erlauben';}).catch(function(){}); });
-['#cQ1','#cQ2','#cS'].forEach(function(s){$(s).addEventListener('input',updateCalc);});
+['#cQ1','#cQ2','#cS','#cFee'].forEach(function(s){$(s).addEventListener('input',updateCalc);});
 $('#cExample').addEventListener('click',function(){$('#cQ1').value='2.20';$('#cQ2').value='2.10';$('#cS').value='1000';updateCalc();});
 
 /* Scan an/aus */
