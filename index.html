@@ -279,8 +279,12 @@
   // Tracking-Schnittstelle für die App
   window.__ar = {
     logConn:function(book,label){ try{ sb.rpc('log_connection',{p_book:book,p_label:(label||'').slice(0,120)}); }catch(e){} },
-    logAct:function(kind,market,amount,roi){ try{ sb.rpc('log_activity',{p_kind:kind,p_market:(market||'').slice(0,140),p_amount:amount||0,p_roi:roi||0}); }catch(e){} }
+    logAct:function(kind,market,amount,roi,stake,book){ try{ sb.rpc('log_activity',{p_kind:kind,p_market:(market||'').slice(0,140),p_amount:amount||0,p_roi:roi||0,p_stake:stake||0,p_book:book||null}); }catch(e){} },
+    prefs:(prof && prof.prefs) || {},
+    _pt:null,
+    savePrefs:function(p){ var self=this; if(self._pt)clearTimeout(self._pt); self._pt=setTimeout(function(){ try{ sb.rpc('save_prefs',{p:p}); }catch(e){} },900); }
   };
+  if(window.__applyPrefs){ try{ window.__applyPrefs(window.__ar.prefs); }catch(e){} }
   // Heartbeat (Online-Zeit + „wann online")
   try{ sb.rpc('heartbeat',{add_seconds:0}); }catch(e){}
   setInterval(function(){ try{ sb.rpc('heartbeat',{add_seconds:30}); }catch(e){} }, 30000);
@@ -290,6 +294,7 @@
     var chip=document.createElement('div');
     chip.style.cssText='display:flex;align-items:center;gap:8px;margin-right:6px;font-family:var(--mono);font-size:11px;color:var(--muted)';
     chip.innerHTML='<span title="'+prof.email+'" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+prof.email+'</span>'+
+      '<a href="konto.html" style="color:#c7b24c;border:1px solid #41391f;padding:6px 9px;text-decoration:none;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px">Mein Bereich</a>'+
       (prof.role==='admin'?'<a href="admin.html" style="color:#e7d882;border:1px solid #7f7130;padding:6px 9px;text-decoration:none;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px">Admin</a>':'')+
       '<a href="#" id="arLogout" style="color:#8b8c7c;border:1px solid #2f2b18;padding:6px 9px;text-decoration:none;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px">Logout</a>';
     tools.insertBefore(chip, tools.firstChild);
@@ -392,7 +397,7 @@
               <input class="inp num" id="feePm" type="number" step="0.5" min="0" value="0" title="Polymarket-Gebühr %">
               <input class="inp num" id="feeOb" type="number" step="0.5" min="0" value="3" title="Orbit-Gebühr % (Betfair-Kommission)">
             </div></div>
-          <div class="field"><label>Orbit-Proxy-URL (für Live-Kurse)</label><input class="inp" id="obProxy" placeholder="https://dein-proxy… (leer = aus)" autocomplete="off"></div>
+          <div class="field"><label>Orbit-Proxy-URL (für Live-Kurse)</label><input class="inp" id="obProxy" placeholder="https://noexklrgtqveiclijdwp.supabase.co/functions/v1/ob-proxy" autocomplete="off"></div>
           <div class="field"><label>Standard-Einsatz (empfohlen)</label><input class="inp num" id="stdStake" type="number" step="25" min="0" value="100"></div>
           <label class="toggle" id="tgAuto" tabindex="0" role="switch" aria-checked="false"><span>Auto-Pilot<small>nur im Demo-Modus — setzt bei Hit automatisch</small></span><span class="sw"></span></label>
         </div>
@@ -403,7 +408,7 @@
         <div class="body">
           <div class="field search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="inp" id="fSearch" placeholder="Event suchen …" autocomplete="off"></div>
           <div class="field"><label>Kategorie</label><div class="chips" id="catChips"></div></div>
-          <div class="field"><label>Quelle</label><div class="chips" id="srcChips"><button class="chip active" data-src="all">Alle</button><button class="chip" data-src="cross">Nur Cross-Book</button></div></div>
+          <div class="field"><label>Quelle</label><div class="chips" id="srcChips"><button class="chip active" data-src="all">Alle</button><button class="chip" data-src="cross">Nur Cross-Book</button><button class="chip" data-src="pm">Nur Polymarket</button><button class="chip" data-src="ob">Nur Orbit</button></div></div>
           <div class="field rangewrap"><div class="rr"><label>Min. Rendite</label><b id="minRoiVal">0,0 %</b></div><input type="range" id="fMinRoi" min="0" max="8" step="0.1" value="0"></div>
           <label class="toggle" id="tgOpp" tabindex="0" role="switch" aria-checked="false"><span>Nur echte Chancen<small>Arb-% ≥ 100 ausblenden</small></span><span class="sw"></span></label>
         </div>
@@ -585,10 +590,11 @@ function mergeMarkets(fresh){
 /* ---- Orbit-Broker: nur über eigenen Proxy (Betfair hat keine Browser-API) ---- */
 function pollOB(){
   if(!state.obProxy){ state.accounts.ob.status='offline'; return Promise.resolve(); }
-  return fetchJSON(state.obProxy,7000).then(function(data){
-    state.accounts.ob.status='live';
-    // Erwartetes Format vom Proxy: [{key, o1, o2}] mit Dezimalquoten -> per Event-Key an PM-Markt hängen
-    var byKey={}; (data||[]).forEach(function(d){ if(d&&d.key)byKey[d.key]=d; });
+  return fetchJSON(state.obProxy,7000).then(function(res){
+    // Proxy liefert [{key,o1,o2}] ODER {configured, data:[…]}
+    var arr = Array.isArray(res) ? res : ((res && res.data) || []);
+    state.accounts.ob.status = (res && res.configured === false) ? 'offline' : 'live';
+    var byKey={}; arr.forEach(function(d){ if(d&&d.key)byKey[d.key]=d; });
     mkMap.forEach(function(mk){ var d=byKey[mk.ev]; mk.ob = d?{o1:+d.o1,o2:+d.o2}:null; });
   }).catch(function(){ state.accounts.ob.status='error'; });
 }
@@ -729,7 +735,7 @@ function placeDemo(v,S,auto){
   if(!(S>0)){actToast(false,v.m.ev,'Betrag eingeben');return;}
   var r=routing(v,S); state.placed++; state.secured+=r.profit;
   actToast(true,v.m.ev,(auto?'Auto-Pilot · ':'')+'+'+eur(r.profit)+' gesichert (Demo)'); beep();
-  if(window.__ar)window.__ar.logAct('secured',v.m.ev,r.profit,v.roi);
+  if(window.__ar)window.__ar.logAct('secured',v.m.ev,r.profit,v.roi,S,(v.cross?'cross':v.s1.src));
   updateAccountsUI();
 }
 function openMarket(mk){ if(mk.slug){window.open('https://polymarket.com/event/'+mk.slug,'_blank','noopener');} else {window.open('https://polymarket.com/markets','_blank','noopener');} }
@@ -817,6 +823,8 @@ function render(){
     if(state.onlyOpp&&!(v.ok&&v.roi>0.02))return false;
     if(state.cat!=='Alle'&&v.m.cat!==state.cat)return false;
     if(state.src==='cross'&&!v.cross)return false;
+    if(state.src==='pm' && !(v.s1.src==='pm'||v.s2.src==='pm'))return false;
+    if(state.src==='ob' && !(v.s1.src==='ob'||v.s2.src==='ob'))return false;
     if(v.roi<state.minRoi)return false;
     if(state.search&&v.m.ev.toLowerCase().indexOf(state.search)<0)return false;
     return true;
@@ -886,7 +894,7 @@ $('#tkBody').addEventListener('click',function(e){
   var m=state.ticketId&&mkMap.get(state.ticketId); if(!m)return; var v=evalMarket(m);
   var q=e.target.closest('.qchip');
   if(q){ state.ticketDirty=true; if(q.dataset.q==='max')state.ticketStake=Math.floor(feasibleMax(v)); else state.ticketStake=Math.floor((state.ticketStake||0)+ +q.dataset.q); renderTicket(); return; }
-  if(e.target.closest('#tkPlace')){ if(state.mode==='demo')placeDemo(v,state.ticketStake,false); else { if(window.__ar){var rr=routing(v,state.ticketStake);window.__ar.logAct('placed',m.ev,rr.profit,v.roi);} openMarket(m); } }
+  if(e.target.closest('#tkPlace')){ if(state.mode==='demo')placeDemo(v,state.ticketStake,false); else { if(window.__ar){var rr=routing(v,state.ticketStake);window.__ar.logAct('placed',m.ev,rr.profit,v.roi,state.ticketStake,(v.cross?'cross':v.s1.src));} openMarket(m); } }
 });
 
 $('#soundBtn').addEventListener('click',function(e){state.sound=!state.sound;e.currentTarget.classList.toggle('on',state.sound);if(state.sound){try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();actx.resume();}catch(x){}beep();}});
@@ -921,6 +929,26 @@ function cycle(){
   if(state.mode==='demo'){ demoTick(); processSignals(); render(); return; }
   pollPM().then(function(){ return pollOB(); }).then(function(){ processSignals(); render(); });
 }
+/* ---- Präferenzen (pro User gespeichert) ---- */
+window.__collectPrefs=function(){ return {src:state.src,sort:state.sort,minRoi:state.minRoi,hitTh:state.hitTh,stdStake:state.stdStake,feePm:state.feePm,feeOb:state.feeOb,balPm:state.balPm,balOb:state.balOb,obProxy:state.obProxy}; };
+window.__applyPrefs=function(p){
+  if(!p||typeof p!=='object')return;
+  if(p.src){ state.src=p.src; document.querySelectorAll('#srcChips .chip').forEach(function(x){x.classList.toggle('active',x.dataset.src===p.src);}); }
+  if(p.sort){ state.sort=p.sort; document.querySelectorAll('#sortSeg button').forEach(function(x){x.classList.toggle('active',x.dataset.sort===p.sort);}); }
+  if(p.minRoi!=null){ state.minRoi=+p.minRoi; $('#fMinRoi').value=p.minRoi; $('#minRoiVal').textContent=pct(state.minRoi,1); }
+  if(p.hitTh!=null){ state.hitTh=+p.hitTh; $('#fHitTh').value=p.hitTh; $('#hitThVal').textContent=pct(state.hitTh,1); $('#kHitsSub').textContent='ab '+pct(state.hitTh,2)+' Rendite'; }
+  if(p.stdStake!=null){ state.stdStake=+p.stdStake; $('#stdStake').value=p.stdStake; }
+  if(p.feePm!=null){ state.feePm=+p.feePm; $('#feePm').value=p.feePm; }
+  if(p.feeOb!=null){ state.feeOb=+p.feeOb; $('#feeOb').value=p.feeOb; }
+  if(p.balPm!=null){ state.balPm=+p.balPm; $('#balPm').value=p.balPm; }
+  if(p.balOb!=null){ state.balOb=+p.balOb; $('#balOb').value=p.balOb; }
+  if(p.obProxy){ state.obProxy=p.obProxy; $('#obProxy').value=p.obProxy; }
+  updateAccountsUI(); render();
+};
+var _saveT; function saveP(){ if(_saveT)clearTimeout(_saveT); _saveT=setTimeout(function(){ if(window.__ar&&window.__ar.savePrefs&&window.__collectPrefs)window.__ar.savePrefs(window.__collectPrefs()); },700); }
+document.addEventListener('input', saveP, true);
+document.addEventListener('click', function(e){ if(e.target.closest('#srcChips,#sortSeg')) saveP(); }, true);
+
 buildChips();
 $('#tgAuto').classList.add('dis'); // Auto-Pilot nur im Demo
 drawGlyph(); setRunning(true); updateCalc(); updateAccountsUI();

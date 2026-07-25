@@ -34,28 +34,27 @@ Ein Mini-Dienst, den **du** mit deinem Betfair/Orbit-Zugang betreibst. Er gibt J
 
 `o1`/`o2` = Dezimalquoten für Ausgang 1 / 2, in derselben Reihenfolge wie auf Polymarket. `key` muss exakt dem Polymarket-Fragetext entsprechen (oder du baust ein Mapping).
 
-Beispiel (Cloudflare Worker / Node, Pseudocode mit Betfair-API):
+**Der Proxy ist als fertige Supabase Edge Function dabei:** `supabase/functions/ob-proxy/index.ts`. Er liefert genau dieses Format (`{configured, data:[{key,o1,o2}]}`) mit offenem CORS und ruft die Betfair-API auf, sobald die Secrets gesetzt sind.
 
-```js
-// GET /odds  ->  [{key, o1, o2}, ...]
-export default {
-  async fetch(req) {
-    const app = env.BETFAIR_APP_KEY;
-    const token = await login(env.BF_USER, env.BF_PASS, env.BF_CERT); // Betfair-Session
-    const markets = await listMarkets(app, token);   // deine Events
-    const out = markets.map(m => ({
-      key: m.polymarketQuestion,                      // dein Mapping PM<->Betfair
-      o1: bestBackPrice(m, 0),                         // beste Back-Quote Ausgang 1
-      o2: bestBackPrice(m, 1)
-    }));
-    return new Response(JSON.stringify(out), {
-      headers: { "content-type": "application/json", "access-control-allow-origin": "*" }
-    });
-  }
-}
+Deploy (einmalig, Supabase CLI):
+
+```bash
+supabase link --project-ref noexklrgtqveiclijdwp
+supabase functions deploy ob-proxy --no-verify-jwt
+supabase secrets set BETFAIR_APP_KEY=dein_app_key BETFAIR_SESSION_TOKEN=dein_session_token
+# optionales Mapping Polymarket-Frage <-> Betfair-Markt:
+supabase secrets set BETFAIR_MARKET_MAP='[{"key":"Will the Republican Party win the OH-07 House seat?","marketId":"1.234","sel1":111,"sel2":222}]'
 ```
 
-Wichtig: `access-control-allow-origin: *` setzen, sonst blockt der Browser. Deploy z. B. auf Cloudflare Workers / Render / Railway. Danach die URL im Feld **Orbit-Proxy-URL** eintragen.
+Endpoint danach: `https://noexklrgtqveiclijdwp.supabase.co/functions/v1/ob-proxy` — diese URL steht schon als Platzhalter im Feld **Orbit-Proxy-URL** in der App. Eintragen → Live-Cross-Book-Arbs erscheinen. Ohne Secrets antwortet der Proxy `{configured:false}` (Orbit bleibt „aus"). Alternativ dasselbe als Cloudflare Worker (CORS `*` nicht vergessen).
+
+Der schwierige Teil bleibt das **Mapping**: Polymarket-Fragen ↔ Betfair-Märkte müssen zusammenpassen (`key` = exakter PM-Fragetext). Ohne Mapping keine echten Cross-Book-Paare.
+
+## Konten, Admin & eigener Bereich (Supabase)
+- **Login/Registrierung** ohne E-Mail-Bestätigung (DB-Trigger `auto_confirm_user`).
+- **Admin** (nur `saifokaram1@gmail.com`, Auto-Rolle) → `admin.html`: alle User, verbundene Bücher, Gewinn, Online-Zeit, „wann online", Bannen.
+- **Jeder User** → `konto.html`: eigene History, Einsätze, Gewinn, Statistik und Gewinn-Chart. Präferenzen (Wett-Modus, Standard-Einsatz, Gebühren, Filter) werden pro User gespeichert.
+- RLS: User sehen nur eigene Daten, Admin alles.
 
 ## Grenzen / Hinweise
 
