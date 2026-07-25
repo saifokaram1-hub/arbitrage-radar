@@ -436,7 +436,8 @@
             <div class="field"><label>Quote 1</label><input class="inp num" id="cQ1" type="number" step="0.01" value="2.20"></div>
             <div class="field"><label>Quote 2</label><input class="inp num" id="cQ2" type="number" step="0.01" value="2.10"></div>
             <div class="field full"><label>Gesamteinsatz S (€)</label><input class="inp num" id="cS" type="number" step="10" value="1000"></div>
-            <div class="field full"><label>Brokergebühr % (auf Gewinn, beide Seiten)</label><input class="inp num" id="cFee" type="number" step="0.5" min="0" value="0"></div>
+            <div class="field"><label>Gebühr Seite 1 %</label><input class="inp num" id="cFee1" type="number" step="0.5" min="0" value="0"></div>
+            <div class="field"><label>Gebühr Seite 2 %</label><input class="inp num" id="cFee2" type="number" step="0.5" min="0" value="0"></div>
           </div>
           <div class="verdict" id="cVerdict"><span class="tag">–</span><span class="pct num" id="cArb">–</span></div>
           <div class="calc-out">
@@ -457,6 +458,8 @@
           <h2>Live-Chancen <span class="cnt" id="listCount">0</span></h2>
           <span class="upd" id="lastUpd">–</span>
           <div class="spacer"></div>
+          <button id="allDeals" title="Alle Filter aus — jeden Deal zeigen" style="height:38px;padding:0 13px;border:1px solid var(--gold-d);background:#1a1608;color:var(--gold-b);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer">⊕ Alle Deals</button>
+          <button id="reloadBtn" title="Jetzt neu laden" style="height:38px;width:40px;border:1px solid var(--line3);background:#0a0b06;color:var(--muted);font-size:15px;cursor:pointer">⟳</button>
           <div class="sortseg" id="sortSeg">
             <button data-sort="arb" class="active">Arb-% ▴</button>
             <button data-sort="roi">Rendite</button>
@@ -518,7 +521,7 @@ var state={
   mode:'live', running:true, sound:true, desktop:false,
   cat:'Alle', src:'all', sort:'arb', search:'', minRoi:0, onlyOpp:false, hitTh:0.5,
   hits:0, closed:0, log:[], unread:0,
-  accounts:{pm:{status:'…'}, ob:{status:'offline'}},
+  accounts:{pm:{status:'…'}, ob:{status:'offline'}}, srcOn:{pm:true, ob:true},
   balPm:0, balOb:0, feePm:0, feeOb:3, obProxy:'', stdStake:100, autopilot:false, placed:0, secured:0,
   ticketId:null, ticketStake:100, ticketDirty:false,
   lastUpd:0, polling:false, pmErr:''
@@ -659,8 +662,9 @@ function processSignals(){
 /* ---- Konten-UI ---- */
 var ACC=[['pm','Polymarket','PM'],['ob','Orbit-Broker','OB']];
 function statusText(k){
+  if(!state.srcOn[k])return['off','Getrennt — klick zum Verbinden'];
   var s=state.accounts[k].status;
-  if(s==='live')return['live','Live verbunden'];
+  if(s==='live')return['live','Live verbunden — klick zum Trennen'];
   if(s==='error')return['err','Getrennt / Fehler'];
   if(s==='demo')return['demo','Demo (simuliert)'];
   if(s==='offline')return['','Getrennt · Proxy nötig'];
@@ -668,18 +672,32 @@ function statusText(k){
 }
 function updateAccountsUI(){
   $('#acctList').innerHTML=ACC.map(function(a){
-    var k=a[0], st=statusText(k), on=(st[0]==='live'||st[0]==='demo');
+    var k=a[0], st=statusText(k), on=state.srcOn[k]&&(st[0]==='live'||st[0]==='demo');
     var bal=k==='pm'?state.balPm:state.balOb;
-    return '<div class="acct '+k+(on?' on':'')+'"><div class="ai"><span class="aico">'+a[2]+'</span>'+
+    return '<div class="acct '+k+(on?' on':'')+'" data-acct="'+k+'" style="cursor:pointer;user-select:none" title="Klicken: '+(state.srcOn[k]?'trennen':'verbinden')+'"><div class="ai"><span class="aico">'+a[2]+'</span>'+
       '<span><span class="an">'+a[1]+'</span><span class="as"><span class="d '+st[0]+'"></span>'+st[1]+'</span></span></div>'+
       '<span class="num" style="font-size:12px;color:'+(bal>0?'var(--txt)':'var(--dim)')+'">'+eur(bal)+'</span></div>';
   }).join('');
   $('#plCount').textContent=state.placed;
   $('#plSecured').textContent='+'+eur(state.secured);
-  var dm={live:'live',error:'err',demo:'demo',offline:''};
-  $('#dPm').className='d '+(dm[state.accounts.pm.status]||''); $('#sPm').textContent=state.accounts.pm.status==='live'?'Live':(state.accounts.pm.status==='demo'?'Demo':(state.accounts.pm.status==='error'?'Fehler':'…'));
-  $('#dOb').className='d '+(dm[state.accounts.ob.status]||''); $('#sOb').textContent=state.accounts.ob.status==='live'?'Live':(state.accounts.ob.status==='offline'?'aus':'Fehler');
+  var dm={live:'live',error:'err',demo:'demo',offline:'',off:''};
+  [['pm','dPm','sPm'],['ob','dOb','sOb']].forEach(function(t){
+    var k=t[0], s=state.srcOn[k]?state.accounts[k].status:'off';
+    $('#'+t[1]).className='d '+(dm[s]||'');
+    $('#'+t[2]).textContent = !state.srcOn[k]?'aus':(s==='live'?'Live':(s==='demo'?'Demo':(s==='error'?'Fehler':(s==='offline'?'aus':'…'))));
+  });
 }
+
+// Quelle anklicken -> verbinden/trennen; getrennte Quelle zeigt keine Angebote mehr
+$('#acctList').addEventListener('click',function(e){
+  var card=e.target.closest('[data-acct]'); if(!card)return;
+  var k=card.dataset.acct; state.srcOn[k]=!state.srcOn[k];
+  if(k==='pm'&&!state.srcOn.pm)mkMap.clear();
+  if(k==='ob'&&!state.srcOn.ob)mkMap.forEach(function(mk){mk.ob=null;});
+  updateAccountsUI(); render();
+  if(window.__ar&&window.__ar.savePrefs&&window.__collectPrefs)window.__ar.savePrefs(window.__collectPrefs());
+  cycle();
+});
 
 /* ---- Einsatz-Aufteilung ---- */
 function routing(v,S){
@@ -865,12 +883,12 @@ function render(){
 
 /* ---- Rechner ---- */
 function updateCalc(){
-  var q1=parseFloat($('#cQ1').value),q2=parseFloat($('#cQ2').value),S=parseFloat($('#cS').value),fee=parseFloat($('#cFee').value)||0;
+  var q1=parseFloat($('#cQ1').value),q2=parseFloat($('#cQ2').value),S=parseFloat($('#cS').value),fee1=parseFloat($('#cFee1').value)||0,fee2=parseFloat($('#cFee2').value)||0;
   var V=$('#cVerdict'),tag=V.querySelector('.tag');
   if(!(q1>1)||!(q2>1)||!(S>0)){ V.className='verdict';tag.textContent='–';$('#cArb').textContent='–';['cE1','cE2','cPay','cProfit','cRoi'].forEach(function(id){$('#'+id).textContent='–';});return; }
-  var f=1-fee/100, q1e=1+(q1-1)*f, q2e=1+(q2-1)*f;   // Effektivquoten nach Gebühr
+  var q1e=1+(q1-1)*(1-fee1/100), q2e=1+(q2-1)*(1-fee2/100);   // je Seite eigene Gebühr
   var c=calcArb(q1e,q2e,S);
-  V.className='verdict '+(c.ok?'ok':'no'); tag.textContent=c.ok?(fee>0?'Arbitrage (netto)':'Arbitrage möglich'):'Kein Arbitrage';
+  V.className='verdict '+(c.ok?'ok':'no'); tag.textContent=c.ok?((fee1>0||fee2>0)?'Arbitrage (netto)':'Arbitrage möglich'):'Kein Arbitrage';
   $('#cArb').textContent=pct(c.arbPct,2); $('#cE1').textContent=eur(c.E1); $('#cE2').textContent=eur(c.E2);
   $('#cPay').textContent=eur(c.pay); $('#cProfit').textContent=(c.profit>=0?'+':'')+eur(c.profit); $('#cRoi').textContent=(c.roi>=0?'+':'')+pct(c.roi,2);
 }
@@ -880,6 +898,16 @@ $('#catChips').addEventListener('click',function(e){var b=e.target.closest('.chi
 $('#catTabs').addEventListener('click',function(e){var b=e.target.closest('.cattab');if(b)setCat(b.dataset.cat);});
 $('#srcChips').addEventListener('click',function(e){var b=e.target.closest('.chip');if(!b)return;state.src=b.dataset.src;document.querySelectorAll('#srcChips .chip').forEach(function(x){x.classList.toggle('active',x===b);});render();});
 $('#sortSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;state.sort=b.dataset.sort;document.querySelectorAll('#sortSeg button').forEach(function(x){x.classList.toggle('active',x===b);});render();});
+// Alle Deals: sämtliche Filter aus -> jeder Markt sichtbar
+$('#allDeals').addEventListener('click',function(){
+  state.src='all'; state.minRoi=0; state.onlyOpp=false; state.search='';
+  $('#fSearch').value=''; $('#fMinRoi').value=0; $('#minRoiVal').textContent=pct(0,1);
+  var t=$('#tgOpp'); t.classList.remove('on'); t.setAttribute('aria-checked','false');
+  document.querySelectorAll('#srcChips .chip').forEach(function(x){x.classList.toggle('active',x.dataset.src==='all');});
+  setCat('Alle');
+});
+// Reload: sofort neu abfragen
+$('#reloadBtn').addEventListener('click',function(){ if(state.mode!=='demo'){ mkMap.clear(); state.accounts.pm.status='…'; $('#rows').innerHTML='<div class="empty">Lade neu …</div>'; } cycle(); });
 $('#fSearch').addEventListener('input',function(e){state.search=e.target.value.toLowerCase().trim();render();});
 $('#fMinRoi').addEventListener('input',function(e){state.minRoi=+e.target.value;$('#minRoiVal').textContent=pct(state.minRoi,1);render();});
 $('#fHitTh').addEventListener('input',function(e){state.hitTh=+e.target.value;$('#hitThVal').textContent=pct(state.hitTh,1);$('#kHitsSub').textContent='ab '+pct(state.hitTh,2)+' Rendite';});
@@ -913,7 +941,7 @@ $('#bellBtn').addEventListener('click',function(e){e.stopPropagation();logPop.cl
 document.addEventListener('click',function(e){if(!logPop.contains(e.target)&&!e.target.closest('#bellBtn')){logPop.classList.remove('show');$('#bellBtn').classList.remove('on');}});
 $('#logClear').addEventListener('click',function(){state.log=[];renderLog();});
 $('#desktopBtn').addEventListener('click',function(){ if(!('Notification'in window)){$('#desktopBtn').textContent='Nicht unterstützt';return;} Notification.requestPermission().then(function(p){state.desktop=(p==='granted');$('#desktopBtn').textContent=state.desktop?'Desktop-Benachrichtigungen: aktiv ✓':'Abgelehnt – im Browser erlauben';}).catch(function(){}); });
-['#cQ1','#cQ2','#cS','#cFee'].forEach(function(s){$(s).addEventListener('input',updateCalc);});
+['#cQ1','#cQ2','#cS','#cFee1','#cFee2'].forEach(function(s){$(s).addEventListener('input',updateCalc);});
 $('#cExample').addEventListener('click',function(){$('#cQ1').value='2.20';$('#cQ2').value='2.10';$('#cS').value='1000';updateCalc();});
 
 /* Scan an/aus */
@@ -937,10 +965,13 @@ $('#modeSeg').addEventListener('click',function(e){
 function cycle(){
   if(!state.running)return;
   if(state.mode==='demo'){ demoTick(); processSignals(); render(); return; }
-  pollPM().then(function(){ return pollOB(); }).then(function(){ processSignals(); render(); });
+  var chain=Promise.resolve();
+  if(state.srcOn.pm){ chain=chain.then(pollPM); } else { mkMap.clear(); state.accounts.pm.status='off'; }
+  chain=chain.then(function(){ if(state.srcOn.ob){ return pollOB(); } state.accounts.ob.status='off'; mkMap.forEach(function(mk){mk.ob=null;}); });
+  chain.then(function(){ processSignals(); render(); });
 }
 /* ---- Präferenzen (pro User gespeichert) ---- */
-window.__collectPrefs=function(){ return {src:state.src,sort:state.sort,minRoi:state.minRoi,hitTh:state.hitTh,stdStake:state.stdStake,feePm:state.feePm,feeOb:state.feeOb,balPm:state.balPm,balOb:state.balOb,obProxy:state.obProxy}; };
+window.__collectPrefs=function(){ return {src:state.src,sort:state.sort,minRoi:state.minRoi,hitTh:state.hitTh,stdStake:state.stdStake,feePm:state.feePm,feeOb:state.feeOb,balPm:state.balPm,balOb:state.balOb,obProxy:state.obProxy,srcOn:state.srcOn}; };
 window.__applyPrefs=function(p){
   if(!p||typeof p!=='object')return;
   if(p.src){ state.src=p.src; document.querySelectorAll('#srcChips .chip').forEach(function(x){x.classList.toggle('active',x.dataset.src===p.src);}); }
@@ -953,6 +984,7 @@ window.__applyPrefs=function(p){
   if(p.balPm!=null){ state.balPm=+p.balPm; $('#balPm').value=p.balPm; }
   if(p.balOb!=null){ state.balOb=+p.balOb; $('#balOb').value=p.balOb; }
   if(p.obProxy){ state.obProxy=p.obProxy; $('#obProxy').value=p.obProxy; }
+  if(p.srcOn&&typeof p.srcOn==='object'){ if(typeof p.srcOn.pm==='boolean')state.srcOn.pm=p.srcOn.pm; if(typeof p.srcOn.ob==='boolean')state.srcOn.ob=p.srcOn.ob; }
   updateAccountsUI(); render();
 };
 var _saveT; function saveP(){ if(_saveT)clearTimeout(_saveT); _saveT=setTimeout(function(){ if(window.__ar&&window.__ar.savePrefs&&window.__collectPrefs)window.__ar.savePrefs(window.__collectPrefs()); },700); }
