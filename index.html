@@ -279,7 +279,7 @@
   // Tracking-Schnittstelle für die App
   window.__ar = {
     logConn:function(book,label){ try{ sb.rpc('log_connection',{p_book:book,p_label:(label||'').slice(0,120)}); }catch(e){} },
-    logAct:function(kind,market,amount,roi,stake,book){ try{ sb.rpc('log_activity',{p_kind:kind,p_market:(market||'').slice(0,140),p_amount:amount||0,p_roi:roi||0,p_stake:stake||0,p_book:book||null}); }catch(e){} },
+    logAct:function(kind,market,amount,roi,stake,book,fee,cat){ try{ sb.rpc('log_activity',{p_kind:kind,p_market:(market||'').slice(0,140),p_amount:amount||0,p_roi:roi||0,p_stake:stake||0,p_book:book||null,p_fee:fee||0,p_cat:cat||null}); }catch(e){} },
     prefs:(prof && prof.prefs) || {},
     _pt:null,
     savePrefs:function(p){ var self=this; if(self._pt)clearTimeout(self._pt); self._pt=setTimeout(function(){ try{ sb.rpc('save_prefs',{p:p}); }catch(e){} },900); }
@@ -306,7 +306,8 @@
   function renderHistory(acts){
     var body=document.getElementById('histBody');
     if(!acts || !acts.length){ body.innerHTML='<div style="color:#5c5d50;font-family:ui-monospace,monospace;font-size:12px;padding:26px;text-align:center;line-height:1.7">Noch keine Aktivität.<br>Sobald du im Ticket setzt (oder im Demo-Modus übst), erscheint hier dein Verlauf mit Diagramm und Analyse.</div>'; return; }
-    var cum=0, pts=acts.map(function(a){ cum+=(+a.amount||0); return {t:new Date(a.created_at).getTime(), y:cum}; });
+    var cum=0, staked=0, profit=0, fee=0, pts=acts.map(function(a){ staked+=(+a.stake||0); profit+=(+a.amount||0); fee+=(+a.fee||0); cum+=(+a.amount||0); return {t:new Date(a.created_at).getTime(), y:cum}; });
+    var grossOut=staked+profit+fee, netBack=staked+profit;
     var total=cum, n=acts.length;
     var rois=acts.map(function(a){return +a.roi||0;}).filter(function(x){return x;});
     var avgRoi=rois.length? rois.reduce(function(s,x){return s+x;},0)/rois.length : 0;
@@ -327,14 +328,15 @@
       '<path d="'+d+'" fill="none" stroke="#c7b24c" stroke-width="2"/>'+
       '<circle cx="'+X(pts[pts.length-1].t).toFixed(1)+'" cy="'+Y(pts[pts.length-1].y).toFixed(1)+'" r="3.5" fill="#e7d882"/>'+
       '</svg>';
-    var stats='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">'+
-      statBox('Kumulierter Gewinn', eur2(total), total>=0?'#9fbf3b':'#b0402e')+
-      statBox('Aktionen', n, '#e7d882')+
-      statBox('Ø Rendite', avgRoi.toFixed(2)+' %', '#f2f1e7')+
-      statBox('Bester Einzel', eur2(best), '#f2f1e7')+'</div>';
-    var list='<div style="border:1px solid #211f12;background:#0a0b06;max-height:220px;overflow-y:auto">'+
-      acts.slice().reverse().slice(0,60).map(function(a){return '<div style="display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid #1a1810;font-family:ui-monospace,monospace;font-size:11px"><span style="color:#8b8c7c;min-width:132px">'+new Date(a.created_at).toLocaleString('de-DE')+'</span><span style="flex:1;color:#f2f1e7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a.kind||'')+' · '+(a.market||'')+'</span><span style="color:#9fbf3b">'+eur2(a.amount)+'</span></div>';}).join('')+'</div>';
-    body.innerHTML=stats+'<div style="border:1px solid #211f12;background:#0a0b06;padding:14px;margin-bottom:16px"><div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#8b8c7c;margin-bottom:8px">Gewinnentwicklung (kumuliert, netto)</div>'+svg+'</div>'+list;
+    var plRow=function(k,v,c){ return '<div style="display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid #1a1810"><span style="font-size:12.5px;color:#8b8c7c">'+k+'</span><span style="font-family:ui-monospace,monospace;font-size:14px;color:'+(c||'#f2f1e7')+'">'+v+'</span></div>'; };
+    var pl='<div style="border:1px solid #211f12;background:#0a0b06;padding:4px 14px;margin-bottom:14px">'+
+      plRow('Eingesetzt', eur2(staked))+
+      plRow('Auszahlung (brutto)', eur2(grossOut))+
+      plRow('− Brokergebühr', '−'+eur2(fee), '#b0402e')+
+      plRow('= Netto zurück', eur2(netBack), '#e7d882')+
+      '<div style="display:flex;justify-content:space-between;padding:11px 2px"><span style="font-size:13px;color:#e7d882;font-weight:600">Gewinn (netto)</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700;color:'+(profit>=0?'#9fbf3b':'#b0402e')+'">'+(profit>=0?'+':'')+eur2(profit)+'</span></div></div>';
+    body.innerHTML=pl+'<div style="border:1px solid #211f12;background:#0a0b06;padding:14px;margin-bottom:14px"><div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#8b8c7c;margin-bottom:8px">Gewinnentwicklung (kumuliert, netto)</div>'+svg+'</div>'+
+      '<a href="konto.html" style="display:block;text-align:center;padding:11px;border:1px solid #7f7130;color:#e7d882;text-decoration:none;font-size:11px;letter-spacing:.14em;text-transform:uppercase">Mein Bereich öffnen — mit Zeitfilter (Monat …)</a>';
   }
   var histBtn=document.getElementById('histBtn'), histPop=document.getElementById('histPop');
   if(histBtn && histPop){
@@ -534,10 +536,13 @@ function parseArr(s){ try{return typeof s==='string'?JSON.parse(s):s;}catch(e){r
 function categorize(q){
   q=(q||'').toLowerCase();
   if(/bitcoin|btc|ethereum| eth |solana|crypto|dogecoin|xrp|coin/.test(q))return'Krypto';
-  if(/fed|rate|cpi|gdp|recession|s&p|nasdaq|stock|inflation/.test(q))return'Wirtschaft';
-  if(/election|senate|house|president|governor|republican|democrat| party |congress|vote|poll\b/.test(q))return'Politik';
+  if(/fed|rate|cpi|gdp|recession|s&p|nasdaq|stock|inflation|earnings|ipo|tesla|apple|nvidia|openai|valuation/.test(q))return'Wirtschaft';
+  if(/election|senate|house|president|governor|republican|democrat| party |congress|vote|poll\b|parliament/.test(q))return'Politik';
+  if(/tennis|alcaraz|sinner|djokovic|swiatek|sabalenka|\batp\b|\bwta\b|medvedev|zverev/.test(q))return'Tennis';
+  if(/nba|basketball|lakers|celtics|nuggets|warriors|bucks|76ers|suns|knicks/.test(q))return'Basketball';
+  if(/soccer|bundesliga|premier league|la liga|serie a|champions|bayern|dortmund|real madrid|barcelona|\bfc /.test(q))return'Fußball';
+  if(/nfl|mlb|nhl|ufc|\bgame\b|\bmatch\b| vs\.?| win\b/.test(q))return'Sport';
   if(/o\/u|over\/under|strikeout|spread:|points|goals|rebounds|assists/.test(q))return'Über/Unter';
-  if(/nba|nfl|mlb|nhl|soccer|football|tennis|ufc|game|match| vs\.?| win\b/.test(q))return'Sport';
   return'Markt';
 }
 
@@ -683,6 +688,8 @@ function routing(v,S){
   var legs={pm:0,ob:0}; legs[v.s1.src]+=E1; legs[v.s2.src]+=E2;
   return {legs:legs,E1:E1,E2:E2,profit:(S/inv-S),roi:(1/inv-1)*100};
 }
+// Gebührenbetrag = Differenz Brutto-Auszahlung (Rohquoten) zu Netto-Auszahlung (nach Gebühr)
+function feeAmount(v,S){ var invG=1/v.s1.odds+1/v.s2.odds, invE=1/v.s1.oddsEff+1/v.s2.oddsEff; return Math.max(0, S/invG - S/invE); }
 function feasibleMax(v){
   var A={pm:state.balPm,ob:state.balOb};
   var q1=v.s1.oddsEff,q2=v.s2.oddsEff,inv=1/q1+1/q2, f1=(1/q1)/inv, f2=(1/q2)/inv;
@@ -735,7 +742,7 @@ function placeDemo(v,S,auto){
   if(!(S>0)){actToast(false,v.m.ev,'Betrag eingeben');return;}
   var r=routing(v,S); state.placed++; state.secured+=r.profit;
   actToast(true,v.m.ev,(auto?'Auto-Pilot · ':'')+'+'+eur(r.profit)+' gesichert (Demo)'); beep();
-  if(window.__ar)window.__ar.logAct('secured',v.m.ev,r.profit,v.roi,S,(v.cross?'cross':v.s1.src));
+  if(window.__ar)window.__ar.logAct('secured',v.m.ev,r.profit,v.roi,S,(v.cross?'cross':v.s1.src),feeAmount(v,S),v.m.cat);
   updateAccountsUI();
 }
 function openMarket(mk){ if(mk.slug){window.open('https://polymarket.com/event/'+mk.slug,'_blank','noopener');} else {window.open('https://polymarket.com/markets','_blank','noopener');} }
@@ -789,11 +796,14 @@ function renderTicket(){
 }
 
 /* ---- Render ---- */
-var CATS_FIX=['Alle','Krypto','Politik','Wirtschaft','Sport','Über/Unter','Markt'];
+var CATS_FIX=['Alle','Krypto','Politik','Wirtschaft','Tennis','Basketball','Fußball','Sport','Über/Unter','Markt'];
+var CATCOLOR={'Alle':'#c7b24c','Krypto':'#E0A93B','Politik':'#C7574F','Wirtschaft':'#5B9BD5','Tennis':'#C9D24A','Basketball':'#E08544','Fußball':'#5FB56A','Sport':'#8FA35B','Über/Unter':'#A382D0','Markt':'#9a9a8c'};
+function catColor(c){return CATCOLOR[c]||'#9a9a8c';}
 function ageInfo(since){ if(!since)return{txt:'–',cls:'old'}; var s=Math.floor((Date.now()-since)/1000); return{txt:s+'s',cls:s<10?'':'stale'}; }
 function buildChips(){
-  $('#catChips').innerHTML=CATS_FIX.map(function(c){return '<button class="chip'+(c===state.cat?' active':'')+'" data-cat="'+c+'">'+c+' <span class="c" data-cc="'+c+'">0</span></button>';}).join('');
-  $('#catTabs').innerHTML=CATS_FIX.map(function(c){return '<button class="cattab'+(c===state.cat?' active':'')+'" data-cat="'+c+'">'+c+' <span class="c" data-tc="'+c+'">0</span></button>';}).join('');
+  function dot(c){return '<span style="display:inline-block;width:7px;height:7px;background:'+catColor(c)+';margin-right:6px;vertical-align:middle"></span>';}
+  $('#catChips').innerHTML=CATS_FIX.map(function(c){return '<button class="chip'+(c===state.cat?' active':'')+'" data-cat="'+c+'">'+dot(c)+c+' <span class="c" data-cc="'+c+'">0</span></button>';}).join('');
+  $('#catTabs').innerHTML=CATS_FIX.map(function(c){return '<button class="cattab'+(c===state.cat?' active':'')+'" data-cat="'+c+'">'+dot(c)+c+' <span class="c" data-tc="'+c+'">0</span></button>';}).join('');
 }
 function setCat(c){ state.cat=c;
   document.querySelectorAll('#catChips .chip').forEach(function(x){x.classList.toggle('active',x.dataset.cat===c);});
@@ -841,7 +851,7 @@ function render(){
     var roiCls=!v.ok?'down':(v.roi>=state.hitTh?'big':(v.roi>0?'up':''));
     var sign=v.roi>0?'+':'';
     return '<div class="r-o'+(hit?' hit':'')+(m.id===state.ticketId?' sel':'')+'" data-id="'+m.id+'">'+
-      '<div class="ev"><div class="name">'+m.ev+'</div><div class="meta"><span class="cattg">'+m.cat+'</span>'+
+      '<div class="ev"><div class="name">'+m.ev+'</div><div class="meta"><span class="cattg" style="color:'+catColor(m.cat)+';border-color:'+catColor(m.cat)+'66">'+m.cat+'</span>'+
         (m.liq?'<span class="liq">Liq '+nf0.format(Math.round(m.liq))+' $</span>':'')+
         '<span class="age '+ag.cls+'"><span class="adot"></span>'+ag.txt+'</span></div></div>'+
       '<div class="side"><div class="oc">'+m.o1+'</div><div class="odds"><b>'+nf.format(v.s1.odds)+'</b><span class="src '+v.s1.src+'">'+(v.s1.src==='pm'?'PM':'OB')+'</span></div></div>'+
@@ -894,7 +904,7 @@ $('#tkBody').addEventListener('click',function(e){
   var m=state.ticketId&&mkMap.get(state.ticketId); if(!m)return; var v=evalMarket(m);
   var q=e.target.closest('.qchip');
   if(q){ state.ticketDirty=true; if(q.dataset.q==='max')state.ticketStake=Math.floor(feasibleMax(v)); else state.ticketStake=Math.floor((state.ticketStake||0)+ +q.dataset.q); renderTicket(); return; }
-  if(e.target.closest('#tkPlace')){ if(state.mode==='demo')placeDemo(v,state.ticketStake,false); else { if(window.__ar){var rr=routing(v,state.ticketStake);window.__ar.logAct('placed',m.ev,rr.profit,v.roi,state.ticketStake,(v.cross?'cross':v.s1.src));} openMarket(m); } }
+  if(e.target.closest('#tkPlace')){ if(state.mode==='demo')placeDemo(v,state.ticketStake,false); else { if(window.__ar){var rr=routing(v,state.ticketStake);window.__ar.logAct('placed',m.ev,rr.profit,v.roi,state.ticketStake,(v.cross?'cross':v.s1.src),feeAmount(v,state.ticketStake),v.m.cat);} openMarket(m); } }
 });
 
 $('#soundBtn').addEventListener('click',function(e){state.sound=!state.sound;e.currentTarget.classList.toggle('on',state.sound);if(state.sound){try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();actx.resume();}catch(x){}beep();}});

@@ -14,36 +14,55 @@
   .mark::before,.mark::after{content:"";position:absolute;background:var(--gold)}
   .mark::before{left:9px;top:15px;width:14px;height:1px;box-shadow:0 -5px 0 var(--gold-d),0 5px 0 var(--gold-d)}
   .mark::after{left:15px;top:9px;width:1px;height:14px;box-shadow:-5px 0 0 var(--gold-d),5px 0 0 var(--gold-d)}
-  h1{margin:0;font-size:13px;letter-spacing:.26em;text-transform:uppercase;font-weight:700}
-  h1 span{color:var(--gold-b)}
+  h1{margin:0;font-size:13px;letter-spacing:.26em;text-transform:uppercase;font-weight:700}h1 span{color:var(--gold-b)}
   .cmd .sp{flex:1}.who{font-size:11px;color:var(--muted);font-family:var(--mono)}
   .lnk{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);border:1px solid var(--line3);padding:8px 12px;text-decoration:none;background:#0a0b06}
   .lnk:hover{color:var(--gold-b);border-color:var(--gold-d)}
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line2);background:var(--void2)}
-  .kpi{padding:16px 18px;border-right:1px solid var(--line)}.kpi:last-child{border-right:0}
+  .wrap{padding:20px;max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+  .period{display:flex;gap:0;border:1px solid var(--line2);background:#0a0b06;align-self:flex-start}
+  .period button{padding:9px 15px;font:inherit;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border:0;border-right:1px solid var(--line);background:none;cursor:pointer}
+  .period button:last-child{border-right:0}
+  .period button.active{background:var(--gold);color:var(--void);font-weight:700}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .kpi{border:1px solid var(--line2);background:linear-gradient(180deg,#0b0c07,#080905);padding:16px 18px}
   .kpi .l{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
-  .kpi .v{font-family:var(--mono);font-size:26px;font-weight:600;margin-top:6px;line-height:1}
-  .kpi.g .v{color:var(--gold-b)}.kpi.p .v{color:var(--pos)}
-  .wrap{padding:20px;max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+  .kpi .v{font-family:var(--mono);font-size:30px;font-weight:600;margin-top:6px;line-height:1}
+  .kpi.hero{border-color:var(--gold-d);background:linear-gradient(180deg,#141206,#0b0c07)}
+  .kpi.hero .v{color:var(--gold-b)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
   .card{border:1px solid var(--line2);background:linear-gradient(180deg,#0b0c07,#080905)}
   .card h2{margin:0;padding:13px 16px;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);border-bottom:1px solid var(--line);font-weight:700}
   .card .b{padding:16px}
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-  .bkrow{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line)}
-  .bkrow:last-child{border-bottom:0}
-  .bkrow .n{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600}
-  .bktag{font-size:8.5px;letter-spacing:.08em;font-weight:700;padding:2px 6px;border:1px solid var(--line3)}
-  .bktag.pm{color:var(--gold-b);border-color:var(--gold-d)}.bktag.ob{color:#c9c7bd}
-  .bkrow .s{font-family:var(--mono);font-size:12px;color:var(--muted)}
-  .bkrow .s b{color:var(--pos)}
+  /* P&L flow */
+  .pl{display:flex;flex-direction:column}
+  .pl .r{display:flex;align-items:center;justify-content:space-between;padding:11px 2px;border-bottom:1px solid var(--line);font-family:var(--mono)}
+  .pl .r:last-child{border-bottom:0}
+  .pl .r .k{font-family:var(--sans);font-size:12.5px;color:var(--muted)}
+  .pl .r .v{font-size:15px}
+  .pl .r.fee .v{color:var(--neg)}
+  .pl .r.tot{border-top:1px solid var(--line3);margin-top:4px;padding-top:12px}
+  .pl .r.tot .k{color:var(--gold-b);font-weight:600;font-family:var(--sans)}
+  .pl .r.tot .v{color:var(--gold-b);font-size:20px;font-weight:700}
+  .pl .r.win .v{color:var(--pos)}
+  /* breakdown bars */
+  .brk{display:flex;flex-direction:column;gap:10px}
+  .brkrow{display:flex;flex-direction:column;gap:5px}
+  .brkrow .top{display:flex;align-items:center;justify-content:space-between;font-size:12.5px}
+  .brkrow .lab{display:flex;align-items:center;gap:8px}
+  .swatch{width:10px;height:10px;flex:none}
+  .brkrow .st{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .brkrow .st b{color:var(--pos)}
+  .bar{height:6px;background:#15160d;overflow:hidden}
+  .bar i{display:block;height:100%}
   table{width:100%;border-collapse:collapse}
   th{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);text-align:left;padding:10px 14px;border-bottom:1px solid var(--line2)}
   th.r,td.r{text-align:right}
-  td{padding:10px 14px;border-bottom:1px solid var(--line);font-size:12.5px;font-family:var(--mono)}
-  td.ev{font-family:var(--sans);color:var(--txt);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  td{padding:9px 14px;border-bottom:1px solid var(--line);font-size:12px;font-family:var(--mono)}
+  td.ev{font-family:var(--sans);color:var(--txt);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cattag{font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border:1px solid}
   .pos{color:var(--pos)}.tblwrap{overflow-x:auto}
   .empty{padding:34px;text-align:center;color:var(--dim);font-family:var(--mono);font-size:12px;line-height:1.7}
-  @media(max-width:820px){.kpis{grid-template-columns:repeat(2,1fr)}.kpi:nth-child(3),.kpi:nth-child(4){border-top:1px solid var(--line)}.two{grid-template-columns:1fr}}
+  @media(max-width:860px){.kpis{grid-template-columns:1fr}.two{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -56,32 +75,46 @@
     <a class="lnk" href="#" id="logout">Abmelden</a>
   </div>
 
-  <div class="kpis">
-    <div class="kpi"><div class="l">Eingesetzt gesamt</div><div class="v num" id="kStake">–</div></div>
-    <div class="kpi p"><div class="l">Gewinn gesamt</div><div class="v num" id="kProfit">–</div></div>
-    <div class="kpi"><div class="l">Zurück gesamt</div><div class="v num" id="kReturn">–</div></div>
-    <div class="kpi g"><div class="l">Ø Rendite</div><div class="v num" id="kRoi">–</div></div>
-  </div>
-
   <div class="wrap">
-    <div class="card">
-      <h2>Gewinnentwicklung (kumuliert, netto)</h2>
-      <div class="b" id="chart"><div class="empty">Lade …</div></div>
+    <div class="period" id="period">
+      <button data-p="today">Heute</button>
+      <button data-p="7d">7 Tage</button>
+      <button data-p="month" class="active">Dieser Monat</button>
+      <button data-p="all">Alles</button>
     </div>
+
+    <div class="kpis">
+      <div class="kpi hero"><div class="l">Gewinn (netto)</div><div class="v num" id="kProfit">–</div></div>
+      <div class="kpi"><div class="l">Ø Rendite</div><div class="v num" id="kRoi">–</div></div>
+      <div class="kpi"><div class="l">Einsätze</div><div class="v num" id="kCount">–</div></div>
+    </div>
+
     <div class="two">
       <div class="card">
-        <h2>Wo du gesetzt hast (nach Buch)</h2>
-        <div class="b" id="byBook"></div>
+        <h2>Bilanz im Zeitraum</h2>
+        <div class="b"><div class="pl" id="pl"></div></div>
       </div>
       <div class="card">
-        <h2>Analyse</h2>
-        <div class="b" id="analysis"></div>
+        <h2>Gewinnentwicklung (kumuliert, netto)</h2>
+        <div class="b" id="chart"><div class="empty">–</div></div>
       </div>
     </div>
+
+    <div class="two">
+      <div class="card">
+        <h2>Nach Thema / Sportart</h2>
+        <div class="b"><div class="brk" id="byCat"></div></div>
+      </div>
+      <div class="card">
+        <h2>Nach Buch</h2>
+        <div class="b"><div class="brk" id="byBook"></div></div>
+      </div>
+    </div>
+
     <div class="card">
-      <h2>Alle Einsätze &amp; Ergebnisse</h2>
+      <h2>Einzelne Einsätze im Zeitraum</h2>
       <div class="tblwrap">
-        <table><thead><tr><th>Zeitpunkt</th><th>Markt</th><th>Buch</th><th class="r">Einsatz</th><th class="r">Gewinn</th><th class="r">Rendite</th></tr></thead>
+        <table><thead><tr><th>Zeit</th><th>Markt</th><th>Thema</th><th class="r">Einsatz</th><th class="r">Gebühr</th><th class="r">Gewinn</th></tr></thead>
         <tbody id="tbody"><tr><td colspan="6" class="empty">Lade …</td></tr></tbody></table>
       </div>
     </div>
@@ -96,32 +129,68 @@
   var sb = auth.sb, prof = auth.profile;
   document.getElementById('who').textContent = prof.email;
   document.getElementById('logout').onclick = async function(e){ e.preventDefault(); await sb.auth.signOut(); location.replace('login.html'); };
+
+  var CATCOLOR={'Krypto':'#E0A93B','Politik':'#C7574F','Wirtschaft':'#5B9BD5','Tennis':'#C9D24A','Basketball':'#E08544','Fußball':'#5FB56A','Sport':'#8FA35B','Über/Unter':'#A382D0','Markt':'#9a9a8c','cross':'#c7b24c','pm':'#e7d882','ob':'#c9c7bd'};
+  function catColor(c){return CATCOLOR[c]||'#9a9a8c';}
+  function bookName(b){return b==='pm'?'Polymarket':b==='ob'?'Orbit-Broker':b==='cross'?'Cross-Book':(b||'—');}
   var eur=function(n){return (+n||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';};
-  var bookName=function(b){return b==='pm'?'Polymarket':b==='ob'?'Orbit-Broker':(b||'—');};
 
-  var r = await sb.from('activity').select('*').order('created_at',{ascending:true});
-  var acts = r.data || [];
+  var all = ((await sb.from('activity').select('*').order('created_at',{ascending:true})).data)||[];
+  var period='month';
 
-  var totStake=0, totProfit=0; var rois=[];
-  var byBook={};
-  acts.forEach(function(a){
-    var st=+a.stake||0, pr=+a.amount||0, bk=a.book||'—';
-    totStake+=st; totProfit+=pr; if(a.roi)rois.push(+a.roi);
-    if(!byBook[bk])byBook[bk]={stake:0,profit:0,n:0};
-    byBook[bk].stake+=st; byBook[bk].profit+=pr; byBook[bk].n++;
-  });
-  var avgRoi = rois.length? rois.reduce(function(s,x){return s+x;},0)/rois.length : 0;
-  document.getElementById('kStake').textContent=eur(totStake);
-  document.getElementById('kProfit').textContent=(totProfit>=0?'+':'')+eur(totProfit);
-  document.getElementById('kReturn').textContent=eur(totStake+totProfit);
-  document.getElementById('kRoi').textContent=(avgRoi>=0?'+':'')+avgRoi.toFixed(2)+' %';
+  function startOf(p){ var d=new Date(); if(p==='today')return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime(); if(p==='7d')return d.getTime()-7*864e5; if(p==='month')return new Date(d.getFullYear(),d.getMonth(),1).getTime(); return 0; }
 
-  // Chart
-  (function(){
+  function render(){
+    var from=startOf(period);
+    var acts=all.filter(function(a){ return new Date(a.created_at).getTime()>=from; });
+
+    var staked=0, profit=0, fee=0, rois=[];
+    var byCat={}, byBook={};
+    acts.forEach(function(a){
+      var st=+a.stake||0, pr=+a.amount||0, fe=+a.fee||0, c=a.cat||'Markt', b=a.book||'—';
+      staked+=st; profit+=pr; fee+=fe; if(a.roi)rois.push(+a.roi);
+      (byCat[c]=byCat[c]||{stake:0,profit:0,n:0}); byCat[c].stake+=st; byCat[c].profit+=pr; byCat[c].n++;
+      (byBook[b]=byBook[b]||{stake:0,profit:0,n:0}); byBook[b].stake+=st; byBook[b].profit+=pr; byBook[b].n++;
+    });
+    var grossOut=staked+profit+fee, netBack=staked+profit;
+    var avgRoi=rois.length? rois.reduce(function(s,x){return s+x;},0)/rois.length : 0;
+
+    document.getElementById('kProfit').textContent=(profit>=0?'+':'')+eur(profit);
+    document.getElementById('kRoi').textContent=(avgRoi>=0?'+':'')+avgRoi.toFixed(2)+' %';
+    document.getElementById('kCount').textContent=acts.length;
+
+    // P&L flow
+    document.getElementById('pl').innerHTML=
+      row('Eingesetzt', eur(staked))+
+      row('Auszahlung (brutto)', eur(grossOut))+
+      '<div class="r fee"><span class="k">− Brokergebühr</span><span class="v">−'+eur(fee)+'</span></div>'+
+      '<div class="r tot"><span class="k">= Netto zurück</span><span class="v">'+eur(netBack)+'</span></div>'+
+      '<div class="r win"><span class="k" style="font-family:var(--sans);color:var(--muted)">Gewinn (netto)</span><span class="v">'+(profit>=0?'+':'')+eur(profit)+'</span></div>';
+    function row(k,v){ return '<div class="r"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
+
+    renderChart(acts);
+    renderBrk('byCat', byCat, catColor, function(k){return k;});
+    renderBrk('byBook', byBook, function(b){return catColor(b);}, bookName);
+    renderTable(acts);
+  }
+
+  function renderBrk(id, obj, colorFn, nameFn){
+    var el=document.getElementById(id);
+    var keys=Object.keys(obj).sort(function(a,b){return obj[b].stake-obj[a].stake;});
+    if(!keys.length){ el.innerHTML='<div class="empty">Keine Daten im Zeitraum.</div>'; return; }
+    var max=Math.max.apply(null, keys.map(function(k){return obj[k].stake;}).concat([1]));
+    el.innerHTML=keys.map(function(k){ var d=obj[k], col=colorFn(k);
+      return '<div class="brkrow"><div class="top"><span class="lab"><span class="swatch" style="background:'+col+'"></span>'+nameFn(k)+'</span>'+
+        '<span class="st">'+d.n+'× · '+eur(d.stake)+' · <b style="color:'+(d.profit>=0?'var(--pos)':'var(--neg)')+'">'+(d.profit>=0?'+':'')+eur(d.profit)+'</b></span></div>'+
+        '<div class="bar"><i style="width:'+Math.max(3,Math.round(d.stake/max*100))+'%;background:'+col+'"></i></div></div>';
+    }).join('');
+  }
+
+  function renderChart(acts){
     var el=document.getElementById('chart');
-    if(!acts.length){ el.innerHTML='<div class="empty">Noch keine Einsätze.<br>Sobald du im Ticket setzt (oder im Demo-Modus übst), erscheint hier dein Verlauf.</div>'; return; }
+    if(!acts.length){ el.innerHTML='<div class="empty">Keine Einsätze im Zeitraum.</div>'; return; }
     var cum=0, pts=acts.map(function(a){ cum+=(+a.amount||0); return {t:new Date(a.created_at).getTime(), y:cum}; });
-    var W=940,H=220,pad=30;
+    var W=520,H=200,pad=28;
     var xs=pts.map(function(p){return p.t;}), ys=pts.map(function(p){return p.y;});
     var minX=Math.min.apply(null,xs),maxX=Math.max.apply(null,xs); if(maxX===minX)maxX=minX+1;
     var minY=Math.min.apply(null,ys.concat([0])),maxY=Math.max.apply(null,ys.concat([0])); if(maxY===minY)maxY=minY+1;
@@ -136,49 +205,27 @@
       '<path d="'+area+'" fill="rgba(199,178,76,.12)"/>'+
       '<path d="'+d+'" fill="none" stroke="#c7b24c" stroke-width="2"/>'+
       '<circle cx="'+X(pts[pts.length-1].t).toFixed(1)+'" cy="'+Y(pts[pts.length-1].y).toFixed(1)+'" r="3.5" fill="#e7d882"/></svg>';
-  })();
+  }
 
-  // By book
-  (function(){
-    var el=document.getElementById('byBook');
-    var keys=Object.keys(byBook);
-    if(!keys.length){ el.innerHTML='<div class="empty">Noch keine Daten.</div>'; return; }
-    el.innerHTML=keys.map(function(b){var d=byBook[b];var tag=b==='pm'?'pm':b==='ob'?'ob':'';
-      return '<div class="bkrow"><div class="n"><span class="bktag '+tag+'">'+(b==='pm'?'PM':b==='ob'?'OB':'?')+'</span>'+bookName(b)+'</div>'+
-        '<div class="s">'+d.n+'× · Einsatz '+eur(d.stake)+' · <b>'+(d.profit>=0?'+':'')+eur(d.profit)+'</b></div></div>';
-    }).join('');
-  })();
-
-  // Analysis
-  (function(){
-    var el=document.getElementById('analysis');
-    if(!acts.length){ el.innerHTML='<div class="empty">Noch keine Aktivität.</div>'; return; }
-    var best=Math.max.apply(null, acts.map(function(a){return +a.amount||0;}).concat([0]));
-    var wins=acts.filter(function(a){return (+a.amount||0)>0;}).length;
-    var days={}; acts.forEach(function(a){ days[new Date(a.created_at).toDateString()]=1; });
-    var lines=[
-      ['Aktionen gesamt', acts.length],
-      ['Davon mit Gewinn', wins],
-      ['Bester Einzeltreffer', eur(best)],
-      ['Aktive Tage', Object.keys(days).length],
-      ['Ø Einsatz', eur(acts.length? totStake/acts.length : 0)]
-    ];
-    el.innerHTML=lines.map(function(l){return '<div class="bkrow"><div class="n" style="font-weight:400;color:var(--muted);font-size:12.5px">'+l[0]+'</div><div class="s" style="color:var(--txt)">'+l[1]+'</div></div>';}).join('');
-  })();
-
-  // Table
-  (function(){
+  function renderTable(acts){
     var tb=document.getElementById('tbody');
-    if(!acts.length){ tb.innerHTML='<tr><td colspan="6" class="empty">Noch keine Einsätze.</td></tr>'; return; }
-    tb.innerHTML=acts.slice().reverse().map(function(a){
-      return '<tr><td>'+new Date(a.created_at).toLocaleString('de-DE')+'</td>'+
+    if(!acts.length){ tb.innerHTML='<tr><td colspan="6" class="empty">Keine Einsätze im Zeitraum.</td></tr>'; return; }
+    tb.innerHTML=acts.slice().reverse().map(function(a){ var c=a.cat||'Markt', col=catColor(c);
+      return '<tr><td>'+new Date(a.created_at).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</td>'+
         '<td class="ev">'+(a.market||'—')+'</td>'+
-        '<td>'+bookName(a.book)+'</td>'+
+        '<td><span class="cattag" style="color:'+col+';border-color:'+col+'66">'+c+'</span></td>'+
         '<td class="r">'+eur(a.stake)+'</td>'+
-        '<td class="r pos">'+((+a.amount||0)>=0?'+':'')+eur(a.amount)+'</td>'+
-        '<td class="r">'+((+a.roi||0)>=0?'+':'')+(+a.roi||0).toFixed(2)+' %</td></tr>';
+        '<td class="r" style="color:var(--neg)">−'+eur(a.fee)+'</td>'+
+        '<td class="r pos">'+((+a.amount||0)>=0?'+':'')+eur(a.amount)+'</td></tr>';
     }).join('');
-  })();
+  }
+
+  document.getElementById('period').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b)return; period=b.dataset.p;
+    document.querySelectorAll('#period button').forEach(function(x){x.classList.toggle('active',x===b);});
+    render();
+  });
+  render();
 })();
 </script>
 </body>
