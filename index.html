@@ -399,7 +399,7 @@
               <input class="inp num" id="feePm" type="number" step="0.5" min="0" value="0" title="Polymarket-Gebühr %">
               <input class="inp num" id="feeOb" type="number" step="0.5" min="0" value="3" title="Orbit-Gebühr % (Betfair-Kommission)">
             </div></div>
-          <div class="field"><label>Orbit-Proxy-URL (für Live-Kurse)</label><input class="inp" id="obProxy" placeholder="https://noexklrgtqveiclijdwp.supabase.co/functions/v1/ob-proxy" autocomplete="off"></div>
+          <div class="field"><label>Orbit-Proxy-URL (für Live-Kurse)</label><input class="inp" id="obProxy" value="https://noexklrgtqveiclijdwp.supabase.co/functions/v1/ob-proxy" autocomplete="off"></div>
           <div class="field"><label>Standard-Einsatz (empfohlen)</label><input class="inp num" id="stdStake" type="number" step="25" min="0" value="100"></div>
           <label class="toggle" id="tgAuto" tabindex="0" role="switch" aria-checked="false"><span>Auto-Pilot<small>nur im Demo-Modus — setzt bei Hit automatisch</small></span><span class="sw"></span></label>
         </div>
@@ -522,7 +522,7 @@ var state={
   cat:'Alle', src:'all', sort:'arb', search:'', minRoi:0, onlyOpp:false, hitTh:0.5,
   hits:0, closed:0, log:[], unread:0,
   accounts:{pm:{status:'…'}, ob:{status:'offline'}}, srcOn:{pm:true, ob:true},
-  balPm:0, balOb:0, feePm:0, feeOb:3, obProxy:'', stdStake:100, autopilot:false, placed:0, secured:0,
+  balPm:0, balOb:0, feePm:0, feeOb:3, obProxy:'https://noexklrgtqveiclijdwp.supabase.co/functions/v1/ob-proxy', stdStake:100, autopilot:false, placed:0, secured:0,
   ticketId:null, ticketStake:100, ticketDirty:false,
   lastUpd:0, polling:false, pmErr:''
 };
@@ -601,7 +601,7 @@ function pollOB(){
   return fetchJSON(state.obProxy,7000).then(function(res){
     // Proxy liefert [{key,o1,o2}] ODER {configured, data:[…]}
     var arr = Array.isArray(res) ? res : ((res && res.data) || []);
-    state.accounts.ob.status = (res && res.configured === false) ? 'offline' : 'live';
+    state.accounts.ob.status = (res && res.configured === false) ? 'needkey' : 'live';
     var byKey={}; arr.forEach(function(d){ if(d&&d.key)byKey[d.key]=d; });
     mkMap.forEach(function(mk){ var d=byKey[mk.ev]; mk.ob = d?{o1:+d.o1,o2:+d.o2}:null; });
   }).catch(function(){ state.accounts.ob.status='error'; });
@@ -667,6 +667,7 @@ function statusText(k){
   if(s==='live')return['live','Live verbunden — klick zum Trennen'];
   if(s==='error')return['err','Getrennt / Fehler'];
   if(s==='demo')return['demo','Demo (simuliert)'];
+  if(s==='needkey')return['demo','Proxy erreichbar · Betfair-Zugang fehlt'];
   if(s==='offline')return['','Getrennt · Proxy nötig'];
   return['','…'];
 }
@@ -680,11 +681,11 @@ function updateAccountsUI(){
   }).join('');
   $('#plCount').textContent=state.placed;
   $('#plSecured').textContent='+'+eur(state.secured);
-  var dm={live:'live',error:'err',demo:'demo',offline:'',off:''};
+  var dm={live:'live',error:'err',demo:'demo',needkey:'demo',offline:'',off:''};
   [['pm','dPm','sPm'],['ob','dOb','sOb']].forEach(function(t){
     var k=t[0], s=state.srcOn[k]?state.accounts[k].status:'off';
     $('#'+t[1]).className='d '+(dm[s]||'');
-    $('#'+t[2]).textContent = !state.srcOn[k]?'aus':(s==='live'?'Live':(s==='demo'?'Demo':(s==='error'?'Fehler':(s==='offline'?'aus':'…'))));
+    $('#'+t[2]).textContent = !state.srcOn[k]?'aus':(s==='live'?'Live':(s==='demo'?'Demo':(s==='needkey'?'Proxy':(s==='error'?'Fehler':(s==='offline'?'aus':'…')))));
   });
 }
 
