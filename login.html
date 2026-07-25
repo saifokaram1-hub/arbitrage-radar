@@ -85,10 +85,19 @@
         if(prof && prof.banned){ await sb.auth.signOut(); throw new Error('Dieser Account wurde gesperrt.'); }
         location.replace('index.html');
       } else {
-        var res = await sb.auth.signUp({ email:em, password:p });
-        if(res.error) throw res.error;
-        if(res.data.session){ location.replace('index.html'); }
-        else { show('ok','Konto erstellt. Falls E-Mail-Bestätigung aktiv ist: bitte Postfach prüfen, dann anmelden.'); setMode('login'); }
+        try {
+          var res = await sb.auth.signUp({ email:em, password:p });
+          if(res.error) throw res.error;
+          if(res.data.session){ location.replace('index.html'); return; }
+        } catch(su){
+          // Konto ist durch Auto-Confirm sofort nutzbar — E-Mail-/SMTP-Meldungen ignorieren und direkt einloggen
+          if(!/confirmation|sending|smtp|rate|email/i.test((su&&su.message)||'')) throw su;
+        }
+        var si = await sb.auth.signInWithPassword({ email:em, password:p });
+        if(si.error) throw si.error;
+        var prof2 = (await sb.rpc('my_profile')).data;
+        if(prof2 && prof2.banned){ await sb.auth.signOut(); throw new Error('Dieser Account wurde gesperrt.'); }
+        location.replace('index.html');
       }
     }catch(err){
       var m=(err&&err.message)||String(err);
