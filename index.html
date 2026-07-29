@@ -159,6 +159,9 @@
   .ev .name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ev .meta{display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap}
   .cattg{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line2);padding:1px 6px}
+  .dnp{font-size:8.5px;letter-spacing:.06em;font-weight:700;padding:1px 5px;border:1px solid;cursor:help}
+  .dnp.hoch{color:#d98c4a;border-color:#7a5220}
+  .dnp.mittel{color:#c9c060;border-color:#5f5a20}
   .liq{font-size:9.5px;color:var(--dim);font-family:var(--mono)}
   .age{font-size:10px;color:var(--dim);font-family:var(--mono)}
   .age .adot{display:inline-block;width:6px;height:6px;background:var(--pos);margin-right:4px;vertical-align:middle}
@@ -452,6 +455,7 @@
           <div class="field"><label>Quelle</label><div class="chips" id="srcChips"><button class="chip active" data-src="all">Alle</button><button class="chip" data-src="cross">Nur Cross-Book</button><button class="chip" data-src="pm">Nur Polymarket</button><button class="chip" data-src="ob">Nur Orbit</button></div></div>
           <div class="field rangewrap"><div class="rr"><label>Min. Rendite</label><b id="minRoiVal">0,0 %</b></div><input type="range" id="fMinRoi" min="0" max="8" step="0.1" value="0"></div>
           <label class="toggle" id="tgOpp" tabindex="0" role="switch" aria-checked="false"><span>Nur echte Chancen<small>Arb-% ≥ 100 ausblenden</small></span><span class="sw"></span></label>
+          <label class="toggle" id="tgLowRisk" tabindex="0" role="switch" aria-checked="false"><span>Nur risikoarm<small>DNP/Void-anfällige Märkte ausblenden</small></span><span class="sw"></span></label>
         </div>
       </section>
 
@@ -517,6 +521,7 @@
       </div>
       <div class="footnote" id="foot">
         <b>Datenquellen:</b> Polymarket = <b>echte Live-Kurse</b> über die öffentliche API (Arb-% = Summe der Kaufpreise beider Ausgänge · 100; unter 100 % = echter Vorteil). Echte Surebets innerhalb eines Buches sind selten — die großen Chancen entstehen <b>zwischen</b> Polymarket und Orbit; dafür Orbit-Proxy verbinden (siehe README im Repo). Orbit-Broker (Betfair-Exchange) braucht einen eigenen Proxy, da keine Browser-API. Kein Automatik-Echtgeld: das Ticket zeigt die exakte Aufteilung und öffnet den Markt zum manuellen Setzen. <b>Arb-% und Rendite sind netto</b> — die eingestellte Brokergebühr (Polymarket/Orbit) ist eingerechnet. Läuft, solange dieser Tab offen ist.
+        <br><br><b>DNP / Void-Regeln (Risiko-Management):</b> Bei Player-Props/Ausfällen zahlt <b>Polymarket</b> bei Nicht-Antreten meist <b>nicht</b> zurück (kein Void, oft „Last Fair Market Price"), <b>Orbit/Betfair</b> <b>voidet</b> (Non-Runner → Einsatz zurück). Baue die Position so, dass die DNP-Verlustseite auf Orbit liegt. Vor größeren Wetten die aktuellen Market Rules prüfen: „Does Not Play / Inactive / Void / Non-Runner / Last Fair Market Price / Participation". Die DNP?-Markierung im Tool ist eine Heuristik, keine Garantie.
       </div>
     </main>
   </div>
@@ -558,7 +563,7 @@ var CONFIG={
 };
 var state={
   mode:'live', running:true, sound:true, desktop:false,
-  cat:'Alle', src:'all', sort:'arb', search:'', minRoi:0, onlyOpp:false, hitTh:0.5,
+  cat:'Alle', src:'all', sort:'arb', search:'', minRoi:0, onlyOpp:false, onlyLowRisk:false, hitTh:0.5,
   hits:0, closed:0, log:[], unread:0,
   accounts:{pm:{status:'…'}, ob:{status:'offline'}}, srcOn:{pm:true, ob:true},
   balPm:0, balOb:0, feePm:0, feeOb:3, obProxy:'https://noexklrgtqveiclijdwp.supabase.co/functions/v1/ob-proxy', stdStake:100, autopilot:false, placed:0, secured:0,
@@ -881,16 +886,29 @@ function renderTicket(){
   else if(max<1e9&&S>max)reason='Guthaben reicht bis '+eur(max);
   $('#tkPlace').disabled=(isDemo? !!reason : !v.ok);
   $('#tkWarn').textContent=reason?('⚠ '+reason):'';
-  $('#tkNote').innerHTML=isDemo
+  var risk=dnpRisk(m.ev,m.cat);
+  var dnpNote = risk!=='niedrig'
+    ? '<div style="border:1px solid #7a5220;background:rgba(217,140,74,.08);padding:7px 9px;margin-bottom:8px;color:#d98c4a;line-height:1.5"><b>⚠ DNP / Void-Risiko</b> ('+(risk==='hoch'?'Player-Prop':'Tennis-Aufgabe')+'): Bei Nicht-Antreten zahlt <b>Polymarket meist NICHT zurück</b> (kein Void), <b>Orbit/Betfair voidet</b> (Einsatz zurück). Lege die Seite, die bei DNP verlieren würde, auf <b>Orbit</b>. AGBs prüfen: „Does Not Play / Void / Non-Runner". Heuristik — Regeln je Markt selbst checken.</div>'
+    : '';
+  $('#tkNote').innerHTML= dnpNote + (isDemo
     ? '<b>Beide Seiten</b> simuliert auf die Konten. Empfohlen = Standard-Einsatz, begrenzt durchs Guthaben.'
     : (v.cross? '<b>Cross-Book:</b> Ausgang 1 über '+(v.s1.src==='pm'?'Polymarket':'Orbit')+', Ausgang 2 über '+(v.s2.src==='pm'?'Polymarket':'Orbit')+'. Öffnet den Markt — Beträge oben manuell setzen.'
-             : 'Beide Ausgänge über Polymarket. Öffnet den Markt zum manuellen Setzen (kein Automatik-Echtgeld).');
+             : 'Beide Ausgänge über Polymarket. Öffnet den Markt zum manuellen Setzen (kein Automatik-Echtgeld).'));
 }
 
 /* ---- Render ---- */
 var CATS_FIX=['Alle','Krypto','Politik','Wirtschaft','Tennis','Basketball','Fußball','Sport','Über/Unter','Markt'];
 var CATCOLOR={'Alle':'#c7b24c','Krypto':'#E0A93B','Politik':'#C7574F','Wirtschaft':'#5B9BD5','Tennis':'#C9D24A','Basketball':'#E08544','Fußball':'#5FB56A','Sport':'#8FA35B','Über/Unter':'#A382D0','Markt':'#9a9a8c'};
 function catColor(c){return CATCOLOR[c]||'#9a9a8c';}
+// DNP/Void-Risiko: Player-Props zahlt Polymarket bei Nicht-Antreten meist NICHT zurück (kein Void),
+// Orbit/Betfair voidet (Rückzahlung). Heuristik -> Regeln bleiben zu prüfen.
+function dnpRisk(ev,cat){
+  var q=(ev||'').toLowerCase();
+  if(/strikeout|rebound|assist|to score|anytime|passing|receiving|rushing|\bhits\b|\bsaves\b|prop|points by|goals? by|\bo\/u\b/.test(q))return 'hoch';
+  if(cat==='Über/Unter')return 'hoch';
+  if(cat==='Tennis')return 'mittel';           // Aufgabe/Rückzug-Regeln
+  return 'niedrig';
+}
 function ageInfo(since){ if(!since)return{txt:'–',cls:'old'}; var s=Math.floor((Date.now()-since)/1000); return{txt:s+'s',cls:s<10?'':'stale'}; }
 function buildChips(){
   function dot(c){return '<span style="display:inline-block;width:7px;height:7px;background:'+catColor(c)+';margin-right:6px;vertical-align:middle"></span>';}
@@ -938,6 +956,7 @@ function render(){
 
   var view=all.filter(function(v){
     if(state.onlyOpp&&!(v.ok&&v.roi>0.02))return false;
+    if(state.onlyLowRisk && dnpRisk(v.m.ev,v.m.cat)!=='niedrig')return false;
     if(state.cat!=='Alle'&&v.m.cat!==state.cat)return false;
     if(state.src==='cross'&&!v.cross)return false;
     if(state.src==='pm' && !(v.s1.src==='pm'||v.s2.src==='pm'))return false;
@@ -959,6 +978,7 @@ function render(){
     var sign=v.roi>0?'+':'';
     return '<div class="r-o'+(hit?' hit':'')+(m.id===state.ticketId?' sel':'')+'" data-id="'+m.id+'">'+
       '<div class="ev"><div class="name">'+m.ev+'</div><div class="meta"><span class="cattg" style="color:'+catColor(m.cat)+';border-color:'+catColor(m.cat)+'66">'+m.cat+'</span>'+
+        (dnpRisk(m.ev,m.cat)!=='niedrig'?'<span class="dnp '+dnpRisk(m.ev,m.cat)+'" title="DNP/Void-Risiko: bei Nicht-Antreten zahlt Polymarket meist nicht zurück, Orbit voidet — Regeln prüfen">DNP?</span>':'')+
         (m.liq?'<span class="liq">Liq '+nf0.format(Math.round(m.liq))+' $</span>':'')+
         '<span class="age '+ag.cls+'"><span class="adot"></span>'+ag.txt+'</span></div></div>'+
       '<div class="side"><div class="oc">'+m.o1+'</div><div class="odds"><b>'+nf.format(v.s1.odds)+'</b><span class="src '+v.s1.src+'">'+(v.s1.src==='pm'?'PM':'OB')+'</span></div></div>'+
@@ -1002,6 +1022,7 @@ $('#fMinRoi').addEventListener('input',function(e){state.minRoi=+e.target.value;
 $('#fHitTh').addEventListener('input',function(e){state.hitTh=+e.target.value;$('#hitThVal').textContent=pct(state.hitTh,1);$('#kHitsSub').textContent='ab '+pct(state.hitTh,2)+' Rendite';});
 function bindToggle(sel,key,cb){var t=$(sel);function flip(){if(t.classList.contains('dis'))return;state[key]=!state[key];t.classList.toggle('on',state[key]);t.setAttribute('aria-checked',state[key]);if(cb)cb();}t.addEventListener('click',flip);t.addEventListener('keydown',function(ev){if(ev.key===' '||ev.key==='Enter'){ev.preventDefault();flip();}});}
 bindToggle('#tgOpp','onlyOpp',render);
+bindToggle('#tgLowRisk','onlyLowRisk',render);
 bindToggle('#tgAuto','autopilot');
 $('#balPm').addEventListener('input',function(e){state.balPm=Math.max(0,+e.target.value||0);updateAccountsUI();if(!state.ticketDirty)renderTicket();});
 $('#balOb').addEventListener('input',function(e){state.balOb=Math.max(0,+e.target.value||0);updateAccountsUI();if(!state.ticketDirty)renderTicket();});
@@ -1060,7 +1081,7 @@ function cycle(){
   chain.then(function(){ processSignals(); render(); });
 }
 /* ---- Präferenzen (pro User gespeichert) ---- */
-window.__collectPrefs=function(){ return {src:state.src,sort:state.sort,minRoi:state.minRoi,hitTh:state.hitTh,stdStake:state.stdStake,feePm:state.feePm,feeOb:state.feeOb,balPm:state.balPm,balOb:state.balOb,obProxy:state.obProxy,srcOn:state.srcOn,walletAddr:state.walletAddr}; };
+window.__collectPrefs=function(){ return {src:state.src,sort:state.sort,minRoi:state.minRoi,hitTh:state.hitTh,stdStake:state.stdStake,feePm:state.feePm,feeOb:state.feeOb,balPm:state.balPm,balOb:state.balOb,obProxy:state.obProxy,srcOn:state.srcOn,walletAddr:state.walletAddr,onlyLowRisk:state.onlyLowRisk}; };
 window.__applyPrefs=function(p){
   if(!p||typeof p!=='object')return;
   if(p.src){ state.src=p.src; document.querySelectorAll('#srcChips .chip').forEach(function(x){x.classList.toggle('active',x.dataset.src===p.src);}); }
@@ -1074,6 +1095,7 @@ window.__applyPrefs=function(p){
   if(p.balOb!=null){ state.balOb=+p.balOb; $('#balOb').value=p.balOb; }
   if(p.obProxy){ state.obProxy=p.obProxy; $('#obProxy').value=p.obProxy; }
   if(p.walletAddr){ state.walletAddr=p.walletAddr; $('#walletAddr').value=p.walletAddr; refreshWallet(); }
+  if(typeof p.onlyLowRisk==='boolean'){ state.onlyLowRisk=p.onlyLowRisk; var tlr=$('#tgLowRisk'); tlr.classList.toggle('on',p.onlyLowRisk); tlr.setAttribute('aria-checked',p.onlyLowRisk); }
   if(p.srcOn&&typeof p.srcOn==='object'){ if(typeof p.srcOn.pm==='boolean')state.srcOn.pm=p.srcOn.pm; if(typeof p.srcOn.ob==='boolean')state.srcOn.ob=p.srcOn.ob; }
   updateAccountsUI(); render();
 };
