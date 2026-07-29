@@ -258,6 +258,28 @@
   .footnote b{color:var(--muted)}
   .footnote a{color:var(--gold)}
 
+  .scanbar{display:flex;align-items:center;gap:16px;padding:11px 20px;border-bottom:1px solid var(--line2);background:linear-gradient(180deg,#0a0b07,#080905)}
+  .radar{width:76px;height:50px;flex:none;position:relative;border:1px solid var(--line3);background:#080905;overflow:hidden}
+  .radar .grid{position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:11px 11px;opacity:.6}
+  .radar .sweep{position:absolute;top:0;bottom:0;width:2px;left:-2px;background:linear-gradient(180deg,var(--gold-b),transparent);box-shadow:0 0 14px var(--gold);animation:sweep 1.8s linear infinite}
+  .radar.off .sweep{animation:none;opacity:.2}
+  @keyframes sweep{0%{left:-2px}100%{left:100%}}
+  .radar .blip{position:absolute;top:50%;left:50%;width:6px;height:6px;margin:-3px 0 0 -3px;background:var(--pos);box-shadow:0 0 8px var(--pos);opacity:0}
+  .radar .blip.show{animation:blip 1s ease}
+  @keyframes blip{0%{opacity:1;transform:scale(.4)}100%{opacity:0;transform:scale(1.8)}}
+  .scaninfo{flex:1;min-width:0}
+  .scanline{font-size:12px;color:var(--muted);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .scanline b{color:var(--gold-b);letter-spacing:.14em}
+  .scanline .livedot{display:inline-block;width:8px;height:8px;background:var(--pos);box-shadow:0 0 8px var(--pos);margin-right:7px;vertical-align:middle;animation:pulse 1.2s infinite}
+  .scanline .livedot.off{background:var(--dim);box-shadow:none;animation:none}
+  .scanticker{font-size:11px;color:var(--dim);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono)}
+  .scanticker .op{color:var(--txt)}
+  .scanstats{display:flex;gap:20px;flex:none}
+  .scanstats .ss{text-align:right}
+  .scanstats .ssv{font-family:var(--mono);font-size:20px;font-weight:600;line-height:1}
+  .scanstats .ssv.gold{color:var(--gold-b)}.scanstats .ssv.pos{color:var(--pos)}
+  .scanstats .ssl{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+  @media(max-width:760px){.scanstats .ss:nth-child(3){display:none}.radar{display:none}}
   @media(max-width:1080px){.kpis{grid-template-columns:repeat(3,1fr)}.kpi:nth-child(4),.kpi:nth-child(5){border-top:1px solid var(--line)}}
   @media(max-width:900px){.srcs{display:none}.poll{display:none}}
   @media(max-width:860px){
@@ -280,6 +302,8 @@
   window.__ar = {
     logConn:function(book,label){ try{ sb.rpc('log_connection',{p_book:book,p_label:(label||'').slice(0,120)}); }catch(e){} },
     logAct:function(kind,market,amount,roi,stake,book,fee,cat){ try{ sb.rpc('log_activity',{p_kind:kind,p_market:(market||'').slice(0,140),p_amount:amount||0,p_roi:roi||0,p_stake:stake||0,p_book:book||null,p_fee:fee||0,p_cat:cat||null}); }catch(e){} },
+    logOpp:function(event,cat,edge,arb,books){ try{ sb.rpc('log_opportunity',{p_event:(event||'').slice(0,120),p_cat:cat||null,p_edge:edge||0,p_arb:arb||0,p_books:books||null}); }catch(e){} },
+    scanStats:function(){ return sb.rpc('scan_stats'); },
     prefs:(prof && prof.prefs) || {},
     _pt:null,
     savePrefs:function(p){ var self=this; if(self._pt)clearTimeout(self._pt); self._pt=setTimeout(function(){ try{ sb.rpc('save_prefs',{p:p}); }catch(e){} },900); }
@@ -383,6 +407,19 @@
     <div class="kpi pos"><div class="lab">Beste Rendite</div><div class="val num" id="kBest">–</div><div class="sub">aktuell offen</div></div>
     <div class="kpi"><div class="lab">Ø Rendite</div><div class="val num" id="kAvg">–</div><div class="sub">über offene Chancen</div></div>
     <div class="kpi"><div class="lab">Fenster geschlossen</div><div class="val num" id="kClosed">0</div><div class="sub">seit Start</div></div>
+  </div>
+
+  <div class="scanbar" id="scanbar">
+    <div class="radar" id="radar"><div class="grid"></div><div class="sweep"></div><div class="blip" id="radarBlip"></div></div>
+    <div class="scaninfo">
+      <div class="scanline"><span class="livedot" id="sbDot"></span><b id="sbState">SCANNE</b> · Polymarket + Orbit · <span id="sbMarkets">0</span> Märkte · <span id="sbUpd">verbinde …</span></div>
+      <div class="scanticker" id="sbTicker">Suche nach Arbitrage-Fenstern …</div>
+    </div>
+    <div class="scanstats">
+      <div class="ss"><div class="ssv gold" id="sb24h">–</div><div class="ssl">Chancen / 24 h</div></div>
+      <div class="ss"><div class="ssv" id="sbOpen">0</div><div class="ssl">jetzt offen</div></div>
+      <div class="ss"><div class="ssv pos" id="sbRange">–</div><div class="ssl">Rendite-Range</div></div>
+    </div>
   </div>
 
   <div class="work">
@@ -655,7 +692,7 @@ function demoTick(){
 function processSignals(){
   markets().forEach(function(mk){
     var v=evalMarket(mk); var opp=v.ok&&v.roi>0.02;
-    if(opp){ if(!mk.since)mk.since=Date.now();
+    if(opp){ if(!mk.since){ mk.since=Date.now(); flashBlip(); if(state.mode!=='demo' && window.__ar&&window.__ar.logOpp)window.__ar.logOpp(mk.ev,mk.cat,v.roi,v.arbPct,v.s1.src+'/'+v.s2.src); }
       if(v.roi>=state.hitTh){ if(!mk.wasHit){mk.wasHit=true; fireHit(v);} }
       else if(v.roi<state.hitTh*0.6)mk.wasHit=false;
     } else { if(mk.since){state.closed++; mk.since=0;} mk.wasHit=false; }
@@ -884,6 +921,21 @@ function render(){
   $('#pollInfo').textContent=state.mode==='demo'?'Demo-Modus · simuliert':(state.accounts.pm.status==='error'?('Polymarket getrennt: '+state.pmErr):('Poll alle '+(CONFIG.POLL_MS/1000)+' s · '+all.length+' Märkte live'));
   updateAccountsUI(); renderTicket();
 
+  // Scan-Banner (Animation + Live-Anzeige)
+  if($('#sbMarkets')){
+    $('#sbMarkets').textContent=all.length;
+    $('#sbUpd').textContent=state.lastUpd?('zuletzt '+t):'verbinde …';
+    $('#sbOpen').textContent=opps.length;
+    if(opps.length){ var rs=opps.map(function(v){return v.roi;}); $('#sbRange').textContent='+'+Math.min.apply(null,rs).toFixed(1)+'–'+Math.max.apply(null,rs).toFixed(1)+' %'; }
+    else $('#sbRange').textContent='–';
+    $('#sbTicker').innerHTML = opps.length
+      ? opps.slice(0,4).map(function(v){return '<span class="op">'+v.m.ev+'</span> +'+pct(v.roi,2);}).join('  ·  ')
+      : (all.length? 'Kein offenes Fenster gerade — Scanner läuft weiter.' : 'Verbinde mit den Quellen …');
+    $('#radar').classList.toggle('off',!state.running);
+    $('#sbDot').classList.toggle('off',!state.running);
+    $('#sbState').textContent=state.mode==='demo'?'DEMO-SCAN':(state.running?'SCANNE':'PAUSE');
+  }
+
   var view=all.filter(function(v){
     if(state.onlyOpp&&!(v.ok&&v.roi>0.02))return false;
     if(state.cat!=='Alle'&&v.m.cat!==state.cat)return false;
@@ -1035,6 +1087,11 @@ drawGlyph(); setRunning(true); updateCalc(); updateAccountsUI();
 cycle();
 setInterval(cycle, CONFIG.POLL_MS);
 setInterval(function(){ render(); }, 1000);  // Frische/Alter aktualisieren
+
+function flashBlip(){ var b=$('#radarBlip'); if(!b)return; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); }
+function updateScanStats(){ if(window.__ar&&window.__ar.scanStats){ window.__ar.scanStats().then(function(r){ if(r&&r.data&&$('#sb24h'))$('#sb24h').textContent=r.data.count24h; }).catch(function(){}); } }
+updateScanStats();
+setInterval(updateScanStats, 20000);
 })();
 </script>
 </body>
