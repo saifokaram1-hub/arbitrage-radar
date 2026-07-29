@@ -417,6 +417,7 @@
     <div class="scaninfo">
       <div class="scanline"><span class="livedot" id="sbDot"></span><b id="sbState">SCANNE</b> · Polymarket + Orbit · <span id="sbMarkets">0</span> Märkte · <span id="sbUpd">verbinde …</span></div>
       <div class="scanticker" id="sbTicker">Suche nach Arbitrage-Fenstern …</div>
+      <div id="sbAnalyse" style="font-size:10.5px;color:var(--dim);font-family:var(--mono);margin-top:3px">Scan-Analyse sammelt Daten — wird mit der Zeit genauer …</div>
     </div>
     <div class="scanstats">
       <div class="ss"><div class="ssv gold" id="sb24h">–</div><div class="ssl">Chancen / 24 h</div></div>
@@ -776,7 +777,7 @@ $('#walletAddr').addEventListener('change',function(e){
   state.walletAddr=e.target.value.trim(); refreshWallet();
   if(window.__ar&&window.__ar.savePrefs&&window.__collectPrefs)window.__ar.savePrefs(window.__collectPrefs());
 });
-setInterval(function(){ if(validAddr(state.walletAddr))refreshWallet(); }, 45000);
+setInterval(function(){ if(validAddr(state.walletAddr))refreshWallet(); }, 15000);
 
 /* ---- Einsatz-Aufteilung ---- */
 function routing(v,S){
@@ -1111,7 +1112,21 @@ setInterval(cycle, CONFIG.POLL_MS);
 setInterval(function(){ render(); }, 1000);  // Frische/Alter aktualisieren
 
 function flashBlip(){ var b=$('#radarBlip'); if(!b)return; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); }
-function updateScanStats(){ if(window.__ar&&window.__ar.scanStats){ window.__ar.scanStats().then(function(r){ if(r&&r.data&&$('#sb24h'))$('#sb24h').textContent=r.data.count24h; }).catch(function(){}); } }
+function agoTxt(ts){ if(!ts)return '—'; var s=(Date.now()-new Date(ts).getTime())/1000; if(s<60)return 'gerade'; if(s<3600)return Math.floor(s/60)+' min'; if(s<86400)return Math.floor(s/3600)+' h '+Math.floor((s%3600)/60)+' min'; return Math.floor(s/86400)+' Tagen'; }
+function bookLbl(b){ if(!b)return '—'; return b.replace('pm','Polymarket').replace('ob','Orbit').replace('/',' + '); }
+function updateScanStats(){
+  if(!(window.__ar&&window.__ar.scanStats))return;
+  window.__ar.scanStats().then(function(r){
+    var d=r&&r.data; if(!d)return;
+    if($('#sb24h'))$('#sb24h').textContent=d.count24h;
+    if($('#sbAnalyse')){
+      var rate=d.count24h||0;
+      var interval= rate>0 ? ('~alle '+(24/rate).toFixed(1)+' h') : '—';
+      var last= d.last ? ('vor '+agoTxt(d.last.created_at)+' · '+bookLbl(d.last.books)+(d.last.cat?' ('+d.last.cat+')':'')) : 'noch keiner';
+      $('#sbAnalyse').innerHTML='Fund-Rate: <b style="color:var(--muted)">~'+rate+'/Tag</b> · Ø-Abstand '+interval+' · letzter Fund: <b style="color:var(--muted)">'+last+'</b> · Basis '+(d.total||0)+' Funde';
+    }
+  }).catch(function(){});
+}
 updateScanStats();
 setInterval(updateScanStats, 20000);
 })();
