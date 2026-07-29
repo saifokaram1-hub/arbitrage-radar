@@ -283,6 +283,24 @@
   .scanstats .ssv.gold{color:var(--gold-b)}.scanstats .ssv.pos{color:var(--pos)}
   .scanstats .ssl{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:3px}
   @media(max-width:760px){.scanstats .ss:nth-child(3){display:none}.radar{display:none}}
+  #srcPanel{position:fixed;z-index:80;width:270px;display:none;border:1px solid var(--line3);background:linear-gradient(180deg,#0d0f0a,#080905);box-shadow:0 20px 50px rgba(0,0,0,.6)}
+  #srcPanel .sh{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:1px solid var(--line2)}
+  #srcPanel .sh b{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+  #srcPanel .sh .x{cursor:pointer;color:var(--dim);font-size:16px;line-height:1}
+  #srcPanel .sh .x:hover{color:var(--txt)}
+  #srcPanel .sb2{padding:12px 13px;display:flex;flex-direction:column;gap:9px}
+  #srcPanel .st2{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+  #srcPanel .st2 .d{width:8px;height:8px;background:var(--dim)}
+  #srcPanel .st2 .d.live{background:var(--pos);box-shadow:0 0 6px var(--pos)}
+  #srcPanel .st2 .d.err{background:var(--neg)}
+  #srcPanel .st2 .d.demo{background:var(--gold)}
+  #srcPanel label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  #srcPanel .in2{height:32px;padding:0 9px;background:#0b0c07;border:1px solid var(--line2);color:var(--txt);font-size:11px;font-family:var(--mono)}
+  #srcPanel .tgl{height:34px;border:1px solid var(--line3);background:#0a0b06;color:var(--txt);font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+  #srcPanel .tgl.on{border-color:var(--gold-d);color:var(--gold-b);background:#1a1608}
+  #srcPanel .bal2{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+  #srcPanel .nt{font-size:9.5px;color:var(--dim);line-height:1.5}
+  #srcPanel .nt b{color:var(--muted)}
   @media(max-width:1080px){.kpis{grid-template-columns:repeat(3,1fr)}.kpi:nth-child(4),.kpi:nth-child(5){border-top:1px solid var(--line)}}
   @media(max-width:900px){.srcs{display:none}.poll{display:none}}
   @media(max-width:860px){
@@ -529,6 +547,7 @@
 
   <div class="logpop" id="logPop"><div class="lh"><b>Hit-Verlauf</b><button id="logClear">Leeren</button></div><div class="loglist" id="logList"><div class="logempty">Noch keine Hits.</div></div></div>
   <div class="toasts" id="toasts"></div>
+  <div id="srcPanel"></div>
 
   <div id="histPop" style="position:fixed;inset:0;z-index:70;background:rgba(4,5,3,.74);display:none;align-items:center;justify-content:center;padding:20px">
     <div style="width:720px;max-width:100%;max-height:88vh;overflow-y:auto;border:1px solid var(--line3);background:linear-gradient(180deg,#0c0d08,#070804)">
@@ -560,7 +579,7 @@ function calcArb(q1,q2,S){
 var CONFIG={
   GAMMA:'https://gamma-api.polymarket.com/markets',
   CLOB:'https://clob.polymarket.com',
-  POLL_MS:12000, MAX:18, MIN_LIQ:400
+  POLL_MS:5000, MAX:18, MIN_LIQ:400
 };
 var state={
   mode:'live', running:true, sound:true, desktop:false,
@@ -595,20 +614,26 @@ function categorize(q){
   return'Markt';
 }
 
-/* ---- Polymarket: echte Live-Daten ---- */
+/* ---- Polymarket: echte Live-Daten (Liste gecacht 30s, Kurse jeden Zyklus) ---- */
+var pmPicks=[], lastGamma=0;
 function pollPM(){
   if(state.polling)return Promise.resolve();
   state.polling=true;
-  return fetchJSON(CONFIG.GAMMA+'?closed=false&active=true&limit=80&order=volume&ascending=false',9000)
-    .then(function(list){
-      var picks=[];
-      for(var i=0;i<list.length && picks.length<CONFIG.MAX;i++){
-        var m=list[i]; var outs=parseArr(m.outcomes), toks=parseArr(m.clobTokenIds);
-        if(!outs||outs.length!==2||!toks||toks.length!==2||!m.enableOrderBook)continue;
-        if(parseFloat(m.liquidity||0)<CONFIG.MIN_LIQ)continue;
-        picks.push({m:m,outs:outs,toks:toks});
-      }
-      return Promise.all(picks.map(function(p){
+  var needList=(Date.now()-lastGamma>30000)||pmPicks.length===0;
+  var listP = needList
+    ? fetchJSON(CONFIG.GAMMA+'?closed=false&active=true&limit=80&order=volume&ascending=false',9000).then(function(list){
+        var picks=[];
+        for(var i=0;i<list.length && picks.length<CONFIG.MAX;i++){
+          var m=list[i]; var outs=parseArr(m.outcomes), toks=parseArr(m.clobTokenIds);
+          if(!outs||outs.length!==2||!toks||toks.length!==2||!m.enableOrderBook)continue;
+          if(parseFloat(m.liquidity||0)<CONFIG.MIN_LIQ)continue;
+          picks.push({m:m,outs:outs,toks:toks});
+        }
+        pmPicks=picks; lastGamma=Date.now();
+      })
+    : Promise.resolve();
+  return listP.then(function(){
+      return Promise.all(pmPicks.map(function(p){
         return Promise.all([
           // side=sell liefert den ASK (Kaufpreis, den du zahlst) — nicht den Bid!
           fetchJSON(CONFIG.CLOB+'/price?token_id='+p.toks[0]+'&side=sell',7000),
@@ -721,7 +746,7 @@ function updateAccountsUI(){
   $('#acctList').innerHTML=ACC.map(function(a){
     var k=a[0], st=statusText(k), on=state.srcOn[k]&&(st[0]==='live'||st[0]==='demo');
     var bal=k==='pm'?state.balPm:state.balOb;
-    return '<div class="acct '+k+(on?' on':'')+'" data-acct="'+k+'" style="cursor:pointer;user-select:none" title="Klicken: '+(state.srcOn[k]?'trennen':'verbinden')+'"><div class="ai"><span class="aico">'+a[2]+'</span>'+
+    return '<div class="acct '+k+(on?' on':'')+'" data-acct="'+k+'" style="cursor:pointer;user-select:none" title="Klicken für Konto verbinden &amp; Einstellungen"><div class="ai"><span class="aico">'+a[2]+'</span>'+
       '<span><span class="an">'+a[1]+'</span><span class="as"><span class="d '+st[0]+'"></span>'+st[1]+'</span></span></div>'+
       '<span class="num" style="font-size:12px;color:'+(bal>0?'var(--txt)':'var(--dim)')+'">'+eur(bal)+'</span></div>';
   }).join('');
@@ -735,16 +760,39 @@ function updateAccountsUI(){
   });
 }
 
-// Quelle anklicken -> verbinden/trennen; getrennte Quelle zeigt keine Angebote mehr
+// Quelle anklicken -> Konto-Panel (verbinden/trennen + Konto)
+function saveNow(){ if(window.__ar&&window.__ar.savePrefs&&window.__collectPrefs)window.__ar.savePrefs(window.__collectPrefs()); }
+function toggleSrc(k){ state.srcOn[k]=!state.srcOn[k]; if(k==='pm'&&!state.srcOn.pm)mkMap.clear(); if(k==='ob'&&!state.srcOn.ob)mkMap.forEach(function(mk){mk.ob=null;}); updateAccountsUI(); render(); saveNow(); cycle(); }
+function openSrcPanel(k,x,y){
+  var pop=$('#srcPanel'); var st=statusText(k), on=state.srcOn[k];
+  var name=k==='pm'?'Polymarket':'Orbit-Broker (96ex)';
+  var body='<div class="sh"><b>'+name+'</b><span class="x">✕</span></div><div class="sb2">'+
+    '<div class="st2"><span class="d '+st[0]+'"></span>'+st[1]+'</div>'+
+    '<button class="tgl'+(on?' on':'')+'" data-tgl>'+(on?'Verbunden — trennen':'Getrennt — verbinden')+'</button>';
+  if(k==='pm'){
+    body+='<label>Dein Polymarket-Wallet (read-only · live USDC)</label>'+
+      '<input class="in2" id="sp_wallet" placeholder="0x…" value="'+(state.walletAddr||'')+'">'+
+      '<div class="bal2" id="sp_bal">'+(($('#walletBal')&&$('#walletBal').innerHTML)||'')+'</div>'+
+      '<div class="nt">Nur <b>lesen</b> — keine Schlüssel. Das ist dein „Konto verbinden" für Polymarket (Guthaben live).</div>';
+  } else {
+    body+='<label>Orbit-Proxy-URL</label><input class="in2" id="sp_proxy" value="'+(state.obProxy||'')+'">'+
+      '<div class="nt"><b>Echte Kurse:</b> Betfair/96ex App-Key als Secret nötig — kein Passwort im Tool.</div>';
+  }
+  pop.innerHTML=body+'</div>'; pop.style.display='block';
+  var pw=270, ph=pop.offsetHeight||280;
+  pop.style.left=Math.max(8,Math.min(x, window.innerWidth-pw-12))+'px';
+  pop.style.top=Math.max(8,Math.min(y, window.innerHeight-ph-12))+'px';
+  pop.querySelector('.x').onclick=function(){pop.style.display='none';};
+  pop.querySelector('[data-tgl]').onclick=function(){ toggleSrc(k); openSrcPanel(k, parseInt(pop.style.left,10), parseInt(pop.style.top,10)); };
+  if(k==='pm'){ var w=pop.querySelector('#sp_wallet'); w.onchange=function(){ state.walletAddr=w.value.trim(); $('#walletAddr').value=state.walletAddr; refreshWallet(); saveNow(); setTimeout(function(){ var sb=$('#sp_bal'),wb=$('#walletBal'); if(sb&&wb)sb.innerHTML=wb.innerHTML; },1500); }; }
+  else { var p=pop.querySelector('#sp_proxy'); p.onchange=function(){ state.obProxy=p.value.trim(); $('#obProxy').value=state.obProxy; saveNow(); }; }
+}
 $('#acctList').addEventListener('click',function(e){
   var card=e.target.closest('[data-acct]'); if(!card)return;
-  var k=card.dataset.acct; state.srcOn[k]=!state.srcOn[k];
-  if(k==='pm'&&!state.srcOn.pm)mkMap.clear();
-  if(k==='ob'&&!state.srcOn.ob)mkMap.forEach(function(mk){mk.ob=null;});
-  updateAccountsUI(); render();
-  if(window.__ar&&window.__ar.savePrefs&&window.__collectPrefs)window.__ar.savePrefs(window.__collectPrefs());
-  cycle();
+  var r=card.getBoundingClientRect(); openSrcPanel(card.dataset.acct, r.left, r.bottom+6);
 });
+document.addEventListener('click',function(e){ var pop=$('#srcPanel'); if(pop&&pop.style.display==='block'&&!pop.contains(e.target)&&!e.target.closest('[data-acct]'))pop.style.display='none'; });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){var pop=$('#srcPanel'); if(pop)pop.style.display='none';} });
 
 /* ---- Wallet-Guthaben (read-only, live USDC auf Polygon) ---- */
 var RPCS=['https://1rpc.io/matic','https://polygon-bor-rpc.publicnode.com','https://polygon.drpc.org'];
