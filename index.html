@@ -666,6 +666,31 @@ function mergeMarkets(fresh){
   Array.from(mkMap.keys()).forEach(function(id){ if(mkMap.get(id).demo)return; if(!seen[id])mkMap.delete(id); });
 }
 
+/* ---- Polymarket WebSocket: Echtzeit-Kurse (Bestpreis = min der asks, verifiziert) ---- */
+var ws=null, wsTokenMap={}, wsBooks={}, wsSubKey='', _wsRT=0;
+function wsBestAsk(assetId){ var m=wsBooks[assetId]; if(!m)return null; var best=null; for(var pr in m){ var pf=+pr; if(m[pr]>0 && pf>0 && pf<1){ if(best===null||pf<best)best=pf; } } return best; }
+function wsApply(assetId){ var info=wsTokenMap[assetId]; if(!info)return; var mk=mkMap.get(info.mktId); if(!mk)return; var ba=wsBestAsk(assetId); if(ba===null)return; if(info.slot===0)mk.ask0=ba; else mk.ask1=ba; var now=Date.now(); if(now-_wsRT>=300){ _wsRT=now; processSignals(); render(); } }
+function wsBuildIds(){ wsTokenMap={}; var ids=[]; pmPicks.forEach(function(p){ var id='pm_'+p.m.id; wsTokenMap[p.toks[0]]={mktId:id,slot:0}; wsTokenMap[p.toks[1]]={mktId:id,slot:1}; ids.push(p.toks[0],p.toks[1]); }); return ids; }
+function ensureWS(){
+  if(state.mode==='demo'||!state.srcOn.pm){ if(ws){try{ws.close();}catch(e){} ws=null;} state._wsOn=false; return; }
+  var ids=wsBuildIds(); if(!ids.length)return;
+  var key=ids.slice().sort().join(',');
+  if(ws && ws.readyState<=1 && key===wsSubKey)return;   // schon verbunden/abonniert
+  if(ws){ try{ws.close();}catch(e){} ws=null; }
+  try{
+    ws=new WebSocket('wss://ws-subscriptions-clob.polymarket.com/ws/market');
+    ws.onopen=function(){ wsSubKey=key; state._wsOn=true; try{ws.send(JSON.stringify({assets_ids:ids, type:'market'}));}catch(e){} };
+    ws.onmessage=function(ev){ var d; try{d=JSON.parse(ev.data);}catch(e){return;} var arr=Array.isArray(d)?d:[d];
+      arr.forEach(function(m){ if(!m||!m.asset_id)return;
+        if(m.event_type==='book'){ var mp={}; (m.asks||[]).forEach(function(a){ mp[a.price]=+a.size; }); wsBooks[m.asset_id]=mp; wsApply(m.asset_id); }
+        else if(m.event_type==='price_change'){ var mp2=wsBooks[m.asset_id]||(wsBooks[m.asset_id]={}); (m.changes||[]).forEach(function(c){ if((c.side||'').toUpperCase()==='SELL'){ var sz=+c.size; if(sz>0)mp2[c.price]=sz; else delete mp2[c.price]; } }); wsApply(m.asset_id); }
+      });
+    };
+    ws.onclose=function(){ state._wsOn=false; ws=null; if(state.running && state.mode!=='demo' && state.srcOn.pm)setTimeout(ensureWS,3000); };
+    ws.onerror=function(){ try{ws.close();}catch(e){} };
+  }catch(e){ state._wsOn=false; }
+}
+
 /* ---- Orbit-Broker: nur über eigenen Proxy (Betfair hat keine Browser-API) ---- */
 function pollOB(){
   if(!state.obProxy){ state.accounts.ob.status='offline'; return Promise.resolve(); }
@@ -985,7 +1010,7 @@ function render(){
 
   var t=state.lastUpd?new Date(state.lastUpd).toLocaleTimeString('de-DE'):'–';
   $('#lastUpd').textContent='aktualisiert '+t;
-  $('#pollInfo').textContent=state.mode==='demo'?'Demo-Modus · simuliert':(state.accounts.pm.status==='error'?('Polymarket getrennt: '+state.pmErr):('Poll alle '+(CONFIG.POLL_MS/1000)+' s · '+all.length+' Märkte live'));
+  $('#pollInfo').textContent=state.mode==='demo'?'Demo-Modus · simuliert':(state.accounts.pm.status==='error'?('Polymarket getrennt: '+state.pmErr):(state._wsOn?('⚡ Echtzeit via WebSocket · '+all.length+' Märkte'):('Poll alle '+(CONFIG.POLL_MS/1000)+' s · '+all.length+' Märkte live')));
   updateAccountsUI(); renderTicket();
 
   // Scan-Banner (Animation + Live-Anzeige)
@@ -1000,7 +1025,7 @@ function render(){
       : (all.length? 'Kein offenes Fenster gerade — Scanner läuft weiter.' : 'Verbinde mit den Quellen …');
     $('#radar').classList.toggle('off',!state.running);
     $('#sbDot').classList.toggle('off',!state.running);
-    $('#sbState').textContent=state.mode==='demo'?'DEMO-SCAN':(state.running?'SCANNE':'PAUSE');
+    $('#sbState').textContent=state.mode==='demo'?'DEMO-SCAN':(state.running?(state._wsOn?'⚡ ECHTZEIT':'SCANNE'):'PAUSE');
   }
 
   var view=all.filter(function(v){
@@ -1123,11 +1148,11 @@ $('#modeSeg').addEventListener('click',function(e){
 /* ---- Hauptschleife ---- */
 function cycle(){
   if(!state.running)return;
-  if(state.mode==='demo'){ demoTick(); processSignals(); render(); return; }
+  if(state.mode==='demo'){ ensureWS(); demoTick(); processSignals(); render(); return; }
   var chain=Promise.resolve();
   if(state.srcOn.pm){ chain=chain.then(pollPM); } else { mkMap.clear(); state.accounts.pm.status='off'; }
   chain=chain.then(function(){ if(state.srcOn.ob){ return pollOB(); } state.accounts.ob.status='off'; mkMap.forEach(function(mk){mk.ob=null;}); });
-  chain.then(function(){ processSignals(); render(); });
+  chain.then(function(){ processSignals(); render(); ensureWS(); });
 }
 /* ---- Präferenzen (pro User gespeichert) ---- */
 window.__collectPrefs=function(){ return {src:state.src,sort:state.sort,minRoi:state.minRoi,hitTh:state.hitTh,stdStake:state.stdStake,feePm:state.feePm,feeOb:state.feeOb,balPm:state.balPm,balOb:state.balOb,obProxy:state.obProxy,srcOn:state.srcOn,walletAddr:state.walletAddr,onlyLowRisk:state.onlyLowRisk}; };
