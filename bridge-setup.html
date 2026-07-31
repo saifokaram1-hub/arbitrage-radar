@@ -119,15 +119,18 @@
 
     <!-- SCHRITT 3 -->
     <div class="step">
-      <div class="h"><span class="num">3</span><b>Bridge-Programm herunterladen<span class="sub">Ein kleiner Ordner mit 3 Dateien</span></b></div>
+      <div class="h"><span class="num">3</span><b>Bridge herunterladen<span class="sub">Ein einziger Befehl — kein Entpacken nötig</span></b></div>
       <div class="body">
         <ol>
-          <li>Auf den Knopf klicken — es lädt eine ZIP-Datei:
-            <br><a class="btnlink" href="https://github.com/saifokaram1-hub/arbitrage-radar/archive/refs/heads/main.zip" target="_blank" rel="noopener">Bridge herunterladen (ZIP) ↗</a></li>
-          <li>ZIP <b>entpacken</b> (Rechtsklick → „Alle extrahieren")</li>
-          <li>Im entpackten Ordner den Unterordner <b>bridge</b> öffnen</li>
-          <li>Diesen Ordner an einen Ort legen, den du wiederfindest — z. B. direkt nach <b>C:\bridge</b></li>
+          <li><b>PowerShell öffnen:</b> Windows-Taste drücken, <b>powershell</b> tippen, Enter</li>
+          <li>Den Befehl unten <b>kopieren</b>, ins schwarze/blaue Fenster <b>Rechtsklick</b> (fügt ein), <b>Enter</b> drücken:</li>
         </ol>
+        <div class="codebox">
+          <button class="copy" onclick="copyBox('dl')">Kopieren</button>
+          <pre id="dl">New-Item -ItemType Directory -Force C:\bridge | Out-Null; Invoke-WebRequest "https://raw.githubusercontent.com/saifokaram1-hub/arbitrage-radar/main/bridge/betfair-bridge.js" -OutFile C:\bridge\betfair-bridge.js; Write-Host "Fertig! Bridge liegt in C:\bridge"</pre>
+        </div>
+        <p>Erscheint <b>„Fertig! Bridge liegt in C:\bridge"</b> → alles gut. ✅</p>
+        <div class="hint"><b>PowerShell offen lassen</b> — du brauchst es gleich nochmal.</div>
       </div>
     </div>
 
@@ -135,9 +138,13 @@
     <div class="step">
       <div class="h"><span class="num">4</span><b>Zugangsdatei ausfüllen<span class="sub">Der wichtigste Schritt</span></b></div>
       <div class="body">
-        <p>Im Ordner <b>bridge</b> liegt die Datei <b>bridge-config.example.json</b>.
-        Benenne sie um in <b>bridge-config.json</b> (das „.example" entfernen), dann mit <b>Rechtsklick → Öffnen mit → Editor</b> öffnen.</p>
-        <p>Lösche alles darin und füge stattdessen das hier ein:</p>
+        <p>Diesen Befehl in dasselbe PowerShell-Fenster kopieren und Enter drücken — er öffnet den Editor:</p>
+        <div class="codebox">
+          <button class="copy" onclick="copyBox('mk')">Kopieren</button>
+          <pre id="mk">notepad C:\bridge\bridge-config.json</pre>
+        </div>
+        <p>Der Editor fragt: <b>„Möchten Sie eine neue Datei erstellen?"</b> → auf <b>Ja</b> klicken.</p>
+        <p>Dann den kompletten Text unten kopieren und in den leeren Editor einfügen:</p>
 
         <div class="codebox">
           <button class="copy" onclick="copyBox('cfg')">Kopieren</button>
@@ -176,20 +183,24 @@
     <div class="step">
       <div class="h"><span class="num">5</span><b>Bridge starten<span class="sub">Ab jetzt nur noch ein Befehl</span></b></div>
       <div class="body">
-        <ol>
-          <li>Den Ordner <b>bridge</b> im Explorer öffnen</li>
-          <li>Oben in die <b>Adresszeile</b> klicken, <b>cmd</b> eintippen und <b>Enter</b> drücken (öffnet ein schwarzes Fenster im richtigen Ordner)</li>
-          <li>Diesen Befehl eingeben und Enter drücken:</li>
-        </ol>
+        <p>Zurück ins PowerShell-Fenster — diesen Befehl kopieren, einfügen, Enter:</p>
         <div class="codebox">
           <button class="copy" onclick="copyBox('run')">Kopieren</button>
-          <pre id="run">node betfair-bridge.js</pre>
+          <pre id="run">cd C:\bridge; node betfair-bridge.js</pre>
         </div>
         <p>Wenn alles stimmt, erscheint sowas:</p>
         <div class="codebox"><pre style="color:var(--pos)">✅ Bei Betfair eingeloggt.
 📤 43 Quoten hochgeladen (z.B. Bayern vs Dortmund)</pre></div>
         <div class="hint"><b>Das Fenster muss offen bleiben</b>, solange gescannt werden soll. Zum Beenden: Fenster schließen oder <b>Strg+C</b>.</div>
         <p>Oben auf dieser Seite springt der Status dann auf <b style="color:var(--pos)">Live</b> — und in der App zeigt „Betfair / Orbit" ebenfalls Live. 🎉</p>
+        <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:14px">
+          <b style="color:var(--gold-b);font-size:13px">Beim nächsten Mal starten</b>
+          <p style="margin-top:6px">Schritte 1–4 sind einmalig. Ab jetzt reicht: PowerShell öffnen und diesen einen Befehl:</p>
+          <div class="codebox">
+            <button class="copy" onclick="copyBox('run2')">Kopieren</button>
+            <pre id="run2">cd C:\bridge; node betfair-bridge.js</pre>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -203,9 +214,11 @@
           <tr><td class="k">Token unbekannt</td><td>Das <b>bridgeToken</b> stimmt nicht. Oben nochmal kopieren und einsetzen.</td></tr>
           <tr><td class="k">Blockiert (HTML/Cloudflare)</td><td>VPN/Proxy ausschalten — die Bridge muss über deinen normalen Anschluss laufen.</td></tr>
           <tr><td class="k">node wird nicht erkannt</td><td>Node.js fehlt (Schritt 2) oder PC nach der Installation neu starten.</td></tr>
-          <tr><td class="k">Cannot find module</td><td>Das schwarze Fenster steht im falschen Ordner — Schritt 5, Punkt 2 wiederholen.</td></tr>
+          <tr><td class="k">Cannot find module</td><td>Befehl aus Schritt 5 nochmal ausführen — er wechselt automatisch in den richtigen Ordner.</td></tr>
           <tr><td class="k">keine 2-Wege-Märkte</td><td>Kein Fehler: gerade sind keine passenden Spiele offen.</td></tr>
-          <tr><td class="k">bridge-config.json fehlt</td><td>Datei wurde nicht umbenannt (das „.example" muss weg).</td></tr>
+          <tr><td class="k">bridge-config.json fehlt</td><td>Schritt 4 wiederholen — im Editor auf „Ja" (neue Datei erstellen) klicken und speichern.</td></tr>
+          <tr><td class="k">Unexpected token / JSON</td><td>In der Datei fehlt ein Anführungszeichen oder Komma. Text aus Schritt 4 nochmal komplett neu einfügen.</td></tr>
+          <tr><td class="k">Ausführung von Skripts deaktiviert</td><td>Kommt nur bei PowerShell-Skripten vor — unsere Befehle sind davon nicht betroffen. Einfach nochmal einfügen.</td></tr>
         </table>
       </div>
     </div>
