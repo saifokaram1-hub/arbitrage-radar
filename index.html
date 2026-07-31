@@ -31,7 +31,7 @@
   .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
   .app{min-height:100vh;display:flex;flex-direction:column}
 
-  .cmd{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:18px;padding:11px 18px;background:linear-gradient(180deg,#0b0c07,#080905);border-bottom:1px solid var(--line2)}
+  .cmd{position:sticky;top:0;z-index:40;display:flex;align-items:center;flex-wrap:wrap;gap:12px 16px;padding:11px 18px;background:linear-gradient(180deg,#0b0c07,#080905);border-bottom:1px solid var(--line2)}
   .brand{display:flex;align-items:center;gap:11px;min-width:0}
   .mark{width:34px;height:34px;flex:none;position:relative;border:1px solid var(--gold-d);background:#0a0b06;display:grid;place-items:center;box-shadow:0 0 0 1px #000 inset,0 0 22px rgba(199,178,76,.14)}
   .mark::before,.mark::after{content:"";position:absolute;background:var(--gold)}
@@ -50,7 +50,9 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
   .poll{font-family:var(--mono);font-size:10.5px;color:var(--dim);white-space:nowrap}
   .cmd .spacer{flex:1}
-  .cmd .tools{display:flex;align-items:center;gap:8px}
+  .cmd .tools{display:flex;align-items:center;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+  .cmd .spacer{flex:1 1 auto;min-width:0}
+  .brand{flex:0 1 auto;min-width:0}
   .modeseg{display:flex;border:1px solid var(--line2);background:#0a0b06;height:38px}
   .modeseg button{padding:0 13px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
   .modeseg button.active{background:var(--gold);color:var(--void);font-weight:700}
@@ -261,7 +263,7 @@
   .footnote b{color:var(--muted)}
   .footnote a{color:var(--gold)}
 
-  .scanbar{display:flex;align-items:center;gap:16px;padding:11px 20px;border-bottom:1px solid var(--line2);background:linear-gradient(180deg,#0a0b07,#080905)}
+  .scanbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px 16px;padding:11px 20px;border-bottom:1px solid var(--line2);background:linear-gradient(180deg,#0a0b07,#080905)}
   .radar{width:76px;height:50px;flex:none;position:relative;border:1px solid var(--line3);background:#080905;overflow:hidden}
   .radar .grid{position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:11px 11px;opacity:.6}
   .radar .sweep{position:absolute;top:0;bottom:0;width:2px;left:-2px;background:linear-gradient(180deg,var(--gold-b),transparent);box-shadow:0 0 14px var(--gold);animation:sweep 1.8s linear infinite}
@@ -270,7 +272,7 @@
   .radar .blip{position:absolute;top:50%;left:50%;width:6px;height:6px;margin:-3px 0 0 -3px;background:var(--pos);box-shadow:0 0 8px var(--pos);opacity:0}
   .radar .blip.show{animation:blip 1s ease}
   @keyframes blip{0%{opacity:1;transform:scale(.4)}100%{opacity:0;transform:scale(1.8)}}
-  .scaninfo{flex:1;min-width:0}
+  .scaninfo{flex:1 1 260px;min-width:0;overflow:hidden}
   .scanline{font-size:12px;color:var(--muted);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .scanline b{color:var(--gold-b);letter-spacing:.14em}
   .scanline .livedot{display:inline-block;width:8px;height:8px;background:var(--pos);box-shadow:0 0 8px var(--pos);margin-right:7px;vertical-align:middle;animation:pulse 1.2s infinite}
@@ -283,7 +285,7 @@
   .scanstats .ssv.gold{color:var(--gold-b)}.scanstats .ssv.pos{color:var(--pos)}
   .scanstats .ssl{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:3px}
   @media(max-width:760px){.scanstats .ss:nth-child(3){display:none}.radar{display:none}}
-  #srcPanel{position:fixed;z-index:80;width:270px;display:none;border:1px solid var(--line3);background:linear-gradient(180deg,#0d0f0a,#080905);box-shadow:0 20px 50px rgba(0,0,0,.6)}
+  #srcPanel{position:fixed;z-index:80;width:270px;max-width:calc(100vw - 20px);max-height:calc(100vh - 24px);overflow-y:auto;display:none;border:1px solid var(--line3);background:linear-gradient(180deg,#0d0f0a,#080905);box-shadow:0 20px 50px rgba(0,0,0,.6)}
   #srcPanel .sh{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:1px solid var(--line2)}
   #srcPanel .sh b{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
   #srcPanel .sh .x{cursor:pointer;color:var(--dim);font-size:16px;line-height:1}
@@ -1045,6 +1047,7 @@ function buildTicket(){
       '<div class="tk-leg"><div class="ll"><span class="src" id="tkSrc2"></span><span class="lo" id="tkOc2"></span></div><div class="lr"><span id="tkOdds2"></span> · <b id="tkE2"></b></div></div>'+
     '</div>'+
     '<div class="tk-row"><input class="inp num" id="tkStakeInp" type="number" step="10" min="0" inputmode="numeric"><button class="qchip" data-q="50">+50</button><button class="qchip" data-q="100">+100</button><button class="qchip" data-q="max">Max</button></div>'+
+    '<div id="tkPayout" style="border:1px solid var(--line2);background:#0a0b06;font-family:var(--mono);font-size:11px"></div>'+
     '<div class="tk-profit" id="tkProfitBox"><span class="pk">Sicherer Gewinn</span><span class="pv" id="tkProfit">–</span></div>'+
     '<button class="placebtn" id="tkPlace">–</button>'+
     '<div class="tk-warn" id="tkWarn"></div>'+
@@ -1063,7 +1066,18 @@ function renderTicket(){
   $('#tkSrc2').className='src '+v.s2.src; $('#tkSrc2').textContent=v.s2.src==='pm'?'PM':'OB';
   $('#tkOc1').textContent=m.o1; $('#tkOc2').textContent=m.o2;
   $('#tkOdds1').textContent=nf.format(v.s1.odds); $('#tkOdds2').textContent=nf.format(v.s2.odds);
-  $('#tkE1').textContent=eur(r.E1); $('#tkE2').textContent=eur(r.E2);
+  // Einsatz + prozentuale Aufteilung (nicht 50/50 — so gerechnet, dass beide Seiten gleich auszahlen)
+  var pc1 = S>0 ? (r.E1/S*100) : 0, pc2 = S>0 ? (r.E2/S*100) : 0;
+  $('#tkE1').textContent=eur(r.E1)+'  ('+pc1.toFixed(1)+' %)';
+  $('#tkE2').textContent=eur(r.E2)+'  ('+pc2.toFixed(1)+' %)';
+  // Beweis: Auszahlung bei beiden Ausgängen (netto, nach Gebühr)
+  var pay1=r.E1*v.s1.oddsEff, pay2=r.E2*v.s2.oddsEff;
+  var pr=function(l,val,gew){ return '<div style="display:flex;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--line)"><span style="color:var(--muted)">'+l+'</span><span>'+eur(val)+' <span style="color:'+(gew>=0?'var(--pos)':'var(--neg)')+'">('+(gew>=0?'+':'')+eur(gew)+')</span></span></div>'; };
+  $('#tkPayout').innerHTML = (S>0 && v.ok)
+    ? ('<div style="padding:6px 10px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);border-bottom:1px solid var(--line)">Auszahlung — egal wie es ausgeht</div>'+
+       pr('wenn '+(m.o1||'Ausgang 1')+' gewinnt', pay1, pay1-S)+
+       pr('wenn '+(m.o2||'Ausgang 2')+' gewinnt', pay2, pay2-S))
+    : '<div style="padding:8px 10px;color:var(--dim)">Auszahlung erscheint, sobald ein Vorteil besteht.</div>';
   var box=$('#tkProfitBox');
   if(v.ok&&S>0){ box.classList.remove('zero'); $('#tkProfit').textContent='+'+eur(r.profit); } else { box.classList.add('zero'); $('#tkProfit').textContent='–'; }
   var isDemo=(state.mode==='demo');

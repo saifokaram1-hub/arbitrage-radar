@@ -11,9 +11,20 @@ window.arClient = function(){
 };
 
 // ---- Sperrbildschirm: Zugangspasswort vor allem anderen ----
+// Sofort beim Laden ALLES verstecken, damit nichts durchblitzt, bevor entsperrt ist.
+(function(){
+  if(sessionStorage.getItem('ar_gate')==='ok') return;
+  var s=document.createElement('style');
+  s.id='arGateHide';
+  s.textContent='html{visibility:hidden!important}html.ar-unlocked{visibility:visible!important}';
+  (document.head||document.documentElement).appendChild(s);
+})();
+
 window.arGate = function(){
-  if(sessionStorage.getItem('ar_gate')==='ok') return true;
+  var unlock=function(){ document.documentElement.classList.add('ar-unlocked'); var h=document.getElementById('arGateHide'); if(h)h.remove(); };
+  if(sessionStorage.getItem('ar_gate')==='ok'){ unlock(); return true; }
   var sb = window.arClient();
+  document.title='Zugang — Arbitrage Radar';
   document.body.innerHTML =
     '<div id="gateWrap" style="position:fixed;inset:0;background:#060704;display:grid;place-items:center;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial,sans-serif">'+
       '<div style="width:340px;max-width:calc(100vw - 32px);border:1px solid #2f2b18;background:linear-gradient(180deg,#0b0c07,#080905);padding:30px 28px;text-align:center">'+
@@ -26,7 +37,10 @@ window.arGate = function(){
           'style="width:100%;height:42px;margin-top:22px;padding:0 12px;background:#0b0c07;border:1px solid #2f2b18;color:#f2f1e7;font-size:14px;text-align:center;font-family:ui-monospace,Consolas,monospace">'+
         '<button id="gateBtn" style="width:100%;height:42px;margin-top:12px;border:1px solid #7f7130;background:#1a1608;color:#e7d882;font:inherit;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;cursor:pointer">Entsperren</button>'+
         '<div id="gateErr" style="min-height:18px;margin-top:10px;font-size:11px;color:#b0402e;font-family:ui-monospace,monospace"></div>'+
+        '<div style="margin-top:14px;padding-top:14px;border-top:1px solid #211f12;font-size:10.5px;color:#5c5d50;line-height:1.6">'+
+          'Danach kannst du dich <b style="color:#8b8c7c">anmelden oder registrieren</b>.<br>Kein Zugangspasswort? Frag den Betreiber.</div>'+
       '</div></div>';
+  unlock();   // nur der Sperrbildschirm wird sichtbar, sonst nichts
   var pw=document.getElementById('gatePw'), btn=document.getElementById('gateBtn'), err=document.getElementById('gateErr');
   function tryOpen(){
     var v=pw.value; if(!v) return;

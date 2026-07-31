@@ -204,6 +204,38 @@
       </div>
     </div>
 
+    <!-- VERZÖGERUNG & LIVE-KEY -->
+    <div class="step">
+      <div class="h"><span class="num">⏱</span><b>Wie aktuell sind die Quoten?<span class="sub">Delayed-Key vs. Live-Key</span></b></div>
+      <div class="body">
+        <p>Der <b>gratis Delayed App Key</b> liefert Betfair-Kurse <b>verzögert</b>. Betfair nennt keine feste Zahl — in der Praxis liegt es meist bei <b>einigen Sekunden bis ~1 Minute</b>. Dazu kommt der Abstand, in dem die Bridge abfragt (Standard 20 s).</p>
+        <table>
+          <tr><th></th><th>Delayed Key (gratis)</th><th>Live Key (£499 einmalig)</th></tr>
+          <tr><td class="k">Kosten</td><td>0 €</td><td>£499</td></tr>
+          <tr><td class="k">Verzögerung</td><td>Sekunden bis ~1 Min</td><td>Echtzeit</td></tr>
+          <tr><td class="k">Gut für</td><td>Langsame Märkte: Politik, Wirtschaft, Langzeit-Wetten</td><td>Schnelle Sport-Arbitrage</td></tr>
+          <tr><td class="k">Risiko</td><td>Fenster kann beim Setzen schon zu sein</td><td>—</td></tr>
+        </table>
+        <div class="hint">Oben auf dieser Seite steht bei „Bridge läuft" immer, <b>vor wie vielen Sekunden</b> die letzten Quoten kamen. So siehst du die tatsächliche Aktualität jederzeit.</div>
+
+        <p style="margin-top:16px"><b style="color:var(--gold-b)">Später auf den Live-Key umsteigen?</b> Das ist ein einziger Handgriff — nichts muss neu programmiert werden:</p>
+        <ol>
+          <li>Live-Key bei Betfair freischalten (Konto muss mit £499 gedeckt sein):
+            <br><a class="btnlink" href="https://support.developer.betfair.com/hc/en-us/articles/115003860331-How-do-I-activate-my-Live-App-Key" target="_blank" rel="noopener">Live-Key aktivieren ↗</a></li>
+          <li>Zugangsdatei öffnen:</li>
+        </ol>
+        <div class="codebox">
+          <button class="copy" onclick="copyBox('sw')">Kopieren</button>
+          <pre id="sw">notepad C:\bridge\bridge-config.json</pre>
+        </div>
+        <ol start="3">
+          <li>Bei <b>betfairAppKey</b> den alten Key durch den <b>Live-Key</b> ersetzen → speichern</li>
+          <li>Bridge neu starten (Fenster schließen, Startbefehl nochmal ausführen)</li>
+        </ol>
+        <p>Fertig — ab dann laufen die Quoten in Echtzeit. ✅</p>
+      </div>
+    </div>
+
     <!-- PROBLEME -->
     <div class="step">
       <div class="h"><span class="num">?</span><b>Wenn etwas nicht klappt<span class="sub">Die häufigsten Meldungen</span></b></div>
