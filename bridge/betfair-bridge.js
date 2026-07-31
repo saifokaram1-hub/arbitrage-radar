@@ -15,21 +15,60 @@
 const fs = require('fs');
 const path = require('path');
 
-const CFG_PATH = path.join(__dirname, 'bridge-config.json');
+// Als .exe verpackt liegt die Config neben der exe, sonst neben dem Skript
+const BASE_DIR = process.pkg ? path.dirname(process.execPath) : __dirname;
+const CFG_PATH = path.join(BASE_DIR, 'bridge-config.json');
+
+const VORLAGE = {
+  betfairUsername: 'HIER-DEIN-BETFAIR-BENUTZERNAME',
+  betfairPassword: 'HIER-DEIN-BETFAIR-PASSWORT',
+  betfairAppKey: 'HIER-DEIN-16-ZEICHEN-APP-KEY',
+  bridgeToken: 'HIER-DEIN-TOKEN-AUS-MEIN-BEREICH',
+  bridgeUrl: 'https://noexklrgtqveiclijdwp.supabase.co/functions/v1/bf-bridge',
+  intervalSeconds: 20,
+  maxMarkets: 100,
+  eventTypeIds: ['1', '2', '7522', '6423']
+};
+
+function warte() {
+  // Fenster offen halten, damit man die Meldung lesen kann (bei Doppelklick)
+  try {
+    console.log('\n[Fenster bleibt offen — zum Schliessen Enter druecken]');
+    require('child_process').execSync('pause > nul', { shell: 'cmd.exe', stdio: 'inherit' });
+  } catch (e) {}
+}
+
 if (!fs.existsSync(CFG_PATH)) {
-  console.error('\n❌ Die Zugangsdatei fehlt noch: bridge-config.json');
-  console.error('\n   So legst du sie an (Schritt 4 der Anleitung):');
-  console.error('   1. Diesen Befehl ausführen:   notepad ' + CFG_PATH);
-  console.error('   2. Auf "Ja" klicken (neue Datei erstellen)');
-  console.error('   3. Den Text aus der Anleitung einfügen, 3 Felder ausfüllen, speichern');
-  console.error('   4. Dann die Bridge erneut starten\n');
+  try {
+    fs.writeFileSync(CFG_PATH, JSON.stringify(VORLAGE, null, 2), 'utf8');
+    console.log('\n📝 Zugangsdatei wurde neu angelegt:\n   ' + CFG_PATH);
+    console.log('\n   SO GEHT ES WEITER:');
+    console.log('   1. Diese Datei mit dem Editor oeffnen (Doppelklick, dann "Editor" waehlen)');
+    console.log('   2. Die vier HIER-... Felder ausfuellen:');
+    console.log('        betfairUsername  = dein Betfair-Login');
+    console.log('        betfairPassword  = dein Betfair-Passwort');
+    console.log('        betfairAppKey    = dein 16-Zeichen App-Key');
+    console.log('        bridgeToken      = dein Token aus "Mein Bereich" auf der Website');
+    console.log('   3. Speichern und dieses Programm nochmal starten\n');
+    try { require('child_process').exec('notepad "' + CFG_PATH + '"'); } catch (e) {}
+  } catch (e) {
+    console.error('\n❌ Konnte die Zugangsdatei nicht anlegen: ' + e.message);
+  }
+  warte();
   process.exit(1);
 }
 const CFG = JSON.parse(fs.readFileSync(CFG_PATH, 'utf8'));
 
 const REQUIRED = ['betfairUsername', 'betfairPassword', 'betfairAppKey', 'bridgeUrl', 'bridgeToken'];
-for (const k of REQUIRED) {
-  if (!CFG[k]) { console.error('❌ In bridge-config.json fehlt: ' + k); process.exit(1); }
+const offen = REQUIRED.filter(k => !CFG[k] || String(CFG[k]).indexOf('HIER-') === 0);
+if (offen.length) {
+  console.error('\n❌ In der Zugangsdatei sind noch Felder offen:\n');
+  offen.forEach(k => console.error('   • ' + k));
+  console.error('\n   Datei: ' + CFG_PATH);
+  console.error('   Bitte ausfuellen, speichern und das Programm neu starten.\n');
+  try { require('child_process').exec('notepad "' + CFG_PATH + '"'); } catch (e) {}
+  warte();
+  process.exit(1);
 }
 
 const INTERVAL_MS = (CFG.intervalSeconds || 20) * 1000;

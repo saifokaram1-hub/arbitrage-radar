@@ -75,7 +75,7 @@
     <div class="intro">
       <h2>Was mache ich hier — und warum?</h2>
       <p>Damit der Radar auch die Quoten von <b>96ex / Orbit</b> vergleichen kann, muss ein kleines Hilfsprogramm auf <b>deinem eigenen Computer</b> laufen. Grund: Betfair blockiert Anfragen von Servern im Internet — von deinem Heimanschluss aus funktioniert es aber.</p>
-      <p>Du machst das <b>einmal</b>. Danach startest du es mit einem Doppelklick, wann immer du scannen willst.</p>
+      <p>Du machst das <b>einmal</b> (ca. 10 Minuten). Danach reicht ein <b>Doppelklick</b>, wann immer du scannen willst — keine Installation, keine Kommandozeile.</p>
       <div class="safe"><b>🔒 Deine Daten bleiben bei dir.</b> Dein Betfair-Passwort wird nur in einer Datei auf deinem PC gespeichert. An die Website gehen <b>ausschließlich Quoten</b> — niemals dein Login.</div>
     </div>
 
@@ -109,60 +109,37 @@
 
     <!-- SCHRITT 2 -->
     <div class="step">
-      <div class="h"><span class="num">2</span><b>Node.js installieren<span class="sub">Das Programm, das die Bridge ausführt · 2 Minuten</span></b></div>
-      <div class="body">
-        <p>Lade die Version mit der Bezeichnung <b>LTS</b> herunter und klicke bei der Installation immer auf „Weiter/Next".</p>
-        <a class="btnlink" href="https://nodejs.org" target="_blank" rel="noopener">Node.js herunterladen ↗</a>
-        <div class="hint">Schon installiert? Dann überspring diesen Schritt einfach.</div>
-      </div>
-    </div>
-
-    <!-- SCHRITT 3 -->
-    <div class="step">
-      <div class="h"><span class="num">3</span><b>Bridge herunterladen<span class="sub">Ein einziger Befehl — kein Entpacken nötig</span></b></div>
+      <div class="h"><span class="num">2</span><b>Bridge-Programm herunterladen<span class="sub">Eine einzige Datei · kein Installieren nötig</span></b></div>
       <div class="body">
         <ol>
-          <li><b>PowerShell öffnen:</b> Windows-Taste drücken, <b>powershell</b> tippen, Enter</li>
-          <li>Den Befehl unten <b>kopieren</b>, ins schwarze/blaue Fenster <b>Rechtsklick</b> (fügt ein), <b>Enter</b> drücken:</li>
+          <li>Auf den Knopf klicken — es lädt die Datei <b>betfair-bridge.exe</b>:
+            <br><a class="btnlink" href="https://github.com/saifokaram1-hub/arbitrage-radar/releases/download/bridge-v1/betfair-bridge.exe">⬇ Bridge herunterladen (Windows)</a></li>
+          <li>Einen neuen Ordner anlegen, z. B. <b>C:\bridge</b></li>
+          <li>Die heruntergeladene <b>betfair-bridge.exe</b> in diesen Ordner verschieben</li>
         </ol>
-        <div class="codebox">
-          <button class="copy" onclick="copyBox('dl')">Kopieren</button>
-          <pre id="dl">New-Item -ItemType Directory -Force C:\bridge | Out-Null; Invoke-WebRequest "https://raw.githubusercontent.com/saifokaram1-hub/arbitrage-radar/main/bridge/betfair-bridge.js" -OutFile C:\bridge\betfair-bridge.js; Write-Host "Fertig! Bridge liegt in C:\bridge"</pre>
-        </div>
-        <p>Erscheint <b>„Fertig! Bridge liegt in C:\bridge"</b> → alles gut. ✅</p>
-        <div class="hint"><b>PowerShell offen lassen</b> — du brauchst es gleich nochmal.</div>
+        <div class="hint"><b>Windows warnt beim Öffnen?</b> Das ist bei neuen Programmen normal. Klicke auf <b>„Weitere Informationen"</b> → <b>„Trotzdem ausführen"</b>.</div>
+        <div class="hint">Kein Node.js, keine Installation, keine Kommandozeile nötig — die Datei bringt alles mit.</div>
       </div>
     </div>
 
     <!-- SCHRITT 4 -->
     <div class="step">
-      <div class="h"><span class="num">4</span><b>Zugangsdatei ausfüllen<span class="sub">Der wichtigste Schritt</span></b></div>
+      <div class="h"><span class="num">3</span><b>Programm starten &amp; Daten eintragen<span class="sub">Der wichtigste Schritt</span></b></div>
       <div class="body">
-        <p>Diesen Befehl in dasselbe PowerShell-Fenster kopieren und Enter drücken — er öffnet den Editor:</p>
-        <div class="codebox">
-          <button class="copy" onclick="copyBox('mk')">Kopieren</button>
-          <pre id="mk">notepad C:\bridge\bridge-config.json</pre>
-        </div>
-        <p>Der Editor fragt: <b>„Möchten Sie eine neue Datei erstellen?"</b> → auf <b>Ja</b> klicken.</p>
-        <p>Dann den kompletten Text unten kopieren und in den leeren Editor einfügen:</p>
+        <p><b>Doppelklick auf betfair-bridge.exe.</b></p>
+        <p>Beim ersten Start legt das Programm die Zugangsdatei selbst an und öffnet sie automatisch im Editor. Du siehst dann diesen Text — trage die <span class="fill">orange markierten</span> Stellen ein:</p>
 
         <div class="codebox">
-          <button class="copy" onclick="copyBox('cfg')">Kopieren</button>
           <pre id="cfg">{
   "betfairUsername": "<span class="fill">DEIN-BETFAIR-BENUTZERNAME</span>",
   "betfairPassword": "<span class="fill">DEIN-BETFAIR-PASSWORT</span>",
   "betfairAppKey": "<span class="fill">DEIN-16-ZEICHEN-APP-KEY</span>",
-
   "bridgeToken": "<span class="fill" id="tokIn">…wird geladen…</span>",
-  "bridgeUrl": "https://noexklrgtqveiclijdwp.supabase.co/functions/v1/bf-bridge",
-
-  "intervalSeconds": 20,
-  "maxMarkets": 100,
-  "eventTypeIds": ["1", "2", "7522", "6423"]
+  ...
 }</pre>
         </div>
 
-        <p>Ersetze jetzt die <span class="fill">orange markierten</span> Stellen — <b>die Anführungszeichen müssen stehen bleiben!</b></p>
+        <p><b>Die Anführungszeichen müssen stehen bleiben!</b> Nur den Text dazwischen ersetzen.</p>
         <table>
           <tr><th>Feld</th><th>Was kommt rein</th></tr>
           <tr><td class="k">betfairUsername</td><td>Dein Betfair-Benutzername (womit du dich einloggst)</td></tr>
@@ -181,25 +158,18 @@
 
     <!-- SCHRITT 5 -->
     <div class="step">
-      <div class="h"><span class="num">5</span><b>Bridge starten<span class="sub">Ab jetzt nur noch ein Befehl</span></b></div>
+      <div class="h"><span class="num">4</span><b>Nochmal starten — fertig<span class="sub">Ab jetzt reicht ein Doppelklick</span></b></div>
       <div class="body">
-        <p>Zurück ins PowerShell-Fenster — diesen Befehl kopieren, einfügen, Enter:</p>
-        <div class="codebox">
-          <button class="copy" onclick="copyBox('run')">Kopieren</button>
-          <pre id="run">cd C:\bridge; node betfair-bridge.js</pre>
-        </div>
+        <p>Datei gespeichert? Dann <b>nochmal Doppelklick auf betfair-bridge.exe</b>.</p>
         <p>Wenn alles stimmt, erscheint sowas:</p>
         <div class="codebox"><pre style="color:var(--pos)">✅ Bei Betfair eingeloggt.
 📤 43 Quoten hochgeladen (z.B. Bayern vs Dortmund)</pre></div>
         <div class="hint"><b>Das Fenster muss offen bleiben</b>, solange gescannt werden soll. Zum Beenden: Fenster schließen oder <b>Strg+C</b>.</div>
         <p>Oben auf dieser Seite springt der Status dann auf <b style="color:var(--pos)">Live</b> — und in der App zeigt „Betfair / Orbit" ebenfalls Live. 🎉</p>
         <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:14px">
-          <b style="color:var(--gold-b);font-size:13px">Beim nächsten Mal starten</b>
-          <p style="margin-top:6px">Schritte 1–4 sind einmalig. Ab jetzt reicht: PowerShell öffnen und diesen einen Befehl:</p>
-          <div class="codebox">
-            <button class="copy" onclick="copyBox('run2')">Kopieren</button>
-            <pre id="run2">cd C:\bridge; node betfair-bridge.js</pre>
-          </div>
+          <b style="color:var(--gold-b);font-size:13px">Beim nächsten Mal</b>
+          <p style="margin-top:6px">Alles oben ist einmalig. Ab jetzt reicht: <b>Doppelklick auf betfair-bridge.exe</b> — fertig.</p>
+          <div class="hint">Tipp: Rechtsklick auf die exe → <b>„An Taskleiste anheften"</b>, dann ist sie immer griffbereit.</div>
         </div>
       </div>
     </div>
@@ -222,15 +192,9 @@
         <ol>
           <li>Live-Key bei Betfair freischalten (Konto muss mit £499 gedeckt sein):
             <br><a class="btnlink" href="https://support.developer.betfair.com/hc/en-us/articles/115003860331-How-do-I-activate-my-Live-App-Key" target="_blank" rel="noopener">Live-Key aktivieren ↗</a></li>
-          <li>Zugangsdatei öffnen:</li>
-        </ol>
-        <div class="codebox">
-          <button class="copy" onclick="copyBox('sw')">Kopieren</button>
-          <pre id="sw">notepad C:\bridge\bridge-config.json</pre>
-        </div>
-        <ol start="3">
+          <li>Im Bridge-Ordner die Datei <b>bridge-config.json</b> öffnen (Doppelklick → „Editor")</li>
           <li>Bei <b>betfairAppKey</b> den alten Key durch den <b>Live-Key</b> ersetzen → speichern</li>
-          <li>Bridge neu starten (Fenster schließen, Startbefehl nochmal ausführen)</li>
+          <li>Bridge-Fenster schließen und <b>betfair-bridge.exe</b> neu starten</li>
         </ol>
         <p>Fertig — ab dann laufen die Quoten in Echtzeit. ✅</p>
       </div>
@@ -245,19 +209,19 @@
           <tr><td class="k">INVALID_USERNAME_OR_PASSWORD</td><td>Benutzername oder Passwort in der Datei falsch. Groß-/Kleinschreibung beachten.</td></tr>
           <tr><td class="k">Token unbekannt</td><td>Das <b>bridgeToken</b> stimmt nicht. Oben nochmal kopieren und einsetzen.</td></tr>
           <tr><td class="k">Blockiert (HTML/Cloudflare)</td><td>VPN/Proxy ausschalten — die Bridge muss über deinen normalen Anschluss laufen.</td></tr>
-          <tr><td class="k">node wird nicht erkannt</td><td>Node.js fehlt (Schritt 2) oder PC nach der Installation neu starten.</td></tr>
-          <tr><td class="k">Cannot find module</td><td>Befehl aus Schritt 5 nochmal ausführen — er wechselt automatisch in den richtigen Ordner.</td></tr>
+          <tr><td class="k">Windows-Warnung beim Start</td><td>Normal bei neuen Programmen: „Weitere Informationen" → „Trotzdem ausführen".</td></tr>
+          <tr><td class="k">Fenster schließt sofort</td><td>Sollte nicht passieren — das Programm hält an. Falls doch: exe in einen eigenen Ordner legen (nicht Downloads).</td></tr>
           <tr><td class="k">keine 2-Wege-Märkte</td><td>Kein Fehler: gerade sind keine passenden Spiele offen.</td></tr>
-          <tr><td class="k">bridge-config.json fehlt</td><td>Schritt 4 wiederholen — im Editor auf „Ja" (neue Datei erstellen) klicken und speichern.</td></tr>
+          <tr><td class="k">Felder noch offen</td><td>In der Datei stehen noch HIER-… Platzhalter. Ausfüllen, speichern, neu starten.</td></tr>
           <tr><td class="k">Unexpected token / JSON</td><td>In der Datei fehlt ein Anführungszeichen oder Komma. Text aus Schritt 4 nochmal komplett neu einfügen.</td></tr>
-          <tr><td class="k">Ausführung von Skripts deaktiviert</td><td>Kommt nur bei PowerShell-Skripten vor — unsere Befehle sind davon nicht betroffen. Einfach nochmal einfügen.</td></tr>
+          
         </table>
       </div>
     </div>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=11"></script>
+<script src="config.js?v=12"></script>
 <script>
 var SB=null, TOKEN='';
 function copyBox(id){
