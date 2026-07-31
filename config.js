@@ -24,9 +24,12 @@ window.arClient = function(){
   (document.head||document.documentElement).appendChild(s);
 })();
 
+window.AR_LOCKED = (sessionStorage.getItem('ar_gate')!=='ok');
+
 window.arGate = function(){
-  var unlock=function(){ document.documentElement.classList.add('ar-unlocked'); var h=document.getElementById('arGateHide'); if(h)h.remove(); };
+  var unlock=function(){ window.AR_LOCKED=false; document.documentElement.classList.add('ar-unlocked'); var h=document.getElementById('arGateHide'); if(h)h.remove(); };
   if(sessionStorage.getItem('ar_gate')==='ok'){ unlock(); return true; }
+  if(document.getElementById('arGateOverlay')) return false;   // schon aufgebaut
   var sb = window.arClient();
   document.title='Zugang — Arbitrage Radar';
   var ov=document.createElement('div');
@@ -46,7 +49,8 @@ window.arGate = function(){
         '<div style="margin-top:14px;padding-top:14px;border-top:1px solid #211f12;font-size:10.5px;color:#5c5d50;line-height:1.6">'+
           'Danach kannst du dich <b style="color:#8b8c7c">anmelden oder registrieren</b>.<br>Kein Zugangspasswort? Frag den Betreiber.</div>'+
       '</div></div>';
-  (document.body||document.documentElement).appendChild(ov);   // Overlay drüber, Rest bleibt versteckt
+  function mount(){ (document.body||document.documentElement).appendChild(ov); }
+  if(document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
   var pw=document.getElementById('gatePw'), btn=document.getElementById('gateBtn'), err=document.getElementById('gateErr');
   function tryOpen(){
     var v=pw.value; if(!v) return;
@@ -61,6 +65,9 @@ window.arGate = function(){
   setTimeout(function(){pw.focus();},50);
   return false;
 };
+
+// Sperrbildschirm sofort aufbauen (unabhängig davon, ob die Seite ihn aufruft)
+if(window.AR_LOCKED){ try{ window.arGate(); }catch(e){} }
 
 // Session prüfen; bei fehlender Anmeldung zu login.html. Gibt {session, profile} zurück.
 window.arRequireAuth = async function(opts){

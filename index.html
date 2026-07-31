@@ -565,6 +565,7 @@
 <script>
 (function(){
 "use strict";
+if(window.AR_LOCKED)return;   // Sperrbildschirm aktiv -> App laeuft nicht
 var $=function(s){return document.querySelector(s);};
 var nf=new Intl.NumberFormat('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
 var nf0=new Intl.NumberFormat('de-DE');
