@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Arbitrage Radar — Live</title>
-<meta name="description" content="Live-Surebet-Scanner: Polymarket (echte Daten) ⇄ Orbit-Broker">
+<meta name="description" content="Live-Surebet-Scanner: Polymarket ⇄ SX Bet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <style>
@@ -406,7 +406,7 @@
     </div>
     <div class="srcs">
       <div class="srcstat"><span class="d" id="dPm"></span>Polymarket <b id="sPm">…</b></div>
-      <div class="srcstat"><span class="d" id="dOb"></span>Orbit-Broker <b id="sOb">…</b></div>
+      <div class="srcstat"><span class="d" id="dOb"></span>SX Bet <b id="sOb">…</b></div>
     </div>
     <div class="poll" id="pollInfo">verbinde …</div>
     <div class="spacer"></div>
@@ -433,7 +433,7 @@
   <div class="scanbar" id="scanbar">
     <div class="radar" id="radar"><div class="grid"></div><div class="sweep"></div><div class="blip" id="radarBlip"></div></div>
     <div class="scaninfo">
-      <div class="scanline"><span class="livedot" id="sbDot"></span><b id="sbState">SCANNE</b> · Polymarket + Orbit · <span id="sbMarkets">0</span> Märkte · <span id="sbUpd">verbinde …</span></div>
+      <div class="scanline"><span class="livedot" id="sbDot"></span><b id="sbState">SCANNE</b> · Polymarket + SX Bet · <span id="sbMarkets">0</span> Märkte · <span id="sbMatch">–</span> · <span id="sbUpd">verbinde …</span></div>
       <div class="scanticker" id="sbTicker">Suche nach Arbitrage-Fenstern …</div>
       <div id="sbAnalyse" style="font-size:10.5px;color:var(--dim);font-family:var(--mono);margin-top:3px">Scan-Analyse sammelt Daten — wird mit der Zeit genauer …</div>
     </div>
@@ -454,13 +454,13 @@
           <div class="field"><label>Guthaben Polymarket (€)</label><input class="inp num" id="balPm" type="number" step="50" min="0" value="0" placeholder="0"></div>
           <div class="field"><label>Polygon-Wallet (read-only · live USDC)</label><input class="inp" id="walletAddr" placeholder="0x… (deine Polymarket-Einzahl-Adresse)" autocomplete="off" spellcheck="false" style="font-family:var(--mono);font-size:11px"></div>
           <div id="walletBal" style="font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-top:-6px">Adresse eingeben → Live-Guthaben</div>
-          <div class="field"><label>Guthaben Orbit-Broker (€)</label><input class="inp num" id="balOb" type="number" step="50" min="0" value="0" placeholder="0"></div>
-          <div class="field"><label>Brokergebühr % — Polymarket / Orbit</label>
+          <div class="field"><label>Guthaben SX Bet (€)</label><input class="inp num" id="balOb" type="number" step="50" min="0" value="0" placeholder="0"></div>
+          <div class="field"><label>Brokergebühr % — Polymarket / SX Bet</label>
             <div style="display:flex;gap:10px">
               <input class="inp num" id="feePm" type="number" step="0.5" min="0" value="0" title="Polymarket-Gebühr %">
-              <input class="inp num" id="feeOb" type="number" step="0.5" min="0" value="3" title="Orbit-Gebühr % (Betfair-Kommission)">
+              <input class="inp num" id="feeOb" type="number" step="0.5" min="0" value="3" title="SX Bet Gebühr %">
             </div></div>
-          <div class="field"><label>Orbit-Proxy-URL (für Live-Kurse)</label><input class="inp" id="obProxy" value="https://noexklrgtqveiclijdwp.supabase.co/functions/v1/ob-proxy" autocomplete="off"></div>
+          <div class="field"><label>Eigener Proxy (optional)</label><input class="inp" id="obProxy" value="https://noexklrgtqveiclijdwp.supabase.co/functions/v1/ob-proxy" autocomplete="off"></div>
           <div class="field"><label>Standard-Einsatz (empfohlen)</label><input class="inp num" id="stdStake" type="number" step="25" min="0" value="100"></div>
           <label class="toggle" id="tgAuto" tabindex="0" role="switch" aria-checked="false"><span>Auto-Pilot<small>nur im Demo-Modus — setzt bei Hit automatisch</small></span><span class="sw"></span></label>
         </div>
@@ -471,7 +471,7 @@
         <div class="body">
           <div class="field search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="inp" id="fSearch" placeholder="Event suchen …" autocomplete="off"></div>
           <div class="field"><label>Kategorie</label><div class="chips" id="catChips"></div></div>
-          <div class="field"><label>Quelle</label><div class="chips" id="srcChips"><button class="chip active" data-src="all">Alle</button><button class="chip" data-src="cross">Nur Cross-Book</button><button class="chip" data-src="pm">Nur Polymarket</button><button class="chip" data-src="ob">Nur Orbit</button></div></div>
+          <div class="field"><label>Quelle</label><div class="chips" id="srcChips"><button class="chip active" data-src="all">Alle</button><button class="chip" data-src="cross">Nur Cross-Book</button><button class="chip" data-src="pm">Nur Polymarket</button><button class="chip" data-src="ob">Nur SX Bet</button></div></div>
           <div class="field rangewrap"><div class="rr"><label>Min. Rendite</label><b id="minRoiVal">0,0 %</b></div><input type="range" id="fMinRoi" min="0" max="8" step="0.1" value="0"></div>
           <label class="toggle" id="tgOpp" tabindex="0" role="switch" aria-checked="false"><span>Nur echte Chancen<small>Arb-% ≥ 100 ausblenden</small></span><span class="sw"></span></label>
           <label class="toggle" id="tgLowRisk" tabindex="0" role="switch" aria-checked="false"><span>Nur risikoarm<small>DNP/Void-anfällige Märkte ausblenden</small></span><span class="sw"></span></label>
@@ -579,6 +579,7 @@ function calcArb(q1,q2,S){
 var CONFIG={
   GAMMA:'https://gamma-api.polymarket.com/markets',
   CLOB:'https://clob.polymarket.com',
+  SX:'https://noexklrgtqveiclijdwp.supabase.co/functions/v1/sx-proxy',
   POLL_MS:5000, MAX:50, MIN_LIQ:300
 };
 var state={
@@ -695,16 +696,50 @@ function ensureWS(){
   }catch(e){ state._wsOn=false; }
 }
 
-/* ---- Orbit-Broker: nur über eigenen Proxy (Betfair hat keine Browser-API) ---- */
-function pollOB(){
-  if(!state.obProxy){ state.accounts.ob.status='offline'; return Promise.resolve(); }
-  return fetchJSON(state.obProxy,7000).then(function(res){
-    // Proxy liefert [{key,o1,o2}] ODER {configured, data:[…]}
-    var arr = Array.isArray(res) ? res : ((res && res.data) || []);
-    state.accounts.ob.status = (res && res.configured === false) ? 'needkey' : 'live';
-    var byKey={}; arr.forEach(function(d){ if(d&&d.key)byKey[d.key]=d; });
-    mkMap.forEach(function(mk){ var d=byKey[mk.ev]; mk.ob = d?{o1:+d.o1,o2:+d.o2}:null; });
+/* ---- SX Bet: zweite Börse über eigenen Proxy (kein Key nötig) ---- */
+var sxRaw=[], sxLast=0;
+// Team-Namen normalisieren -> Abgleich Polymarket <-> SX Bet
+function nrm(s){ return (s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
+function keyWord(team){ var w=nrm(team).split(' '); return w[w.length-1]||''; }   // "Los Angeles Rams" -> "rams"
+function matchSX(mk){
+  if(!sxRaw.length)return null;
+  var q=nrm(mk.ev);
+  for(var i=0;i<sxRaw.length;i++){
+    var s=sxRaw[i]; if(!s.teamA||!s.teamB)continue;
+    var a=keyWord(s.teamA), b=keyWord(s.teamB);
+    if(a.length<3||b.length<3)continue;
+    if(q.indexOf(a)>=0 && q.indexOf(b)>=0){
+      // Ausrichtung: steht Team A im ersten Polymarket-Ausgang?
+      var o1=nrm(mk.o1);
+      var flip = (o1.indexOf(a)<0 && o1.indexOf(b)>=0);
+      return flip ? {o1:s.q2,o2:s.q1,link:s.link,ev:s.ev} : {o1:s.q1,o2:s.q2,link:s.link,ev:s.ev};
+    }
+  }
+  return null;
+}
+function pollSX(){
+  if(Date.now()-sxLast<20000 && sxRaw.length){ applySX(); return Promise.resolve(); }
+  return fetchJSON(CONFIG.SX,25000).then(function(res){
+    var arr=(res&&res.data)||[];
+    sxRaw=arr.map(function(d){
+      var t=(d.ev||'').split(' vs ');
+      return {teamA:t[0]||'', teamB:t[1]||'', q1:+d.q1, q2:+d.q2, link:d.link, ev:d.ev, arb:d.arb, league:d.league};
+    }).filter(function(x){return x.q1>1&&x.q2>1;});
+    sxLast=Date.now();
+    state.accounts.ob.status = sxRaw.length? 'live':'error';
+    applySX();
+    if(!state._sxLogged){ state._sxLogged=true; if(window.__ar)window.__ar.logConn('ob','sxbet'); }
   }).catch(function(){ state.accounts.ob.status='error'; });
+}
+function applySX(){
+  var hits=0;
+  mkMap.forEach(function(mk){
+    if(mk.demo)return;
+    var m=matchSX(mk);
+    if(m){ mk.ob={o1:m.o1,o2:m.o2}; mk.obLink=m.link; mk.obEv=m.ev; hits++; }
+    else { mk.ob=null; mk.obLink=null; }
+  });
+  state.sxMatches=hits; state.sxCount=sxRaw.length;
 }
 
 /* ---- Bewertung: beste Quote je Ausgang, Arb-%, ROI — NETTO nach Brokergebühr ---- */
@@ -760,7 +795,7 @@ function processSignals(){
 }
 
 /* ---- Konten-UI ---- */
-var ACC=[['pm','Polymarket','PM'],['ob','Orbit-Broker','OB']];
+var ACC=[['pm','Polymarket','PM'],['ob','SX Bet','SX']];
 function statusText(k){
   if(!state.srcOn[k])return['off','Getrennt — klick zum Verbinden'];
   var s=state.accounts[k].status;
@@ -804,7 +839,7 @@ function connectMetaMask(){
 function toggleSrc(k){ state.srcOn[k]=!state.srcOn[k]; if(k==='pm'&&!state.srcOn.pm)mkMap.clear(); if(k==='ob'&&!state.srcOn.ob)mkMap.forEach(function(mk){mk.ob=null;}); updateAccountsUI(); render(); saveNow(); cycle(); }
 function openSrcPanel(k,x,y){
   var pop=$('#srcPanel'); var st=statusText(k), on=state.srcOn[k];
-  var name=k==='pm'?'Polymarket':'Orbit-Broker (96ex)';
+  var name=k==='pm'?'Polymarket':'SX Bet (Wettbörse)';
   var body='<div class="sh"><b>'+name+'</b><span class="x">✕</span></div><div class="sb2">'+
     '<div class="st2"><span class="d '+st[0]+'"></span>'+st[1]+'</div>'+
     '<button class="tgl'+(on?' on':'')+'" data-tgl>'+(on?'Verbunden — trennen':'Getrennt — verbinden')+'</button>';
@@ -815,8 +850,8 @@ function openSrcPanel(k,x,y){
       '<div class="bal2" id="sp_bal">'+(($('#walletBal')&&$('#walletBal').innerHTML)||'')+'</div>'+
       '<div class="nt"><b>Volle Verbindung (einmalig einrichten):</b><br>1. MetaMask installieren (metamask.io)<br>2. Oben „Wallet verbinden" → deine Adresse verbindet sich (nur lesen, kein Schlüssel)<br>3. Auf Polymarket USDC (Polygon) einzahlen + Konto aktivieren<br>Danach: Guthaben live hier. Setzen per Wallet-Bestätigung folgt als geprüfter Schritt.</div>';
   } else {
-    body+='<label>Orbit-Proxy-URL</label><input class="in2" id="sp_proxy" value="'+(state.obProxy||'')+'">'+
-      '<div class="nt"><b>Echte Kurse:</b> Betfair/96ex App-Key als Secret nötig — kein Passwort im Tool.</div>';
+    body+='<label>Eigener Proxy (optional)</label><input class="in2" id="sp_proxy" value="'+(state.obProxy||'')+'">'+
+      '<div class="nt"><b>SX Bet</b> ist eine echte Wettbörse (Krypto/USDC) — <b>kein Key, kein Login</b> nötig zum Scannen. Zum Setzen brauchst du dort ein eigenes Konto mit Guthaben.<br>Feld oben nur für einen eigenen Proxy (optional).</div>';
   }
   pop.innerHTML=body+'</div>'; pop.style.display='block';
   var pw=270, ph=pop.offsetHeight||280;
@@ -931,7 +966,12 @@ function placeDemo(v,S,auto){
   if(window.__ar)window.__ar.logAct('secured',v.m.ev,r.profit,v.roi,S,(v.cross?'cross':v.s1.src),feeAmount(v,S),v.m.cat);
   updateAccountsUI();
 }
-function openMarket(mk){ if(mk.slug){window.open('https://polymarket.com/event/'+mk.slug,'_blank','noopener');} else {window.open('https://polymarket.com/markets','_blank','noopener');} }
+function pmLink(mk){ return mk.slug? ('https://polymarket.com/event/'+mk.slug) : 'https://polymarket.com/markets'; }
+function openMarket(mk){
+  // Beide Bücher gleichzeitig öffnen (falls Cross-Book) -> nebeneinander setzen
+  window.open(pmLink(mk),'_blank','noopener');
+  if(mk.obLink) window.open(mk.obLink,'_blank','noopener');
+}
 
 /* ---- Wett-Ticket ---- */
 function selectTicket(id){ state.ticketId=id; state.ticketDirty=false; tkBuiltId=null; renderTicket(); if(window.innerWidth<=860)$('.ticket').scrollIntoView({behavior:'smooth',block:'nearest'}); }
@@ -979,10 +1019,16 @@ function renderTicket(){
   var dnpNote = risk!=='niedrig'
     ? '<div style="border:1px solid #7a5220;background:rgba(217,140,74,.08);padding:7px 9px;margin-bottom:8px;color:#d98c4a;line-height:1.5"><b>⚠ DNP / Void-Risiko</b> ('+(risk==='hoch'?'Player-Prop':'Tennis-Aufgabe')+'): Bei Nicht-Antreten zahlt <b>Polymarket meist NICHT zurück</b> (kein Void), <b>Orbit/Betfair voidet</b> (Einsatz zurück). Lege die Seite, die bei DNP verlieren würde, auf <b>Orbit</b>. AGBs prüfen: „Does Not Play / Void / Non-Runner". Heuristik — Regeln je Markt selbst checken.</div>'
     : '';
-  $('#tkNote').innerHTML= dnpNote + (isDemo
+  var bk=function(s){return s==='pm'?'Polymarket':'SX Bet';};
+  // Direktlinks zu beiden Büchern
+  var links='<div style="display:flex;gap:6px;margin-bottom:8px">'+
+    '<a href="'+pmLink(m)+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #7f7130;color:#e7d882;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">Polymarket öffnen ↗</a>'+
+    (m.obLink?'<a href="'+m.obLink+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #41391f;color:#c9c7bd;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">SX Bet öffnen ↗</a>':'')+
+    '</div>';
+  $('#tkNote').innerHTML= links + dnpNote + (isDemo
     ? '<b>Beide Seiten</b> simuliert auf die Konten. Empfohlen = Standard-Einsatz, begrenzt durchs Guthaben.'
-    : (v.cross? '<b>Cross-Book:</b> Ausgang 1 über '+(v.s1.src==='pm'?'Polymarket':'Orbit')+', Ausgang 2 über '+(v.s2.src==='pm'?'Polymarket':'Orbit')+'. Öffnet den Markt — Beträge oben manuell setzen.'
-             : 'Beide Ausgänge über Polymarket. Öffnet den Markt zum manuellen Setzen (kein Automatik-Echtgeld).'));
+    : (v.cross? '<b>Cross-Book:</b> Ausgang 1 über <b>'+bk(v.s1.src)+'</b>, Ausgang 2 über <b>'+bk(v.s2.src)+'</b>. Beide Links oben öffnen und die Beträge dort setzen.'
+             : 'Beide Ausgänge über '+bk(v.s1.src)+'. Link oben öffnen und manuell setzen.'));
 }
 
 /* ---- Render ---- */
@@ -1041,6 +1087,7 @@ function render(){
     $('#radar').classList.toggle('off',!state.running);
     $('#sbDot').classList.toggle('off',!state.running);
     $('#sbState').textContent=state.mode==='demo'?'DEMO-SCAN':(state.running?(state._wsOn?'⚡ ECHTZEIT':'SCANNE'):'PAUSE');
+    var sbm=$('#sbMatch'); if(sbm)sbm.textContent=(state.sxCount||0)+' SX-Märkte · '+(state.sxMatches||0)+' gematcht';
   }
 
   var view=all.filter(function(v){
@@ -1166,7 +1213,7 @@ function cycle(){
   if(state.mode==='demo'){ ensureWS(); demoTick(); processSignals(); render(); return; }
   var chain=Promise.resolve();
   if(state.srcOn.pm){ chain=chain.then(pollPM); } else { mkMap.clear(); state.accounts.pm.status='off'; }
-  chain=chain.then(function(){ if(state.srcOn.ob){ return pollOB(); } state.accounts.ob.status='off'; mkMap.forEach(function(mk){mk.ob=null;}); });
+  chain=chain.then(function(){ if(state.srcOn.ob){ return pollSX(); } state.accounts.ob.status='off'; mkMap.forEach(function(mk){mk.ob=null;}); });
   chain.then(function(){ processSignals(); render(); ensureWS(); });
 }
 /* ---- Präferenzen (pro User gespeichert) ---- */
@@ -1201,7 +1248,7 @@ setInterval(function(){ render(); }, 1000);  // Frische/Alter aktualisieren
 
 function flashBlip(){ var b=$('#radarBlip'); if(!b)return; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); }
 function agoTxt(ts){ if(!ts)return '—'; var s=(Date.now()-new Date(ts).getTime())/1000; if(s<60)return 'gerade'; if(s<3600)return Math.floor(s/60)+' min'; if(s<86400)return Math.floor(s/3600)+' h '+Math.floor((s%3600)/60)+' min'; return Math.floor(s/86400)+' Tagen'; }
-function bookLbl(b){ if(!b)return '—'; return b.replace('pm','Polymarket').replace('ob','Orbit').replace('/',' + '); }
+function bookLbl(b){ if(!b)return '—'; return b.replace('pm','Polymarket').replace('ob','SX Bet').replace('/',' + '); }
 function updateScanStats(){
   if(!(window.__ar&&window.__ar.scanStats))return;
   window.__ar.scanStats().then(function(r){
