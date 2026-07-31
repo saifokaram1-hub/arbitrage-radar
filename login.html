@@ -53,6 +53,7 @@
 <script src="config.js"></script>
 <script>
 (function(){
+  if(!window.arGate()) return;              // Sperrbildschirm vor dem Login
   var sb = window.arClient();
   var mode = 'login';
   var email=document.getElementById('email'), pw=document.getElementById('pw');

@@ -10,9 +10,42 @@ window.arClient = function(){
   return window.__arc;
 };
 
+// ---- Sperrbildschirm: Zugangspasswort vor allem anderen ----
+window.arGate = function(){
+  if(sessionStorage.getItem('ar_gate')==='ok') return true;
+  var sb = window.arClient();
+  document.body.innerHTML =
+    '<div id="gateWrap" style="position:fixed;inset:0;background:#060704;display:grid;place-items:center;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial,sans-serif">'+
+      '<div style="width:340px;max-width:calc(100vw - 32px);border:1px solid #2f2b18;background:linear-gradient(180deg,#0b0c07,#080905);padding:30px 28px;text-align:center">'+
+        '<div style="width:40px;height:40px;margin:0 auto 16px;position:relative;border:1px solid #7f7130;background:#0a0b06">'+
+          '<span style="position:absolute;left:13px;top:19px;width:14px;height:1px;background:#c7b24c;box-shadow:0 -5px 0 #7f7130,0 5px 0 #7f7130"></span>'+
+          '<span style="position:absolute;left:19px;top:13px;width:1px;height:14px;background:#c7b24c;box-shadow:-5px 0 0 #7f7130,5px 0 0 #7f7130"></span></div>'+
+        '<div style="font-size:13px;letter-spacing:.3em;text-transform:uppercase;color:#f2f1e7;font-weight:700">Arbitrage Radar</div>'+
+        '<div style="font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:#8b8c7c;margin-top:6px">Privater Zugang</div>'+
+        '<input id="gatePw" type="password" placeholder="Zugangspasswort" autocomplete="off" '+
+          'style="width:100%;height:42px;margin-top:22px;padding:0 12px;background:#0b0c07;border:1px solid #2f2b18;color:#f2f1e7;font-size:14px;text-align:center;font-family:ui-monospace,Consolas,monospace">'+
+        '<button id="gateBtn" style="width:100%;height:42px;margin-top:12px;border:1px solid #7f7130;background:#1a1608;color:#e7d882;font:inherit;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;cursor:pointer">Entsperren</button>'+
+        '<div id="gateErr" style="min-height:18px;margin-top:10px;font-size:11px;color:#b0402e;font-family:ui-monospace,monospace"></div>'+
+      '</div></div>';
+  var pw=document.getElementById('gatePw'), btn=document.getElementById('gateBtn'), err=document.getElementById('gateErr');
+  function tryOpen(){
+    var v=pw.value; if(!v) return;
+    btn.disabled=true; err.textContent='prüfe …';
+    sb.rpc('check_gate',{p:v}).then(function(r){
+      if(r && r.data===true){ sessionStorage.setItem('ar_gate','ok'); location.reload(); }
+      else { err.textContent='Falsches Passwort'; btn.disabled=false; pw.value=''; pw.focus(); }
+    }).catch(function(){ err.textContent='Verbindungsfehler'; btn.disabled=false; });
+  }
+  btn.onclick=tryOpen;
+  pw.onkeydown=function(e){ if(e.key==='Enter') tryOpen(); };
+  setTimeout(function(){pw.focus();},50);
+  return false;
+};
+
 // Session prüfen; bei fehlender Anmeldung zu login.html. Gibt {session, profile} zurück.
 window.arRequireAuth = async function(opts){
   opts = opts || {};
+  if(!window.arGate()) return null;          // Sperrbildschirm zuerst
   const sb = window.arClient();
   const { data:{ session } } = await sb.auth.getSession();
   if(!session){ location.replace('login.html'); return null; }

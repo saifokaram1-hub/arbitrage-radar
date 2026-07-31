@@ -111,6 +111,39 @@
       </div>
     </div>
 
+    <div class="two">
+      <div class="card">
+        <h2>🔑 Mein Passwort ändern</h2>
+        <div class="b" style="display:flex;flex-direction:column;gap:10px">
+          <input id="pw1" type="password" placeholder="Neues Passwort (min. 6 Zeichen)" style="height:38px;padding:0 12px;background:#0b0c07;border:1px solid var(--line2);color:var(--txt);font-size:13px">
+          <input id="pw2" type="password" placeholder="Neues Passwort wiederholen" style="height:38px;padding:0 12px;background:#0b0c07;border:1px solid var(--line2);color:var(--txt);font-size:13px">
+          <button id="pwSave" style="height:40px;border:1px solid var(--gold-d);background:#1a1608;color:var(--gold-b);font:inherit;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer">Passwort ändern</button>
+          <div id="pwMsg" style="font-size:11.5px;font-family:var(--mono);min-height:16px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>📡 Meine Bridge (Betfair / 96ex scannen)</h2>
+        <div class="b" style="display:flex;flex-direction:column;gap:9px">
+          <div style="font-size:11px;color:var(--muted);line-height:1.6">Läuft auf <b>deinem PC</b> und versorgt alle mit Orbit/96ex-Quoten — solange dein Rechner an ist. Zugangsdaten bleiben bei dir.</div>
+          <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Dein persönliches Bridge-Token</div>
+          <div id="brgTok" style="font-family:var(--mono);font-size:11px;background:#0b0c07;border:1px solid var(--line2);padding:9px;word-break:break-all;color:var(--gold-b)">…</div>
+          <div style="display:flex;gap:7px">
+            <button id="brgCopy" style="flex:1;height:34px;border:1px solid var(--line3);background:#0a0b06;color:var(--txt);font:inherit;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">Kopieren</button>
+            <button id="brgNew" style="flex:1;height:34px;border:1px solid var(--line3);background:#0a0b06;color:var(--muted);font:inherit;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">Neu erzeugen</button>
+          </div>
+          <div style="border:1px solid var(--line2);background:#0a0b06;padding:9px 10px;font-size:10px;color:var(--muted);line-height:1.75">
+            <b style="color:var(--gold-b)">Einrichten (einmalig):</b><br>
+            1. <b>Node.js</b> installieren (nodejs.org)<br>
+            2. Ordner <b>bridge/</b> herunterladen (Link unten)<br>
+            3. <b>bridge-config.example.json</b> → umbenennen in <b>bridge-config.json</b><br>
+            4. Eintragen: dein <b>Betfair-Login</b>, dein <b>App-Key</b>, und oben stehendes <b>Token</b><br>
+            5. Terminal: <b>node betfair-bridge.js</b> → Fenster offen lassen
+          </div>
+          <a href="https://github.com/saifokaram1-hub/arbitrage-radar/tree/main/bridge" target="_blank" rel="noopener" style="text-align:center;padding:9px;border:1px solid var(--gold-d);color:var(--gold-b);text-decoration:none;font-size:10px;letter-spacing:.1em;text-transform:uppercase">Bridge herunterladen ↗</a>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <h2>Einzelne Einsätze im Zeitraum</h2>
       <div class="tblwrap">
@@ -219,6 +252,32 @@
         '<td class="r pos">'+((+a.amount||0)>=0?'+':'')+eur(a.amount)+'</td></tr>';
     }).join('');
   }
+
+  // --- Passwort ändern ---
+  document.getElementById('pwSave').onclick=async function(){
+    var a=document.getElementById('pw1').value, b=document.getElementById('pw2').value, m=document.getElementById('pwMsg');
+    if(a.length<6){ m.style.color='var(--neg)'; m.textContent='Mindestens 6 Zeichen'; return; }
+    if(a!==b){ m.style.color='var(--neg)'; m.textContent='Passwörter stimmen nicht überein'; return; }
+    m.style.color='var(--muted)'; m.textContent='speichere …';
+    var r=await sb.auth.updateUser({password:a});
+    if(r.error){ m.style.color='var(--neg)'; m.textContent='Fehler: '+r.error.message; }
+    else { m.style.color='var(--pos)'; m.textContent='✓ Passwort geändert'; document.getElementById('pw1').value=''; document.getElementById('pw2').value=''; }
+  };
+
+  // --- Bridge-Token ---
+  async function loadTok(regen){
+    var el=document.getElementById('brgTok');
+    var r=await sb.rpc('my_bridge_token',{ regenerate: !!regen });
+    el.textContent = (r && r.data) ? r.data : 'Fehler beim Laden';
+  }
+  document.getElementById('brgCopy').onclick=function(){
+    var t=document.getElementById('brgTok').textContent;
+    navigator.clipboard.writeText(t).then(function(){ var b=document.getElementById('brgCopy'); b.textContent='✓ Kopiert'; setTimeout(function(){b.textContent='Kopieren';},1500); });
+  };
+  document.getElementById('brgNew').onclick=function(){
+    if(confirm('Neues Token erzeugen? Deine laufende Bridge muss dann mit dem neuen Token neu gestartet werden.')) loadTok(true);
+  };
+  loadTok(false);
 
   document.getElementById('period').addEventListener('click',function(e){
     var b=e.target.closest('button'); if(!b)return; period=b.dataset.p;

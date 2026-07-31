@@ -49,6 +49,7 @@
   .act button{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:6px 10px;border:1px solid var(--line3);background:#0a0b06;color:var(--muted);cursor:pointer}
   .act button.ban:hover{border-color:var(--neg-d);color:#d98c7c}
   .act button.unban:hover{border-color:#5e7420;color:var(--pos)}
+  .act button.del:hover{border-color:var(--neg);color:#d98c7c;background:rgba(176,64,46,.1)}
   .empty{padding:40px;text-align:center;color:var(--dim);font-family:var(--mono);font-size:12px}
   /* Drawer */
   .drawer{position:fixed;top:0;right:0;bottom:0;width:440px;max-width:100vw;background:linear-gradient(180deg,#0b0c07,#070804);border-left:1px solid var(--line3);transform:translateX(100%);transition:transform .2s;z-index:50;overflow-y:auto;box-shadow:-30px 0 60px rgba(0,0,0,.5)}
@@ -89,6 +90,16 @@
   </div>
 
   <div class="wrap">
+    <div style="border:1px solid var(--line2);background:linear-gradient(180deg,#0b0c07,#080905);padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700">🔒 Zugangspasswort (Sperrbildschirm)</div>
+        <div style="font-size:10.5px;color:var(--dim);margin-top:4px">Wer die Seite öffnet, muss dieses Passwort eingeben — vor dem Login.</div>
+      </div>
+      <input id="gateNew" type="text" placeholder="Neues Zugangspasswort" style="height:36px;padding:0 12px;background:#0b0c07;border:1px solid var(--line2);color:var(--txt);font-size:13px;min-width:200px">
+      <button id="gateSave" style="height:36px;padding:0 16px;border:1px solid var(--gold-d);background:#1a1608;color:var(--gold-b);font:inherit;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer">Ändern</button>
+      <span id="gateMsg" class="who"></span>
+    </div>
+
     <div class="bar">
       <input id="search" placeholder="User suchen (E-Mail) …">
       <button class="refresh" id="refresh">↻ Aktualisieren</button>
@@ -157,10 +168,21 @@
         '<td class="num">'+peak+'</td>'+
         '<td class="num" style="color:'+(isOnline(r.last_seen)?'var(--pos)':'var(--muted)')+'">'+fmtAgo(r.last_seen)+'</td>'+
         '<td class="r act">'+(r.role==='admin'?'<span style="color:var(--faint);font-size:10px">—</span>':
-          (r.banned?'<button class="unban" data-un="'+r.id+'">Entbannen</button>':'<button class="ban" data-ban="'+r.id+'">Bannen</button>'))+'</td>'+
+          ((r.banned?'<button class="unban" data-un="'+r.id+'">Entbannen</button>':'<button class="ban" data-ban="'+r.id+'">Bannen</button>')+
+           '<button class="del" data-del="'+r.id+'" data-mail="'+(r.email||'')+'" style="margin-left:5px">Löschen</button>'))+'</td>'+
       '</tr>';
     }).join('');
   }
+
+  // Zugangspasswort ändern
+  document.getElementById('gateSave').onclick = async function(){
+    var v=document.getElementById('gateNew').value.trim(), msg=document.getElementById('gateMsg');
+    if(v.length<4){ msg.style.color='var(--neg)'; msg.textContent='Mindestens 4 Zeichen'; return; }
+    msg.style.color='var(--muted)'; msg.textContent='speichere …';
+    var r=await sb.rpc('admin_set_gate',{ p:v });
+    if(r.error){ msg.style.color='var(--neg)'; msg.textContent='Fehler: '+r.error.message; }
+    else { msg.style.color='var(--pos)'; msg.textContent='✓ Geändert — gilt ab sofort für alle'; document.getElementById('gateNew').value=''; }
+  };
 
   document.getElementById('search').addEventListener('input', render);
   document.getElementById('refresh').addEventListener('click', load);
@@ -172,6 +194,13 @@
       if(reason===null) return;
       var { error } = await sb.rpc('admin_set_ban',{ p_uid:ban.dataset.ban, p_banned:true, p_reason:reason||null });
       if(error) alert('Fehler: '+error.message); else load(); return;
+    }
+    var del=e.target.closest('[data-del]');
+    if(del){ e.stopPropagation();
+      var mail=del.dataset.mail||'diesen User';
+      if(!confirm('User "'+mail+'" endgültig löschen?\n\nAlle Daten (History, Einsätze) werden mitgelöscht. Das kann nicht rückgängig gemacht werden.')) return;
+      var res=await sb.rpc('admin_delete_user',{ p_uid:del.dataset.del });
+      if(res.error) alert('Fehler: '+res.error.message); else load(); return;
     }
     if(un){ e.stopPropagation();
       var { error:er2 } = await sb.rpc('admin_set_ban',{ p_uid:un.dataset.un, p_banned:false, p_reason:null });
