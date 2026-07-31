@@ -16,7 +16,11 @@ window.arClient = function(){
   if(sessionStorage.getItem('ar_gate')==='ok') return;
   var s=document.createElement('style');
   s.id='arGateHide';
-  s.textContent='html{visibility:hidden!important}html.ar-unlocked{visibility:visible!important}';
+  // Alles verstecken — NUR der Sperrbildschirm selbst bleibt sichtbar.
+  // (Auch Markup, das der Browser erst danach lädt, bleibt so verdeckt.)
+  s.textContent='html{visibility:hidden!important}'+
+                '#arGateOverlay,#arGateOverlay *{visibility:visible!important}'+
+                'html.ar-unlocked{visibility:visible!important}';
   (document.head||document.documentElement).appendChild(s);
 })();
 
@@ -25,8 +29,10 @@ window.arGate = function(){
   if(sessionStorage.getItem('ar_gate')==='ok'){ unlock(); return true; }
   var sb = window.arClient();
   document.title='Zugang — Arbitrage Radar';
-  document.body.innerHTML =
-    '<div id="gateWrap" style="position:fixed;inset:0;background:#060704;display:grid;place-items:center;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial,sans-serif">'+
+  var ov=document.createElement('div');
+  ov.id='arGateOverlay';
+  ov.innerHTML =
+    '<div id="gateWrap" style="position:fixed;inset:0;z-index:2147483647;background:#060704;display:grid;place-items:center;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial,sans-serif">'+
       '<div style="width:340px;max-width:calc(100vw - 32px);border:1px solid #2f2b18;background:linear-gradient(180deg,#0b0c07,#080905);padding:30px 28px;text-align:center">'+
         '<div style="width:40px;height:40px;margin:0 auto 16px;position:relative;border:1px solid #7f7130;background:#0a0b06">'+
           '<span style="position:absolute;left:13px;top:19px;width:14px;height:1px;background:#c7b24c;box-shadow:0 -5px 0 #7f7130,0 5px 0 #7f7130"></span>'+
@@ -40,7 +46,7 @@ window.arGate = function(){
         '<div style="margin-top:14px;padding-top:14px;border-top:1px solid #211f12;font-size:10.5px;color:#5c5d50;line-height:1.6">'+
           'Danach kannst du dich <b style="color:#8b8c7c">anmelden oder registrieren</b>.<br>Kein Zugangspasswort? Frag den Betreiber.</div>'+
       '</div></div>';
-  unlock();   // nur der Sperrbildschirm wird sichtbar, sonst nichts
+  (document.body||document.documentElement).appendChild(ov);   // Overlay drüber, Rest bleibt versteckt
   var pw=document.getElementById('gatePw'), btn=document.getElementById('gateBtn'), err=document.getElementById('gateErr');
   function tryOpen(){
     var v=pw.value; if(!v) return;
