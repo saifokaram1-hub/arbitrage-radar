@@ -471,7 +471,7 @@
         <div class="body">
           <div class="field search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="inp" id="fSearch" placeholder="Event suchen …" autocomplete="off"></div>
           <div class="field"><label>Kategorie</label><div class="chips" id="catChips"></div></div>
-          <div class="field"><label>Quelle</label><div class="chips" id="srcChips"><button class="chip active" data-src="all">Alle</button><button class="chip" data-src="cross">Nur Cross-Book</button><button class="chip" data-src="pm">Nur Polymarket</button><button class="chip" data-src="ob">Nur SX Bet</button></div></div>
+          <div class="field"><label>Quelle</label><div class="chips" id="srcChips"><button class="chip active" data-src="all">Alle</button><button class="chip" data-src="cross">Nur Cross-Book</button><button class="chip" data-src="pm">Nur Polymarket</button><button class="chip" data-src="ob">Nur SX Bet</button><button class="chip" data-src="bf">Nur Betfair</button></div></div>
           <div class="field rangewrap"><div class="rr"><label>Min. Rendite</label><b id="minRoiVal">0,0 %</b></div><input type="range" id="fMinRoi" min="0" max="8" step="0.1" value="0"></div>
           <label class="toggle" id="tgOpp" tabindex="0" role="switch" aria-checked="false"><span>Nur echte Chancen<small>Arb-% ≥ 100 ausblenden</small></span><span class="sw"></span></label>
           <label class="toggle" id="tgLowRisk" tabindex="0" role="switch" aria-checked="false"><span>Nur risikoarm<small>DNP/Void-anfällige Märkte ausblenden</small></span><span class="sw"></span></label>
@@ -580,13 +580,14 @@ var CONFIG={
   GAMMA:'https://gamma-api.polymarket.com/markets',
   CLOB:'https://clob.polymarket.com',
   SX:'https://noexklrgtqveiclijdwp.supabase.co/functions/v1/sx-proxy',
+  BF:'https://noexklrgtqveiclijdwp.supabase.co/functions/v1/bf-bridge',
   POLL_MS:5000, MAX:50, MIN_LIQ:300
 };
 var state={
   mode:'live', running:true, sound:true, desktop:false,
   cat:'Alle', src:'all', sort:'arb', search:'', minRoi:0, onlyOpp:false, onlyLowRisk:false, hitTh:0.5,
   hits:0, closed:0, log:[], unread:0,
-  accounts:{pm:{status:'…'}, ob:{status:'offline'}}, srcOn:{pm:true, ob:true},
+  accounts:{pm:{status:'…'}, ob:{status:'offline'}, bf:{status:'nobridge'}}, srcOn:{pm:true, ob:true, bf:true},
   balPm:0, balOb:0, feePm:0, feeOb:3, obProxy:'https://noexklrgtqveiclijdwp.supabase.co/functions/v1/ob-proxy', stdStake:100, autopilot:false, placed:0, secured:0,
   ticketId:null, ticketStake:100, ticketDirty:false,
   walletAddr:'',
@@ -731,6 +732,44 @@ function pollSX(){
     if(!state._sxLogged){ state._sxLogged=true; if(window.__ar)window.__ar.logConn('ob','sxbet'); }
   }).catch(function(){ state.accounts.ob.status='error'; });
 }
+/* ---- Betfair/Orbit über die lokale Bridge (PC des Nutzers) ---- */
+var bfRaw=[], bfLast=0;
+function pollBF(){
+  if(Date.now()-bfLast<15000 && bfRaw.length){ applyBF(); return Promise.resolve(); }
+  return fetchJSON(CONFIG.BF,15000).then(function(res){
+    var arr=(res&&res.data)||[];
+    bfRaw=arr.filter(function(d){return d&&d.key&&+d.o1>1&&+d.o2>1;});
+    bfLast=Date.now();
+    state.bfAge=res&&res.age_seconds;
+    state.accounts.bf.status = (res&&res.live&&bfRaw.length)? 'live' : (bfRaw.length? 'stale':'nobridge');
+    applyBF();
+  }).catch(function(){ state.accounts.bf.status='error'; });
+}
+function matchBF(mk){
+  if(!bfRaw.length)return null;
+  var q=nrm(mk.ev);
+  for(var i=0;i<bfRaw.length;i++){
+    var s=bfRaw[i]; var t=(s.key||'').split(' vs ');
+    var a=keyWord(t[0]||''), b=keyWord(t[1]||'');
+    if(a.length<3||b.length<3)continue;
+    if(q.indexOf(a)>=0 && q.indexOf(b)>=0){
+      var o1=nrm(mk.o1);
+      var flip=(o1.indexOf(a)<0 && o1.indexOf(b)>=0);
+      return flip? {o1:+s.o2,o2:+s.o1,link:s.link} : {o1:+s.o1,o2:+s.o2,link:s.link};
+    }
+  }
+  return null;
+}
+function applyBF(){
+  var hits=0;
+  mkMap.forEach(function(mk){
+    if(mk.demo)return;
+    var m=matchBF(mk);
+    if(m){ mk.bf={o1:m.o1,o2:m.o2}; mk.bfLink=m.link; hits++; }
+    else { mk.bf=null; mk.bfLink=null; }
+  });
+  state.bfMatches=hits; state.bfCount=bfRaw.length;
+}
 function applySX(){
   var hits=0;
   mkMap.forEach(function(mk){
@@ -743,12 +782,15 @@ function applySX(){
 }
 
 /* ---- Bewertung: beste Quote je Ausgang, Arb-%, ROI — NETTO nach Brokergebühr ---- */
-function feeOf(src){ return (src==='ob'? (+state.feeOb||0) : (+state.feePm||0))/100; }
+function feeOf(src){ var f = src==='ob'? state.feeOb : (src==='bf'? (state.feeBf==null?5:state.feeBf) : state.feePm); return (+f||0)/100; }
 // Effektivquote nach Kommission auf den Gewinn: q_eff = 1 + (q-1)*(1-Gebühr)
 function effOdds(q,src){ return 1 + (q-1)*(1-feeOf(src)); }
 function evalMarket(mk){
-  var c1=[{src:'pm',q:1/mk.ask0}], c2=[{src:'pm',q:1/mk.ask1}];
-  if(mk.ob && mk.ob.o1>1 && mk.ob.o2>1){ c1.push({src:'ob',q:mk.ob.o1}); c2.push({src:'ob',q:mk.ob.o2}); }
+  var c1=[], c2=[];
+  if(state.srcOn.pm){ c1.push({src:'pm',q:1/mk.ask0}); c2.push({src:'pm',q:1/mk.ask1}); }
+  if(state.srcOn.ob && mk.ob && mk.ob.o1>1 && mk.ob.o2>1){ c1.push({src:'ob',q:mk.ob.o1}); c2.push({src:'ob',q:mk.ob.o2}); }
+  if(state.srcOn.bf && mk.bf && mk.bf.o1>1 && mk.bf.o2>1){ c1.push({src:'bf',q:mk.bf.o1}); c2.push({src:'bf',q:mk.bf.o2}); }
+  if(!c1.length||!c2.length){ c1=[{src:'pm',q:1/mk.ask0}]; c2=[{src:'pm',q:1/mk.ask1}]; }
   function pick(cs){ var b=cs[0], be=effOdds(cs[0].q,cs[0].src);
     for(var i=1;i<cs.length;i++){ var e=effOdds(cs[i].q,cs[i].src); if(e>be){b=cs[i];be=e;} }
     return {src:b.src, odds:b.q, oddsEff:be}; }
@@ -795,7 +837,7 @@ function processSignals(){
 }
 
 /* ---- Konten-UI ---- */
-var ACC=[['pm','Polymarket','PM'],['ob','SX Bet','SX']];
+var ACC=[['pm','Polymarket','PM'],['ob','SX Bet','SX'],['bf','Betfair / Orbit','BF']];
 function statusText(k){
   if(!state.srcOn[k])return['off','Getrennt — klick zum Verbinden'];
   var s=state.accounts[k].status;
@@ -803,6 +845,8 @@ function statusText(k){
   if(s==='error')return['err','Getrennt / Fehler'];
   if(s==='demo')return['demo','Demo (simuliert)'];
   if(s==='needkey')return['demo','Proxy erreichbar · Betfair-Zugang fehlt'];
+  if(s==='nobridge')return['','Bridge nicht gestartet — klicken für Anleitung'];
+  if(s==='stale')return['demo','Bridge veraltet (PC aus?)'];
   if(s==='offline')return['','Getrennt · Proxy nötig'];
   return['','…'];
 }
@@ -839,7 +883,7 @@ function connectMetaMask(){
 function toggleSrc(k){ state.srcOn[k]=!state.srcOn[k]; if(k==='pm'&&!state.srcOn.pm)mkMap.clear(); if(k==='ob'&&!state.srcOn.ob)mkMap.forEach(function(mk){mk.ob=null;}); updateAccountsUI(); render(); saveNow(); cycle(); }
 function openSrcPanel(k,x,y){
   var pop=$('#srcPanel'); var st=statusText(k), on=state.srcOn[k];
-  var name=k==='pm'?'Polymarket':'SX Bet (Wettbörse)';
+  var name=k==='pm'?'Polymarket':(k==='bf'?'Betfair / Orbit':'SX Bet (Wettbörse)');
   var body='<div class="sh"><b>'+name+'</b><span class="x">✕</span></div><div class="sb2">'+
     '<div class="st2"><span class="d '+st[0]+'"></span>'+st[1]+'</div>'+
     '<button class="tgl'+(on?' on':'')+'" data-tgl>'+(on?'Verbunden — trennen':'Getrennt — verbinden')+'</button>';
@@ -849,6 +893,21 @@ function openSrcPanel(k,x,y){
       '<input class="in2" id="sp_wallet" placeholder="0x…" value="'+(state.walletAddr||'')+'">'+
       '<div class="bal2" id="sp_bal">'+(($('#walletBal')&&$('#walletBal').innerHTML)||'')+'</div>'+
       '<div class="nt"><b>Volle Verbindung (einmalig einrichten):</b><br>1. MetaMask installieren (metamask.io)<br>2. Oben „Wallet verbinden" → deine Adresse verbindet sich (nur lesen, kein Schlüssel)<br>3. Auf Polymarket USDC (Polygon) einzahlen + Konto aktivieren<br>Danach: Guthaben live hier. Setzen per Wallet-Bestätigung folgt als geprüfter Schritt.</div>';
+  } else if(k==='bf'){
+    var age=(state.bfAge!=null)?(state.bfAge<180?('aktuell, vor '+state.bfAge+' s'):('veraltet: vor '+Math.round(state.bfAge/60)+' min')):'—';
+    body+='<div class="nt" style="line-height:1.6">Betfair/Orbit blockt Cloud-Server. Deshalb läuft ein <b>kleines Programm auf deinem eigenen PC</b>, das die Kurse holt.<br>'+
+      '<b>Deine Zugangsdaten bleiben auf deinem PC</b> — hochgeladen werden nur Quoten.</div>'+
+      '<div style="border:1px solid var(--line2);background:#0a0b06;padding:9px 10px;font-size:10px;color:var(--muted);line-height:1.75">'+
+      '<b style="color:var(--gold-b)">So richtest du es ein (einmalig):</b><br>'+
+      '1. <b>Node.js</b> installieren (nodejs.org)<br>'+
+      '2. Ordner <b>bridge/</b> aus dem Repo herunterladen<br>'+
+      '3. <b>bridge-config.example.json</b> → umbenennen in <b>bridge-config.json</b><br>'+
+      '4. Darin eintragen: Betfair-Benutzername, Passwort, App-Key + ein selbst gewähltes <b>bridgeToken</b><br>'+
+      '5. Dasselbe Token in Supabase als Secret <b>BRIDGE_TOKEN</b> anlegen<br>'+
+      '6. Terminal im Ordner öffnen → <b>node betfair-bridge.js</b><br>'+
+      '7. Fenster offen lassen → hier springt der Status auf <b style="color:var(--pos)">Live</b></div>'+
+      '<div class="bal2">Bridge-Status: '+age+' · '+(state.bfCount||0)+' Quoten · '+(state.bfMatches||0)+' gematcht</div>'+
+      '<a href="https://github.com/saifokaram1-hub/arbitrage-radar/tree/main/bridge" target="_blank" rel="noopener" style="text-align:center;padding:8px;border:1px solid var(--gold-d);color:var(--gold-b);text-decoration:none;font-size:10px;letter-spacing:.1em;text-transform:uppercase">Bridge-Programm herunterladen ↗</a>';
   } else {
     body+='<label>Eigener Proxy (optional)</label><input class="in2" id="sp_proxy" value="'+(state.obProxy||'')+'">'+
       '<div class="nt"><b>SX Bet</b> ist eine echte Wettbörse (Krypto/USDC) — <b>kein Key, kein Login</b> nötig zum Scannen. Zum Setzen brauchst du dort ein eigenes Konto mit Guthaben.<br>Feld oben nur für einen eigenen Proxy (optional).</div>';
@@ -860,7 +919,7 @@ function openSrcPanel(k,x,y){
   pop.querySelector('.x').onclick=function(){pop.style.display='none';};
   pop.querySelector('[data-tgl]').onclick=function(){ toggleSrc(k); openSrcPanel(k, parseInt(pop.style.left,10), parseInt(pop.style.top,10)); };
   if(k==='pm'){ var w=pop.querySelector('#sp_wallet'); w.onchange=function(){ state.walletAddr=w.value.trim(); $('#walletAddr').value=state.walletAddr; refreshWallet(); saveNow(); setTimeout(function(){ var sb=$('#sp_bal'),wb=$('#walletBal'); if(sb&&wb)sb.innerHTML=wb.innerHTML; },1500); }; var mm=pop.querySelector('#sp_mm'); if(mm)mm.onclick=connectMetaMask; }
-  else { var p=pop.querySelector('#sp_proxy'); p.onchange=function(){ state.obProxy=p.value.trim(); $('#obProxy').value=state.obProxy; saveNow(); }; }
+  else { var p=pop.querySelector('#sp_proxy'); if(p)p.onchange=function(){ state.obProxy=p.value.trim(); $('#obProxy').value=state.obProxy; saveNow(); }; }
 }
 $('#acctList').addEventListener('click',function(e){
   var card=e.target.closest('[data-acct]'); if(!card)return;
@@ -968,9 +1027,10 @@ function placeDemo(v,S,auto){
 }
 function pmLink(mk){ return mk.slug? ('https://polymarket.com/event/'+mk.slug) : 'https://polymarket.com/markets'; }
 function openMarket(mk){
-  // Beide Bücher gleichzeitig öffnen (falls Cross-Book) -> nebeneinander setzen
+  // Alle beteiligten Bücher gleichzeitig öffnen -> nebeneinander setzen
   window.open(pmLink(mk),'_blank','noopener');
   if(mk.obLink) window.open(mk.obLink,'_blank','noopener');
+  if(mk.bfLink) window.open(mk.bfLink,'_blank','noopener');
 }
 
 /* ---- Wett-Ticket ---- */
@@ -1019,11 +1079,12 @@ function renderTicket(){
   var dnpNote = risk!=='niedrig'
     ? '<div style="border:1px solid #7a5220;background:rgba(217,140,74,.08);padding:7px 9px;margin-bottom:8px;color:#d98c4a;line-height:1.5"><b>⚠ DNP / Void-Risiko</b> ('+(risk==='hoch'?'Player-Prop':'Tennis-Aufgabe')+'): Bei Nicht-Antreten zahlt <b>Polymarket meist NICHT zurück</b> (kein Void), <b>Orbit/Betfair voidet</b> (Einsatz zurück). Lege die Seite, die bei DNP verlieren würde, auf <b>Orbit</b>. AGBs prüfen: „Does Not Play / Void / Non-Runner". Heuristik — Regeln je Markt selbst checken.</div>'
     : '';
-  var bk=function(s){return s==='pm'?'Polymarket':'SX Bet';};
+  var bk=function(s){return s==='pm'?'Polymarket':(s==='bf'?'Betfair/Orbit':'SX Bet');};
   // Direktlinks zu beiden Büchern
   var links='<div style="display:flex;gap:6px;margin-bottom:8px">'+
     '<a href="'+pmLink(m)+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #7f7130;color:#e7d882;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">Polymarket öffnen ↗</a>'+
-    (m.obLink?'<a href="'+m.obLink+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #41391f;color:#c9c7bd;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">SX Bet öffnen ↗</a>':'')+
+    (m.obLink?'<a href="'+m.obLink+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #41391f;color:#c9c7bd;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">SX Bet ↗</a>':'')+
+    (m.bfLink?'<a href="'+m.bfLink+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #41391f;color:#c9c7bd;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">Betfair ↗</a>':'')+
     '</div>';
   $('#tkNote').innerHTML= links + dnpNote + (isDemo
     ? '<b>Beide Seiten</b> simuliert auf die Konten. Empfohlen = Standard-Einsatz, begrenzt durchs Guthaben.'
@@ -1097,6 +1158,7 @@ function render(){
     if(state.src==='cross'&&!v.cross)return false;
     if(state.src==='pm' && !(v.s1.src==='pm'||v.s2.src==='pm'))return false;
     if(state.src==='ob' && !(v.s1.src==='ob'||v.s2.src==='ob'))return false;
+    if(state.src==='bf' && !(v.s1.src==='bf'||v.s2.src==='bf'))return false;
     if(v.roi<state.minRoi)return false;
     if(state.search&&v.m.ev.toLowerCase().indexOf(state.search)<0)return false;
     return true;
@@ -1214,6 +1276,7 @@ function cycle(){
   var chain=Promise.resolve();
   if(state.srcOn.pm){ chain=chain.then(pollPM); } else { mkMap.clear(); state.accounts.pm.status='off'; }
   chain=chain.then(function(){ if(state.srcOn.ob){ return pollSX(); } state.accounts.ob.status='off'; mkMap.forEach(function(mk){mk.ob=null;}); });
+  chain=chain.then(function(){ if(state.srcOn.bf){ return pollBF(); } state.accounts.bf.status='off'; mkMap.forEach(function(mk){mk.bf=null;}); });
   chain.then(function(){ processSignals(); render(); ensureWS(); });
 }
 /* ---- Präferenzen (pro User gespeichert) ---- */
@@ -1232,7 +1295,7 @@ window.__applyPrefs=function(p){
   if(p.obProxy){ state.obProxy=p.obProxy; $('#obProxy').value=p.obProxy; }
   if(p.walletAddr){ state.walletAddr=p.walletAddr; $('#walletAddr').value=p.walletAddr; refreshWallet(); }
   if(typeof p.onlyLowRisk==='boolean'){ state.onlyLowRisk=p.onlyLowRisk; var tlr=$('#tgLowRisk'); tlr.classList.toggle('on',p.onlyLowRisk); tlr.setAttribute('aria-checked',p.onlyLowRisk); }
-  if(p.srcOn&&typeof p.srcOn==='object'){ if(typeof p.srcOn.pm==='boolean')state.srcOn.pm=p.srcOn.pm; if(typeof p.srcOn.ob==='boolean')state.srcOn.ob=p.srcOn.ob; }
+  if(p.srcOn&&typeof p.srcOn==='object'){ ['pm','ob','bf'].forEach(function(k){ if(typeof p.srcOn[k]==='boolean')state.srcOn[k]=p.srcOn[k]; }); }
   updateAccountsUI(); render();
 };
 var _saveT; function saveP(){ if(_saveT)clearTimeout(_saveT); _saveT=setTimeout(function(){ if(window.__ar&&window.__ar.savePrefs&&window.__collectPrefs)window.__ar.savePrefs(window.__collectPrefs()); },700); }
@@ -1248,7 +1311,7 @@ setInterval(function(){ render(); }, 1000);  // Frische/Alter aktualisieren
 
 function flashBlip(){ var b=$('#radarBlip'); if(!b)return; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); }
 function agoTxt(ts){ if(!ts)return '—'; var s=(Date.now()-new Date(ts).getTime())/1000; if(s<60)return 'gerade'; if(s<3600)return Math.floor(s/60)+' min'; if(s<86400)return Math.floor(s/3600)+' h '+Math.floor((s%3600)/60)+' min'; return Math.floor(s/86400)+' Tagen'; }
-function bookLbl(b){ if(!b)return '—'; return b.replace('pm','Polymarket').replace('ob','SX Bet').replace('/',' + '); }
+function bookLbl(b){ if(!b)return '—'; return b.replace('pm','Polymarket').replace('ob','SX Bet').replace('bf','Betfair').replace('/',' + '); }
 function updateScanStats(){
   if(!(window.__ar&&window.__ar.scanStats))return;
   window.__ar.scanStats().then(function(r){

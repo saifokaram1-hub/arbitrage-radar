@@ -1,3 +1,6 @@
 .test_email
 _check.js
 _verify.mjs
+_*.mjs
+_*.js
+bridge/bridge-config.json

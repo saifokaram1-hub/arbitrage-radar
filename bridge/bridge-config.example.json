@@ -1,0 +1,14 @@
+{
+  "_hinweis": "Kopiere diese Datei zu 'bridge-config.json' und trage deine Daten ein. NIEMALS hochladen oder weitergeben!",
+
+  "betfairUsername": "DEIN_BETFAIR_BENUTZERNAME",
+  "betfairPassword": "DEIN_BETFAIR_PASSWORT",
+  "betfairAppKey": "DEIN_16_ZEICHEN_APP_KEY",
+
+  "bridgeUrl": "https://noexklrgtqveiclijdwp.supabase.co/functions/v1/bf-bridge",
+  "bridgeToken": "SELBST_AUSGEDACHTES_LANGES_PASSWORT",
+
+  "intervalSeconds": 20,
+  "maxMarkets": 100,
+  "eventTypeIds": ["1", "2", "7522", "6423"]
+}
