@@ -17,8 +17,12 @@ const path = require('path');
 
 const CFG_PATH = path.join(__dirname, 'bridge-config.json');
 if (!fs.existsSync(CFG_PATH)) {
-  console.error('\n❌ bridge-config.json fehlt.');
-  console.error('   Kopiere bridge-config.example.json zu bridge-config.json und trage deine Daten ein.\n');
+  console.error('\n❌ Die Zugangsdatei fehlt noch: bridge-config.json');
+  console.error('\n   So legst du sie an (Schritt 4 der Anleitung):');
+  console.error('   1. Diesen Befehl ausführen:   notepad ' + CFG_PATH);
+  console.error('   2. Auf "Ja" klicken (neue Datei erstellen)');
+  console.error('   3. Den Text aus der Anleitung einfügen, 3 Felder ausfüllen, speichern');
+  console.error('   4. Dann die Bridge erneut starten\n');
   process.exit(1);
 }
 const CFG = JSON.parse(fs.readFileSync(CFG_PATH, 'utf8'));
