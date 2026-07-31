@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Betfair / 96ex verbinden — Anleitung</title>
+<style>
+  :root{--void:#060704;--void2:#0a0b07;--line:#211f12;--line2:#2f2b18;--line3:#41391f;--txt:#f2f1e7;--muted:#8b8c7c;--dim:#5c5d50;--faint:#3a3b31;--gold:#c7b24c;--gold-b:#e7d882;--gold-d:#7f7130;--pos:#9fbf3b;--neg:#b0402e;--mono:ui-monospace,"Cascadia Code",Consolas,monospace;--sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Arial,sans-serif}
+  *{box-sizing:border-box}html,body{margin:0;padding:0}
+  body{background:var(--void);color:var(--txt);font-family:var(--sans);font-size:14px;line-height:1.6;
+    background-image:radial-gradient(120% 50% at 100% 0%,rgba(199,178,76,.05),transparent 55%)}
+  .cmd{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:14px;padding:12px 20px;background:linear-gradient(180deg,#0b0c07,#080905);border-bottom:1px solid var(--line2)}
+  .mark{width:30px;height:30px;position:relative;border:1px solid var(--gold-d);background:#0a0b06;flex:none}
+  .mark::before,.mark::after{content:"";position:absolute;background:var(--gold)}
+  .mark::before{left:8px;top:14px;width:13px;height:1px;box-shadow:0 -5px 0 var(--gold-d),0 5px 0 var(--gold-d)}
+  .mark::after{left:14px;top:8px;width:1px;height:13px;box-shadow:-5px 0 0 var(--gold-d),5px 0 0 var(--gold-d)}
+  h1{margin:0;font-size:12.5px;letter-spacing:.24em;text-transform:uppercase;font-weight:700}
+  h1 span{color:var(--gold-b)}
+  .cmd .sp{flex:1}
+  .lnk{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);border:1px solid var(--line3);padding:8px 12px;text-decoration:none;background:#0a0b06}
+  .lnk:hover{color:var(--gold-b);border-color:var(--gold-d)}
+  .wrap{max-width:800px;margin:0 auto;padding:26px 20px 70px}
+
+  .intro{border:1px solid var(--line2);background:linear-gradient(180deg,#0d0f0a,#080905);padding:22px 24px;margin-bottom:26px}
+  .intro h2{margin:0 0 10px;font-size:17px;color:var(--gold-b);letter-spacing:.02em}
+  .intro p{margin:0 0 10px;color:var(--muted);font-size:13.5px}
+  .intro .safe{border-left:3px solid var(--pos);background:rgba(159,191,59,.06);padding:11px 14px;margin-top:14px;font-size:12.5px;color:var(--txt)}
+
+  .status{display:flex;align-items:center;gap:12px;border:1px solid var(--line2);background:#0a0b06;padding:14px 18px;margin-bottom:26px}
+  .status .dot{width:13px;height:13px;flex:none;background:var(--dim)}
+  .status .dot.on{background:var(--pos);box-shadow:0 0 12px var(--pos)}
+  .status .dot.off{background:var(--neg)}
+  .status .t{flex:1}
+  .status .t b{display:block;font-size:13px}
+  .status .t small{color:var(--muted);font-family:var(--mono);font-size:11px}
+
+  .step{border:1px solid var(--line2);background:linear-gradient(180deg,#0b0c07,#080905);margin-bottom:16px}
+  .step > .h{display:flex;align-items:center;gap:14px;padding:15px 18px;border-bottom:1px solid var(--line)}
+  .step .num{width:30px;height:30px;flex:none;display:grid;place-items:center;border:1px solid var(--gold-d);background:#1a1608;color:var(--gold-b);font-family:var(--mono);font-weight:700;font-size:14px}
+  .step .h b{font-size:14.5px}
+  .step .h .sub{display:block;font-size:11.5px;color:var(--muted);font-weight:400;margin-top:2px}
+  .step .body{padding:16px 18px 20px}
+  .step ol{margin:0;padding-left:20px}
+  .step li{margin-bottom:9px;color:var(--txt)}
+  .step p{margin:0 0 12px;color:var(--muted);font-size:13px}
+  .hint{border-left:3px solid var(--gold-d);background:rgba(199,178,76,.05);padding:9px 13px;font-size:12.5px;color:var(--muted);margin:12px 0}
+  .warn{border-left:3px solid var(--neg);background:rgba(176,64,46,.06);padding:9px 13px;font-size:12.5px;color:#d98c7c;margin:12px 0}
+  .btnlink{display:inline-block;padding:10px 16px;border:1px solid var(--gold-d);background:#1a1608;color:var(--gold-b);text-decoration:none;font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:6px 6px 6px 0}
+  .btnlink:hover{background:#2a2410}
+  .btnlink.grey{border-color:var(--line3);color:var(--txt);background:#0a0b06}
+
+  .codebox{position:relative;border:1px solid var(--line3);background:#080905;margin:12px 0}
+  .codebox pre{margin:0;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;color:var(--gold-b);line-height:1.7;white-space:pre}
+  .codebox .copy{position:absolute;top:8px;right:8px;padding:5px 10px;border:1px solid var(--line3);background:#0d0f0a;color:var(--muted);font:inherit;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+  .codebox .copy:hover{color:var(--gold-b);border-color:var(--gold-d)}
+  .fill{color:#d98c4a}
+
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  th{text-align:left;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding:8px 10px;border-bottom:1px solid var(--line2)}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);font-size:12.5px;vertical-align:top}
+  td.k{font-family:var(--mono);color:#d98c4a;white-space:nowrap}
+  .tokbox{font-family:var(--mono);font-size:12px;background:#080905;border:1px solid var(--line3);padding:11px 13px;word-break:break-all;color:var(--gold-b);margin:10px 0}
+  @media(max-width:560px){.wrap{padding:18px 14px 60px}.step .body{padding:14px}}
+</style>
+</head>
+<body>
+  <div class="cmd">
+    <div class="mark"></div>
+    <h1>Betfair / 96ex <span>verbinden</span></h1>
+    <div class="sp"></div>
+    <a class="lnk" href="index.html">← Zurück zur App</a>
+  </div>
+
+  <div class="wrap">
+    <div class="intro">
+      <h2>Was mache ich hier — und warum?</h2>
+      <p>Damit der Radar auch die Quoten von <b>96ex / Orbit</b> vergleichen kann, muss ein kleines Hilfsprogramm auf <b>deinem eigenen Computer</b> laufen. Grund: Betfair blockiert Anfragen von Servern im Internet — von deinem Heimanschluss aus funktioniert es aber.</p>
+      <p>Du machst das <b>einmal</b>. Danach startest du es mit einem Doppelklick, wann immer du scannen willst.</p>
+      <div class="safe"><b>🔒 Deine Daten bleiben bei dir.</b> Dein Betfair-Passwort wird nur in einer Datei auf deinem PC gespeichert. An die Website gehen <b>ausschließlich Quoten</b> — niemals dein Login.</div>
+    </div>
+
+    <div class="status">
+      <span class="dot" id="stDot"></span>
+      <span class="t"><b id="stTxt">Prüfe Verbindung …</b><small id="stSub">—</small></span>
+      <button class="btnlink grey" style="margin:0" onclick="checkStatus()">Neu prüfen</button>
+    </div>
+
+    <!-- SCHRITT 1 -->
+    <div class="step">
+      <div class="h"><span class="num">1</span><b>Betfair-Konto &amp; App-Key holen<span class="sub">Nur einmal nötig · ca. 10 Minuten</span></b></div>
+      <div class="body">
+        <p>Du brauchst ein Betfair-Konto (kostenlos) und daraus einen sogenannten „App-Key". <b>Wichtig:</b> Das ist nur zum <b>Lesen der Quoten</b> — gewettet wird weiter bei 96ex.</p>
+        <ol>
+          <li>Konto erstellen und <b>verifizieren</b> (Ausweis hochladen — Pflicht bei Wettanbietern):
+            <br><a class="btnlink" href="https://www.betfair.com" target="_blank" rel="noopener">Betfair-Konto erstellen ↗</a></li>
+          <li>In <b>demselben Browser</b> bei Betfair <b>eingeloggt bleiben</b> (Tab offen lassen)</li>
+          <li>Dann diese Seite öffnen — dort wird der Key erzeugt:
+            <br><a class="btnlink" href="https://apps.betfair.com/visualisers/api-ng-account-operations/" target="_blank" rel="noopener">App-Key erzeugen ↗</a></li>
+          <li>Links in der Liste <b>createDeveloperAppKeys</b> anklicken</li>
+          <li>Das Feld <b>„Session Token"</b> füllt sich von selbst. Ist es leer → Seite mit <b>F5</b> neu laden</li>
+          <li>Bei <b>Application Name</b> einen Fantasienamen eintragen (z. B. <b>MeinRadar2026</b>) — darf nicht dein Benutzername sein</li>
+          <li>Unten auf <b>Execute</b> klicken</li>
+          <li>Du bekommst zwei Keys. Kopiere den <b>„Delayed App Key"</b> (16 Zeichen) — der ist gratis</li>
+        </ol>
+        <div class="hint">Key verloren? Kein Problem: dieselbe Seite öffnen, statt <b>create…</b> einfach <b>getDeveloperAppKeys</b> wählen → Execute. Dein Key erscheint wieder.</div>
+        <div class="warn">Der Key funktioniert nur, wenn dein Betfair-Konto <b>verifiziert</b> ist. Solange die Prüfung läuft, kommt eine Fehlermeldung — dann einfach später nochmal.</div>
+      </div>
+    </div>
+
+    <!-- SCHRITT 2 -->
+    <div class="step">
+      <div class="h"><span class="num">2</span><b>Node.js installieren<span class="sub">Das Programm, das die Bridge ausführt · 2 Minuten</span></b></div>
+      <div class="body">
+        <p>Lade die Version mit der Bezeichnung <b>LTS</b> herunter und klicke bei der Installation immer auf „Weiter/Next".</p>
+        <a class="btnlink" href="https://nodejs.org" target="_blank" rel="noopener">Node.js herunterladen ↗</a>
+        <div class="hint">Schon installiert? Dann überspring diesen Schritt einfach.</div>
+      </div>
+    </div>
+
+    <!-- SCHRITT 3 -->
+    <div class="step">
+      <div class="h"><span class="num">3</span><b>Bridge-Programm herunterladen<span class="sub">Ein kleiner Ordner mit 3 Dateien</span></b></div>
+      <div class="body">
+        <ol>
+          <li>Auf den Knopf klicken — es lädt eine ZIP-Datei:
+            <br><a class="btnlink" href="https://github.com/saifokaram1-hub/arbitrage-radar/archive/refs/heads/main.zip" target="_blank" rel="noopener">Bridge herunterladen (ZIP) ↗</a></li>
+          <li>ZIP <b>entpacken</b> (Rechtsklick → „Alle extrahieren")</li>
+          <li>Im entpackten Ordner den Unterordner <b>bridge</b> öffnen</li>
+          <li>Diesen Ordner an einen Ort legen, den du wiederfindest — z. B. direkt nach <b>C:\bridge</b></li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- SCHRITT 4 -->
+    <div class="step">
+      <div class="h"><span class="num">4</span><b>Zugangsdatei ausfüllen<span class="sub">Der wichtigste Schritt</span></b></div>
+      <div class="body">
+        <p>Im Ordner <b>bridge</b> liegt die Datei <b>bridge-config.example.json</b>.
+        Benenne sie um in <b>bridge-config.json</b> (das „.example" entfernen), dann mit <b>Rechtsklick → Öffnen mit → Editor</b> öffnen.</p>
+        <p>Lösche alles darin und füge stattdessen das hier ein:</p>
+
+        <div class="codebox">
+          <button class="copy" onclick="copyBox('cfg')">Kopieren</button>
+          <pre id="cfg">{
+  "betfairUsername": "<span class="fill">DEIN-BETFAIR-BENUTZERNAME</span>",
+  "betfairPassword": "<span class="fill">DEIN-BETFAIR-PASSWORT</span>",
+  "betfairAppKey": "<span class="fill">DEIN-16-ZEICHEN-APP-KEY</span>",
+
+  "bridgeToken": "<span class="fill" id="tokIn">…wird geladen…</span>",
+  "bridgeUrl": "https://noexklrgtqveiclijdwp.supabase.co/functions/v1/bf-bridge",
+
+  "intervalSeconds": 20,
+  "maxMarkets": 100,
+  "eventTypeIds": ["1", "2", "7522", "6423"]
+}</pre>
+        </div>
+
+        <p>Ersetze jetzt die <span class="fill">orange markierten</span> Stellen — <b>die Anführungszeichen müssen stehen bleiben!</b></p>
+        <table>
+          <tr><th>Feld</th><th>Was kommt rein</th></tr>
+          <tr><td class="k">betfairUsername</td><td>Dein Betfair-Benutzername (womit du dich einloggst)</td></tr>
+          <tr><td class="k">betfairPassword</td><td>Dein Betfair-Passwort</td></tr>
+          <tr><td class="k">betfairAppKey</td><td>Der 16-Zeichen-Key aus Schritt 1</td></tr>
+          <tr><td class="k">bridgeToken</td><td><b>Schon fertig eingesetzt</b> — dein persönliches Token</td></tr>
+        </table>
+
+        <div class="tokbox">Dein persönliches Bridge-Token:<br><span id="tokShow">…</span></div>
+        <button class="btnlink grey" onclick="copyTok()">Token kopieren</button>
+
+        <p style="margin-top:14px">Danach: <b>Datei speichern</b> (Strg+S) und schließen.</p>
+        <div class="warn"><b>Niemals weitergeben:</b> Diese Datei enthält dein Betfair-Passwort. Nicht verschicken, nicht hochladen, nicht in einen Chat kopieren.</div>
+      </div>
+    </div>
+
+    <!-- SCHRITT 5 -->
+    <div class="step">
+      <div class="h"><span class="num">5</span><b>Bridge starten<span class="sub">Ab jetzt nur noch ein Befehl</span></b></div>
+      <div class="body">
+        <ol>
+          <li>Den Ordner <b>bridge</b> im Explorer öffnen</li>
+          <li>Oben in die <b>Adresszeile</b> klicken, <b>cmd</b> eintippen und <b>Enter</b> drücken (öffnet ein schwarzes Fenster im richtigen Ordner)</li>
+          <li>Diesen Befehl eingeben und Enter drücken:</li>
+        </ol>
+        <div class="codebox">
+          <button class="copy" onclick="copyBox('run')">Kopieren</button>
+          <pre id="run">node betfair-bridge.js</pre>
+        </div>
+        <p>Wenn alles stimmt, erscheint sowas:</p>
+        <div class="codebox"><pre style="color:var(--pos)">✅ Bei Betfair eingeloggt.
+📤 43 Quoten hochgeladen (z.B. Bayern vs Dortmund)</pre></div>
+        <div class="hint"><b>Das Fenster muss offen bleiben</b>, solange gescannt werden soll. Zum Beenden: Fenster schließen oder <b>Strg+C</b>.</div>
+        <p>Oben auf dieser Seite springt der Status dann auf <b style="color:var(--pos)">Live</b> — und in der App zeigt „Betfair / Orbit" ebenfalls Live. 🎉</p>
+      </div>
+    </div>
+
+    <!-- PROBLEME -->
+    <div class="step">
+      <div class="h"><span class="num">?</span><b>Wenn etwas nicht klappt<span class="sub">Die häufigsten Meldungen</span></b></div>
+      <div class="body">
+        <table>
+          <tr><th>Meldung</th><th>Bedeutung / Lösung</th></tr>
+          <tr><td class="k">INVALID_USERNAME_OR_PASSWORD</td><td>Benutzername oder Passwort in der Datei falsch. Groß-/Kleinschreibung beachten.</td></tr>
+          <tr><td class="k">Token unbekannt</td><td>Das <b>bridgeToken</b> stimmt nicht. Oben nochmal kopieren und einsetzen.</td></tr>
+          <tr><td class="k">Blockiert (HTML/Cloudflare)</td><td>VPN/Proxy ausschalten — die Bridge muss über deinen normalen Anschluss laufen.</td></tr>
+          <tr><td class="k">node wird nicht erkannt</td><td>Node.js fehlt (Schritt 2) oder PC nach der Installation neu starten.</td></tr>
+          <tr><td class="k">Cannot find module</td><td>Das schwarze Fenster steht im falschen Ordner — Schritt 5, Punkt 2 wiederholen.</td></tr>
+          <tr><td class="k">keine 2-Wege-Märkte</td><td>Kein Fehler: gerade sind keine passenden Spiele offen.</td></tr>
+          <tr><td class="k">bridge-config.json fehlt</td><td>Datei wurde nicht umbenannt (das „.example" muss weg).</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+var SB=null, TOKEN='';
+function copyBox(id){
+  var t=document.getElementById(id).innerText;
+  navigator.clipboard.writeText(t).then(function(){
+    var b=document.querySelector('#'+id).parentNode.querySelector('.copy');
+    b.textContent='✓ Kopiert'; setTimeout(function(){b.textContent='Kopieren';},1500);
+  });
+}
+function copyTok(){ if(TOKEN) navigator.clipboard.writeText(TOKEN).then(function(){ alert('Token kopiert!'); }); }
+function checkStatus(){
+  fetch('https://noexklrgtqveiclijdwp.supabase.co/functions/v1/bf-bridge')
+    .then(function(r){return r.json();})
+    .then(function(j){
+      var dot=document.getElementById('stDot'), t=document.getElementById('stTxt'), s=document.getElementById('stSub');
+      if(j.live){ dot.className='dot on'; t.textContent='Bridge läuft — Betfair/96ex-Quoten kommen an ✅';
+        s.textContent=(j.data||[]).length+' Quoten · zuletzt vor '+j.age_seconds+' s'+(j.source?(' · '+j.source):''); }
+      else { dot.className='dot off'; t.textContent='Keine Bridge aktiv — Betfair/96ex wird nicht gescannt';
+        s.textContent='Folge der Anleitung unten. Polymarket und SX Bet laufen weiter.'; }
+    }).catch(function(){
+      document.getElementById('stTxt').textContent='Status nicht abrufbar';
+    });
+}
+(async function(){
+  var auth = await window.arRequireAuth();
+  if(!auth) return;
+  SB=auth.sb;
+  var r=await SB.rpc('my_bridge_token',{regenerate:false});
+  TOKEN=(r&&r.data)||'';
+  if(TOKEN){ document.getElementById('tokIn').textContent=TOKEN; document.getElementById('tokShow').textContent=TOKEN; }
+  checkStatus();
+  setInterval(checkStatus, 15000);
+})();
+</script>
+</body>
+</html>
