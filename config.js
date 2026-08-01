@@ -10,10 +10,18 @@ window.arClient = function(){
   return window.__arc;
 };
 
+window.AR_VERSION = 16;   // zum Prüfen, welche Fassung geladen ist
+
+// Speicher sicher benutzen — in privaten Fenstern kann sessionStorage gesperrt sein
+window.arStore = {
+  get:function(k){ try{ return sessionStorage.getItem(k); }catch(e){ return window.__mem&&window.__mem[k]||null; } },
+  set:function(k,v){ try{ sessionStorage.setItem(k,v); }catch(e){ window.__mem=window.__mem||{}; window.__mem[k]=v; } }
+};
+
 // ---- Sperrbildschirm: Zugangspasswort vor allem anderen ----
 // Sofort beim Laden ALLES verstecken, damit nichts durchblitzt, bevor entsperrt ist.
 (function(){
-  if(sessionStorage.getItem('ar_gate')==='ok') return;
+  if(window.arStore.get('ar_gate')==='ok') return;
   var s=document.createElement('style');
   s.id='arGateHide';
   // Alles verstecken — NUR der Sperrbildschirm selbst bleibt sichtbar.
@@ -24,12 +32,13 @@ window.arClient = function(){
   (document.head||document.documentElement).appendChild(s);
 })();
 
-window.AR_LOCKED = (sessionStorage.getItem('ar_gate')!=='ok');
+window.AR_LOCKED = (window.arStore.get('ar_gate')!=='ok');
 
 window.arGate = function(){
   var unlock=function(){ window.AR_LOCKED=false; document.documentElement.classList.add('ar-unlocked'); var h=document.getElementById('arGateHide'); if(h)h.remove(); };
-  if(sessionStorage.getItem('ar_gate')==='ok'){ unlock(); return true; }
-  if(document.getElementById('arGateOverlay')) return false;   // schon aufgebaut
+  if(window.arStore.get('ar_gate')==='ok'){ unlock(); return true; }
+  if(window.__arGateBuilt) return false;   // schon aufgebaut (auch wenn noch nicht eingehängt)
+  window.__arGateBuilt = true;
   var sb = window.arClient();
   document.title='Orion Panel';
   var ov=document.createElement('div');
@@ -49,20 +58,50 @@ window.arGate = function(){
         '<div style="margin-top:14px;padding-top:14px;border-top:1px solid #211f12;font-size:10.5px;color:#5c5d50;line-height:1.6">'+
           'Danach kannst du dich <b style="color:#8b8c7c">anmelden oder registrieren</b>.<br>Kein Zugangspasswort? Frag den Betreiber.</div>'+
       '</div></div>';
-  function mount(){ (document.body||document.documentElement).appendChild(ov); }
-  if(document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
-  var pw=document.getElementById('gatePw'), btn=document.getElementById('gateBtn'), err=document.getElementById('gateErr');
-  function tryOpen(){
-    var v=pw.value; if(!v) return;
-    btn.disabled=true; err.textContent='prüfe …';
-    sb.rpc('check_gate',{p:v}).then(function(r){
-      if(r && r.data===true){ sessionStorage.setItem('ar_gate','ok'); location.reload(); }
-      else { err.textContent='Falsches Passwort'; btn.disabled=false; pw.value=''; pw.focus(); }
-    }).catch(function(){ err.textContent='Verbindungsfehler'; btn.disabled=false; });
+  var pw, btn, err;
+  function mount(){
+    if(!ov.isConnected) (document.body||document.documentElement).appendChild(ov);
+    // Erst NACH dem Einhängen die Elemente holen und verdrahten
+    pw=ov.querySelector('#gatePw'); btn=ov.querySelector('#gateBtn'); err=ov.querySelector('#gateErr');
+    if(!pw||!btn||!err) return;
+    btn.onclick=tryOpen;
+    pw.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); tryOpen(); } };
+    setTimeout(function(){ try{pw.focus();}catch(e){} },50);
   }
-  btn.onclick=tryOpen;
-  pw.onkeydown=function(e){ if(e.key==='Enter') tryOpen(); };
-  setTimeout(function(){pw.focus();},50);
+  function tryOpen(){
+    var v=(pw.value||'').trim();
+    if(!v){ err.style.color='#b0402e'; err.textContent='Bitte Passwort eingeben'; pw.focus(); return; }
+    btn.disabled=true; err.style.color='#8b8c7c'; err.textContent='prüfe …';
+    var fertig=false;
+    // Notbremse: falls die Antwort hängt, nicht ewig blockieren
+    var timer=setTimeout(function(){
+      if(fertig)return; fertig=true;
+      err.style.color='#b0402e'; err.textContent='Zeitüberschreitung — nochmal versuchen';
+      btn.disabled=false;
+    }, 12000);
+    try{
+      sb.rpc('check_gate',{p:v}).then(function(r){
+        if(fertig)return; fertig=true; clearTimeout(timer);
+        if(r && r.error){ err.style.color='#b0402e'; err.textContent='Serverfehler: '+r.error.message; btn.disabled=false; return; }
+        if(r && r.data===true){ window.arStore.set('ar_gate','ok'); err.style.color='#9fbf3b'; err.textContent='✓ Zugang frei'; location.reload(); }
+        else { err.style.color='#b0402e'; err.textContent='Falsches Passwort'; btn.disabled=false; pw.value=''; pw.focus(); }
+      }).catch(function(e){
+        if(fertig)return; fertig=true; clearTimeout(timer);
+        err.style.color='#b0402e'; err.textContent='Verbindungsfehler — Internet prüfen';
+        btn.disabled=false;
+      });
+    }catch(e){
+      fertig=true; clearTimeout(timer);
+      err.style.color='#b0402e'; err.textContent='Fehler: '+(e&&e.message||e);
+      btn.disabled=false;
+    }
+  }
+  // Sofort einhängen wenn möglich, sonst sobald der Body da ist
+  if(document.body) mount();
+  else {
+    document.addEventListener('DOMContentLoaded', mount);
+    document.addEventListener('readystatechange', mount);
+  }
   return false;
 };
 
