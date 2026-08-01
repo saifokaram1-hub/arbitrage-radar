@@ -31,7 +31,7 @@ window.arGate = function(){
   if(sessionStorage.getItem('ar_gate')==='ok'){ unlock(); return true; }
   if(document.getElementById('arGateOverlay')) return false;   // schon aufgebaut
   var sb = window.arClient();
-  document.title='Zugang — Arbitrage Radar';
+  document.title='Orion Panel';
   var ov=document.createElement('div');
   ov.id='arGateOverlay';
   ov.innerHTML =
@@ -40,8 +40,8 @@ window.arGate = function(){
         '<div style="width:40px;height:40px;margin:0 auto 16px;position:relative;border:1px solid #7f7130;background:#0a0b06">'+
           '<span style="position:absolute;left:13px;top:19px;width:14px;height:1px;background:#c7b24c;box-shadow:0 -5px 0 #7f7130,0 5px 0 #7f7130"></span>'+
           '<span style="position:absolute;left:19px;top:13px;width:1px;height:14px;background:#c7b24c;box-shadow:-5px 0 0 #7f7130,5px 0 0 #7f7130"></span></div>'+
-        '<div style="font-size:13px;letter-spacing:.3em;text-transform:uppercase;color:#f2f1e7;font-weight:700">Arbitrage Radar</div>'+
-        '<div style="font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:#8b8c7c;margin-top:6px">Privater Zugang</div>'+
+        '<div style="font-size:13px;letter-spacing:.3em;text-transform:uppercase;color:#f2f1e7;font-weight:700">Orion Panel</div>'+
+        '<div style="font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:#8b8c7c;margin-top:6px">Interner Zugang</div>'+
         '<input id="gatePw" type="password" placeholder="Zugangspasswort" autocomplete="off" '+
           'style="width:100%;height:42px;margin-top:22px;padding:0 12px;background:#0b0c07;border:1px solid #2f2b18;color:#f2f1e7;font-size:14px;text-align:center;font-family:ui-monospace,Consolas,monospace">'+
         '<button id="gateBtn" style="width:100%;height:42px;margin-top:12px;border:1px solid #7f7130;background:#1a1608;color:#e7d882;font:inherit;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;cursor:pointer">Entsperren</button>'+
