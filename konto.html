@@ -145,7 +145,20 @@
     </div>
 
     <div class="card">
-      <h2>Einzelne Einsätze im Zeitraum</h2>
+      <h2>📡 Gescannte Chancen — nicht gesetzt <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">· wird nach 7 Tagen gelöscht</span></h2>
+      <div class="tblwrap">
+        <table><thead><tr><th>Zeitpunkt</th><th>Event</th><th>Thema</th><th>Bücher</th><th class="r">Arb-%</th><th class="r">Rendite</th></tr></thead>
+        <tbody id="oppBody"><tr><td colspan="6" class="empty">Lade …</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📊 Tägliche Chancen-Statistik <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">· bleibt dauerhaft</span></h2>
+      <div class="b" id="dailyBox"><div class="empty">Lade …</div></div>
+    </div>
+
+    <div class="card">
+      <h2>💰 Einzelne Einsätze im Zeitraum <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">· bleibt dauerhaft</span></h2>
       <div class="tblwrap">
         <table><thead><tr><th>Zeit</th><th>Markt</th><th>Thema</th><th class="r">Einsatz</th><th class="r">Gebühr</th><th class="r">Gewinn</th></tr></thead>
         <tbody id="tbody"><tr><td colspan="6" class="empty">Lade …</td></tr></tbody></table>
@@ -154,7 +167,7 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=12"></script>
+<script src="config.js?v=13"></script>
 <script>
 (async function(){
   var auth = await window.arRequireAuth();
@@ -252,6 +265,50 @@
         '<td class="r pos">'+((+a.amount||0)>=0?'+':'')+eur(a.amount)+'</td></tr>';
     }).join('');
   }
+
+  // --- Chancen-Verlauf (7 Tage) ---
+  (async function(){
+    var tb=document.getElementById('oppBody');
+    var r=await sb.rpc('my_opportunities',{limit_n:80});
+    var rows=(r&&r.data)||[];
+    if(!rows.length){ tb.innerHTML='<tr><td colspan="6" class="empty">Noch keine Chancen gescannt.<br>Sobald der Scanner eine findet, erscheint sie hier — auch wenn du nicht gesetzt hast.</td></tr>'; return; }
+    tb.innerHTML=rows.map(function(o){
+      var c=o.cat||'Markt', col=catColor(c);
+      var buecher=(o.books||'').split('/').map(function(b){return bookName(b.trim());}).join(' + ');
+      return '<tr><td>'+new Date(o.created_at).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</td>'+
+        '<td class="ev">'+(o.event||'—')+'</td>'+
+        '<td><span class="cattag" style="color:'+col+';border-color:'+col+'66">'+c+'</span></td>'+
+        '<td style="font-size:11px;color:var(--muted)">'+buecher+'</td>'+
+        '<td class="r">'+(+o.arb||0).toFixed(2)+' %</td>'+
+        '<td class="r pos">+'+(+o.edge||0).toFixed(2)+' %</td></tr>';
+    }).join('');
+  })();
+
+  // --- Tägliche Statistik (dauerhaft) ---
+  (async function(){
+    var el=document.getElementById('dailyBox');
+    var r=await sb.rpc('my_daily',{days:60});
+    var d=(r&&r.data)||[];
+    if(!d.length){ el.innerHTML='<div class="empty">Noch keine Tagesdaten.<br>Ab dem ersten Scan wird hier täglich mitgeschrieben — dauerhaft.</div>'; return; }
+    var max=Math.max.apply(null, d.map(function(x){return x.anzahl;}).concat([1]));
+    var ges=d.reduce(function(s,x){return s+x.anzahl;},0);
+    var bestTag=d.reduce(function(a,b){return (b.edge_max||0)>(a.edge_max||0)?b:a;}, d[0]);
+    el.innerHTML=
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'+
+        '<div style="border:1px solid var(--line2);background:#0a0b06;padding:9px 11px"><div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Chancen gesamt</div><div class="num" style="font-size:18px;color:var(--gold-b);margin-top:3px">'+ges+'</div></div>'+
+        '<div style="border:1px solid var(--line2);background:#0a0b06;padding:9px 11px"><div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Ø pro Tag</div><div class="num" style="font-size:18px;margin-top:3px">'+(ges/d.length).toFixed(1)+'</div></div>'+
+        '<div style="border:1px solid var(--line2);background:#0a0b06;padding:9px 11px"><div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Beste Rendite</div><div class="num" style="font-size:18px;color:var(--pos);margin-top:3px">+'+(+bestTag.edge_max||0).toFixed(2)+' %</div></div>'+
+      '</div>'+
+      '<div style="display:flex;align-items:flex-end;gap:3px;height:90px">'+
+        d.slice().reverse().map(function(x){
+          var h=Math.max(3,Math.round(x.anzahl/max*86));
+          return '<div title="'+x.day+': '+x.anzahl+' Chancen, Ø +'+(+x.edge_avg||0).toFixed(2)+' %" style="flex:1;height:'+h+'px;background:'+(x.cross_book>0?'var(--gold)':'#3f4a1c')+';border:1px solid var(--line2);border-bottom:0"></div>';
+        }).join('')+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:5px">'+
+        '<span>'+d[d.length-1].day+'</span><span>heute</span></div>'+
+      '<div style="font-size:10px;color:var(--dim);margin-top:8px">Gold = Cross-Book-Chancen (zwischen zwei Büchern) · Grün = innerhalb eines Buches</div>';
+  })();
 
   // --- Passwort ändern ---
   document.getElementById('pwSave').onclick=async function(){

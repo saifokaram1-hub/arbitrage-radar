@@ -108,10 +108,11 @@
     <div class="tblwrap">
       <table>
         <thead><tr>
-          <th>User</th><th>Verbunden mit</th><th class="r">Gewinn</th><th class="r">Online-Zeit</th>
-          <th>Meist online</th><th>Zuletzt</th><th class="r">Aktion</th>
+          <th>User</th><th>Verbunden mit</th><th class="r">Gesetzt</th><th class="r">Gewinn</th>
+          <th class="r">Einsätze</th><th class="r">Chancen</th><th class="r">Online-Zeit</th>
+          <th>Letzter Einsatz</th><th>Zuletzt online</th><th class="r">Aktion</th>
         </tr></thead>
-        <tbody id="tbody"><tr><td colspan="7" class="empty">Lade …</td></tr></tbody>
+        <tbody id="tbody"><tr><td colspan="10" class="empty">Lade …</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -122,7 +123,7 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=12"></script>
+<script src="config.js?v=13"></script>
 <script>
 (async function(){
   var auth = await window.arRequireAuth({ adminOnly:true });
@@ -140,7 +141,7 @@
 
   async function load(){
     var { data, error } = await sb.rpc('admin_overview');
-    if(error){ document.getElementById('tbody').innerHTML='<tr><td colspan="7" class="empty">Fehler: '+error.message+'</td></tr>'; return; }
+    if(error){ document.getElementById('tbody').innerHTML='<tr><td colspan="10" class="empty">Fehler: '+error.message+'</td></tr>'; return; }
     rows = data || [];
     document.getElementById('updated').textContent = 'Stand '+new Date().toLocaleTimeString('de-DE');
     // KPIs
@@ -155,7 +156,7 @@
     var q=(document.getElementById('search').value||'').toLowerCase().trim();
     var view=rows.filter(function(r){return !q || (r.email||'').toLowerCase().indexOf(q)>=0;});
     var tb=document.getElementById('tbody');
-    if(!view.length){ tb.innerHTML='<tr><td colspan="7" class="empty">Keine User.</td></tr>'; return; }
+    if(!view.length){ tb.innerHTML='<tr><td colspan="10" class="empty">Keine User.</td></tr>'; return; }
     tb.innerHTML=view.map(function(r){
       var books=(r.books||'').split(',').map(function(b){b=b.trim();return b?'<span class="b">'+(b==='pm'?'Polymarket':b==='ob'?'Orbit':b)+'</span>':'';}).join('');
       var peak = (r.peak_hour==null)?'–':(String(r.peak_hour).padStart(2,'0')+':00 Uhr');
@@ -163,9 +164,12 @@
         '<td><span class="dot'+(isOnline(r.last_seen)?' on':'')+'"></span><span class="email">'+(r.email||'—')+'</span> '+
           '<span class="rolechip'+(r.role==='admin'?' admin':'')+'">'+r.role+'</span>'+(r.banned?' <span class="banbadge">Gebannt</span>':'')+'</td>'+
         '<td class="book">'+(books||'<span style="color:var(--faint)">—</span>')+'</td>'+
+        '<td class="r num">'+eur(r.gesetzt)+'</td>'+
         '<td class="r prof">'+eur(r.profit)+'</td>'+
+        '<td class="r num">'+(r.einsaetze||0)+'</td>'+
+        '<td class="r num" style="color:var(--gold-b)">'+(r.chancen||0)+'</td>'+
         '<td class="r num">'+fmtDur(r.online_seconds)+'</td>'+
-        '<td class="num">'+peak+'</td>'+
+        '<td class="num" style="color:var(--muted)">'+(r.letzter_einsatz? fmtAgo(r.letzter_einsatz):'—')+'</td>'+
         '<td class="num" style="color:'+(isOnline(r.last_seen)?'var(--pos)':'var(--muted)')+'">'+fmtAgo(r.last_seen)+'</td>'+
         '<td class="r act">'+(r.role==='admin'?'<span style="color:var(--faint);font-size:10px">—</span>':
           ((r.banned?'<button class="unban" data-un="'+r.id+'">Entbannen</button>':'<button class="ban" data-ban="'+r.id+'">Bannen</button>')+
@@ -209,6 +213,40 @@
     var tr=e.target.closest('tr.row'); if(tr) openDetail(tr.dataset.id);
   });
 
+  function bilanzHtml(b, chancenGesamt){
+    b=b||{};
+    return '<div class="dsec"><h3>Bilanz (dauerhaft)</h3>'+
+      '<div class="kv"><span class="k">Einsätze gesamt</span><span class="v">'+(b.einsaetze||0)+'</span></div>'+
+      '<div class="kv"><span class="k">Gesetzt</span><span class="v">'+eur(b.gesetzt)+'</span></div>'+
+      '<div class="kv"><span class="k">Brokergebühr</span><span class="v" style="color:var(--neg)">−'+eur(b.gebuehr)+'</span></div>'+
+      '<div class="kv"><span class="k">Gewinn (netto)</span><span class="v" style="color:var(--pos)">'+((+b.gewinn||0)>=0?'+':'')+eur(b.gewinn)+'</span></div>'+
+      '<div class="kv"><span class="k">Ø Rendite</span><span class="v">'+(+b.roi_avg||0).toFixed(2)+' %</span></div>'+
+      '<div class="kv"><span class="k">Letzter Einsatz</span><span class="v">'+(b.letzter? fmtAgo(b.letzter):'—')+'</span></div>'+
+      '<div class="kv"><span class="k">Chancen gescannt</span><span class="v" style="color:var(--gold-b)">'+(chancenGesamt||0)+'</span></div>'+
+    '</div>';
+  }
+  function taeglichHtml(d){
+    d=d||[];
+    if(!d.length) return '<div class="dsec"><h3>Tages-Statistik (dauerhaft)</h3><div style="color:var(--faint);font-family:var(--mono);font-size:11px">Noch keine Daten.</div></div>';
+    var max=Math.max.apply(null, d.map(function(x){return x.anzahl;}).concat([1]));
+    var bars=d.slice().reverse().map(function(x){
+      var h=Math.max(2,Math.round(x.anzahl/max*70));
+      return '<div title="'+x.day+': '+x.anzahl+' Chancen, Ø +'+(+x.edge_avg||0).toFixed(2)+' %" style="flex:1;height:'+h+'px;background:'+(x.cross_book>0?'var(--gold)':'#3f4a1c')+';border:1px solid var(--line2);border-bottom:0"></div>';
+    }).join('');
+    var ges=d.reduce(function(s,x){return s+x.anzahl;},0);
+    return '<div class="dsec"><h3>Tages-Statistik (dauerhaft)</h3>'+
+      '<div style="display:flex;align-items:flex-end;gap:2px;height:72px">'+bars+'</div>'+
+      '<div style="font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:6px">'+ges+' Chancen über '+d.length+' Tage · Gold = Cross-Book</div></div>';
+  }
+  function chancenHtml(c){
+    c=c||[];
+    if(!c.length) return '<div class="dsec"><h3>Chancen-Verlauf (7 Tage)</h3><div style="color:var(--faint);font-family:var(--mono);font-size:11px">Keine Chancen erfasst.</div></div>';
+    return '<div class="dsec"><h3>Chancen-Verlauf (7 Tage, nicht gesetzt)</h3><div class="actlog">'+
+      c.map(function(o){
+        return '<div class="ai"><b>+'+(+o.edge||0).toFixed(2)+' %</b><span>'+(o.event||'').slice(0,30)+' · '+(o.books||'')+' · '+new Date(o.created_at).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</span></div>';
+      }).join('')+'</div></div>';
+  }
+
   var drawer=document.getElementById('drawer');
   document.getElementById('dClose').onclick=function(){ drawer.classList.remove('open'); };
   async function openDetail(uid){
@@ -232,9 +270,12 @@
         '<div class="kv"><span class="k">Zuletzt online</span><span class="v">'+fmtAgo(p.last_seen)+'</span></div>'+
         '<div class="kv"><span class="k">Online-Zeit</span><span class="v">'+fmtDur(p.online_seconds)+'</span></div>'+
       '</div>'+
+      bilanzHtml(data.bilanz, data.chancen_gesamt)+
       '<div class="dsec"><h3>Wann online (Stunden, Wien)</h3><div class="hist">'+bars+'</div><div class="histx">'+xl+'</div></div>'+
+      taeglichHtml(data.taeglich)+
       '<div class="dsec"><h3>Verbunden mit</h3>'+connHtml+'</div>'+
-      '<div class="dsec"><h3>Letzte Aktivität</h3><div class="actlog">'+actHtml+'</div></div>';
+      '<div class="dsec"><h3>Einsätze (dauerhaft)</h3><div class="actlog">'+actHtml+'</div></div>'+
+      chancenHtml(data.chancen);
   }
 
   await load();
