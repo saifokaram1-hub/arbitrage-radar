@@ -95,12 +95,26 @@ async function login() {
   });
   const txt = await r.text();
   let j = null; try { j = JSON.parse(txt); } catch (e) {}
-  if (!j || j.status !== 'SUCCESS' || !j.token) {
-    throw new Error('Login fehlgeschlagen: ' + (j ? (j.error || j.status) : txt.slice(0, 120)));
+  if (!j) throw new Error('Unerwartete Antwort von Betfair: ' + txt.slice(0, 120));
+
+  // WICHTIG: Betfair liefert bei status LIMITED_ACCESS (z.B. error SUSPENDED,
+  // KYC_SUSPEND, PENDING_AUTH) TROTZDEM ein gueltiges Session-Token.
+  // Wetten ist dann gesperrt — Kurse LESEN funktioniert aber. Genau das brauchen wir.
+  if (!j.token) {
+    throw new Error('Login fehlgeschlagen: ' + (j.error || j.status || 'unbekannt') +
+                    '  (Status: ' + (j.status || '-') + ') — kein Token erhalten');
   }
+
   sessionToken = j.token;
   lastLogin = Date.now();
-  log('✅ Bei Betfair eingeloggt.');
+
+  if (j.status === 'SUCCESS') {
+    log('✅ Bei Betfair eingeloggt.');
+  } else {
+    log('✅ Eingeloggt — Kurse lesen moeglich.');
+    log('   ⚠ Konto eingeschraenkt (' + (j.error || j.status) + '): Wetten ueber die API gesperrt,');
+    log('     Quoten werden trotzdem gelesen. Freischaltung nur ueber Betfair-Support.');
+  }
 }
 
 async function keepAlive() {
@@ -109,7 +123,9 @@ async function keepAlive() {
       headers: { 'X-Application': CFG.betfairAppKey, 'X-Authentication': sessionToken, 'Accept': 'application/json' }
     });
     const j = await r.json();
-    if (j.status !== 'SUCCESS') { log('⚠ keepAlive abgelaufen — logge neu ein'); await login(); }
+    // Bei eingeschraenkten Konten kann hier etwas anderes als SUCCESS kommen,
+    // obwohl die Sitzung lebt. Nur neu einloggen, wenn wirklich kein Token mehr da ist.
+    if (j.status !== 'SUCCESS' && !j.token) { log('⚠ Sitzung abgelaufen — logge neu ein'); await login(); }
   } catch (e) { log('⚠ keepAlive Fehler:', e.message); }
 }
 
