@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=16"></script>
+<script src="config.js?v=17"></script>
 <style>
   :root{
     --void:#060704; --void2:#0a0b07;
@@ -638,15 +638,26 @@ function pollPM(){
   state.polling=true;
   var needList=(Date.now()-lastGamma>60000)||pmPicks.length===0;
   var listP = needList
-    ? fetchJSON(CONFIG.GAMMA+'?closed=false&active=true&limit=200&order=volume&ascending=false',9000).then(function(list){
-        var picks=[];
-        for(var i=0;i<list.length && picks.length<CONFIG.MAX;i++){
-          var m=list[i]; var outs=parseArr(m.outcomes), toks=parseArr(m.clobTokenIds);
+    ? fetchJSON(CONFIG.GAMMA+'?closed=false&active=true&limit=500&order=volume&ascending=false',12000).then(function(list){
+        // Namen aus den anderen Büchern sammeln -> diese Märkte BEVORZUGT scannen,
+        // sonst fallen kleine Events (z.B. Tennis) durch das Umsatz-Raster.
+        var gegen=[];
+        (bfRaw||[]).forEach(function(b){ (b.key||'').split(' vs ').forEach(function(n){ var w=nrm(n).split(' '); var k=w[w.length-1]; if(k&&k.length>3)gegen.push(k); }); });
+        (sxRaw||[]).forEach(function(s){ [s.teamA,s.teamB].forEach(function(n){ var w=nrm(n||'').split(' '); var k=w[w.length-1]; if(k&&k.length>3)gegen.push(k); }); });
+
+        var passend=[], rest=[];
+        for(var i=0;i<list.length;i++){
+          var m=list[i], outs=parseArr(m.outcomes), toks=parseArr(m.clobTokenIds);
           if(!outs||outs.length!==2||!toks||toks.length!==2||!m.enableOrderBook)continue;
-          if(parseFloat(m.liquidity||0)<CONFIG.MIN_LIQ)continue;
-          picks.push({m:m,outs:outs,toks:toks});
+          var eintrag={m:m,outs:outs,toks:toks};
+          var q=nrm(m.question);
+          var passt=gegen.some(function(k){ return q.indexOf(k)>=0; });
+          if(passt) passend.push(eintrag);                                  // Treffer: immer scannen
+          else if(parseFloat(m.liquidity||0)>=CONFIG.MIN_LIQ) rest.push(eintrag);
         }
-        pmPicks=picks; lastGamma=Date.now();
+        pmPicks = passend.concat(rest).slice(0, CONFIG.MAX);
+        state.pmMatchPicks = passend.length;
+        lastGamma=Date.now();
       })
     : Promise.resolve();
   return listP.then(function(){
