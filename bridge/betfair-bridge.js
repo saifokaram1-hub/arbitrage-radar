@@ -77,6 +77,8 @@ const EVENT_TYPE_IDS = CFG.eventTypeIds || ['1', '2', '7522', '6423']; // Fußba
 
 let sessionToken = null;
 let lastLogin = 0;
+let loginFehler = 0;      // zaehlt fehlgeschlagene Logins
+let pauseBis = 0;         // Sperre gegen Dauer-Fehlversuche
 
 const log = (...a) => console.log(new Date().toLocaleTimeString('de-DE'), ...a);
 
@@ -209,8 +211,12 @@ async function push(data) {
 
 /* ---------- Hauptschleife ---------- */
 async function tick() {
+  // Schutz: nach Fehlversuchen nicht im 20-Sekunden-Takt weiterhaemmern
+  if (Date.now() < pauseBis) return;
+
   try {
     if (!sessionToken) await login();
+    loginFehler = 0;                       // Login hat geklappt
     if (Date.now() - lastLogin > 15 * 60e3) await keepAlive();
     const odds = await fetchOdds();
     if (!odds.length) { log('… keine 2-Wege-Märkte gefunden'); return; }
@@ -218,7 +224,22 @@ async function tick() {
     log('📤 ' + n + ' Quoten hochgeladen (z.B. ' + odds[0].key.slice(0, 40) + ')');
   } catch (e) {
     log('❌ ' + e.message);
-    if (/session|invalid|auth|expired/i.test(e.message)) { sessionToken = null; }
+    if (/session|invalid|auth|expired/i.test(e.message)) sessionToken = null;
+
+    if (/Login fehlgeschlagen/i.test(e.message)) {
+      loginFehler++;
+      if (loginFehler >= 3) {
+        // Wartezeit verdoppelt sich: 5, 10, 20, 40 … max 60 Minuten
+        const minuten = Math.min(60, 5 * Math.pow(2, loginFehler - 3));
+        pauseBis = Date.now() + minuten * 60e3;
+        log('');
+        log('⏸  ' + loginFehler + ' Fehlversuche — Pause fuer ' + minuten + ' Minuten.');
+        log('    Grund: Dauernde Fehlversuche koennen das Betfair-Konto zusaetzlich sperren.');
+        log('    Bitte Zugangsdaten pruefen oder Freischaltung abwarten.');
+        log('    (Programm laeuft weiter und versucht es danach erneut)');
+        log('');
+      }
+    }
   }
 }
 
