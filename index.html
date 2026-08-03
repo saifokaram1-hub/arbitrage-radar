@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=18"></script>
+<script src="config.js?v=19"></script>
 <style>
   :root{
     --void:#060704; --void2:#0a0b07;
@@ -274,6 +274,31 @@
   .radar .blip.show{animation:blip 1s ease}
   @keyframes blip{0%{opacity:1;transform:scale(.4)}100%{opacity:0;transform:scale(1.8)}}
   .scaninfo{flex:1 1 260px;min-width:0;overflow:hidden}
+  /* --- Fertig gerechnete Chancen aus der Bridge --- */
+  #oppWrap{border:1px solid var(--line3);background:linear-gradient(180deg,#0d0f0a,#080905);margin:0 0 14px}
+  .oppHead{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line2);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+  .oppHead b{color:var(--gold-b)}
+  .oppHead span{color:var(--dim);font-family:var(--mono);letter-spacing:0;text-transform:none;font-size:11px}
+  .opp{border-bottom:1px solid var(--line);padding:13px 14px}
+  .opp:last-child{border-bottom:0}
+  .oppTop{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:9px}
+  .oppRoi{font-family:var(--mono);font-size:19px;font-weight:700;color:var(--pos)}
+  .oppEv{flex:1;min-width:200px;font-size:13px;color:var(--txt)}
+  .oppMeta{font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+  .oppRisk{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border:1px solid var(--line3);color:var(--muted)}
+  .oppRisk.hoch{color:var(--neg);border-color:#6e2c22}
+  .oppRisk.mittel{color:#d98c4a;border-color:#5c4526}
+  .oppLeg{display:grid;grid-template-columns:88px 62px 1fr auto;gap:10px;align-items:center;padding:7px 0;border-top:1px dashed var(--line)}
+  .oppLeg .bk{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+  .oppLeg .amt{font-family:var(--mono);font-size:13px;color:var(--gold-b);text-align:right}
+  .oppLeg .what{font-size:12px;color:var(--txt)}
+  .oppLeg .what small{display:block;color:var(--dim);font-family:var(--mono);font-size:10px;margin-top:2px}
+  .oppLeg a{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);border:1px solid var(--line3);padding:6px 10px;text-decoration:none;background:#0a0b06;white-space:nowrap}
+  .oppLeg a:hover{color:var(--gold-b);border-color:var(--gold-d)}
+  .oppProof{margin-top:9px;padding:8px 11px;border-left:3px solid var(--pos);background:rgba(159,191,59,.06);font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .oppProof b{color:var(--pos)}
+  @media(max-width:620px){.oppLeg{grid-template-columns:1fr auto;gap:6px}.oppLeg .bk{grid-column:1/-1}}
+
   .scanline{font-size:12px;color:var(--muted);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .scanline b{color:var(--gold-b);letter-spacing:.14em}
   .scanline .livedot{display:inline-block;width:8px;height:8px;background:var(--pos);box-shadow:0 0 8px var(--pos);margin-right:7px;vertical-align:middle;animation:pulse 1.2s infinite}
@@ -447,6 +472,15 @@
     </div>
   </div>
 
+  <!-- Fertig gerechnete Chancen der lokalen Bridge: beide Beine, beide Links -->
+  <div id="oppWrap" style="display:none">
+    <div class="oppHead">
+      <b>Fertig gerechnet von der Bridge</b>
+      <span id="oppSub">–</span>
+    </div>
+    <div id="oppList"></div>
+  </div>
+
   <div class="work">
     <aside class="rail">
       <section class="block">
@@ -589,7 +623,10 @@ var CONFIG={
   // Qualität: beide Seiten müssen echt handelbar sein.
   // Kurse unter 2% / über 98% bedeuten: eine Seite ist praktisch tot
   // (z.B. 100.00 / 1.00) — dort kann man nichts sinnvoll setzen.
-  MIN_ASK:0.02, MAX_ASK:0.98
+  MIN_ASK:0.02, MAX_ASK:0.98,
+  GAMMA_MAX:8000,   // Sicherheitsnetz beim Blättern
+  PM_CHUNK:250,     // Token je Stapelabruf (/books nimmt bis 500)
+  WS_MAX:600        // so viele Token hält eine WebSocket-Verbindung zuverlässig
 };
 var state={
   mode:'live', running:true, sound:true, desktop:false,
@@ -626,28 +663,76 @@ function categorize(q){
 
 /* ---- Polymarket: breite Abdeckung, Echtzeit via WebSocket, REST als Auffrischung/Netz ---- */
 var pmPicks=[], lastGamma=0;
-function mkObj(p,a0,a1){ return {id:'pm_'+p.m.id, cat:categorize(p.m.question), ev:p.m.question, o1:p.outs[0], o2:p.outs[1], ask0:a0, ask1:a1, liq:parseFloat(p.m.liquidity||0), vol:parseFloat(p.m.volume||0), slug:p.m.slug||''}; }
-function seedAsks(p){
-  return Promise.all([
-    fetchJSON(CONFIG.CLOB+'/price?token_id='+p.toks[0]+'&side=sell',7000),
-    fetchJSON(CONFIG.CLOB+'/price?token_id='+p.toks[1]+'&side=sell',7000)
-  ]).then(function(a){
-    var a0=parseFloat(a[0].price), a1=parseFloat(a[1].price);
-    // NUR echte Kaufpreise (asks). Keine Mid-Preis-Notlösung -> sonst Fake-Surebets.
-    if(!(a0>0&&a0<1&&a1>0&&a1<1)) return null;
-    // Qualität: beide Seiten müssen handelbar sein — tote Märkte (z.B. 100.00/1.00) raus
-    if(a0<CONFIG.MIN_ASK||a0>CONFIG.MAX_ASK||a1<CONFIG.MIN_ASK||a1>CONFIG.MAX_ASK) return null;
-    return mkObj(p,a0,a1);
-  }).catch(function(){return null;});
+function mkObj(p,a0,a1,s0,s1){ return {id:'pm_'+p.m.id, cat:categorize(p.m.question), ev:p.m.question, o1:p.outs[0], o2:p.outs[1], ask0:a0, ask1:a1, sz0:s0||0, sz1:s1||0, liq:parseFloat(p.m.liquidity||0), vol:parseFloat(p.m.volume||0), slug:p.m.slug||''}; }
+
+// Gamma liefert HÖCHSTENS 100 Einträge pro Aufruf — egal welches limit man setzt.
+// Vorher stand hier limit=500, dadurch wurden nie mehr als 100 Märkte gesehen.
+// Jetzt wird geblättert, bis wirklich alles da ist (rund 2000 Märkte).
+function gammaAlle(){
+  var raus=[], off=0;
+  function seite(){
+    var c=new AbortController(); var t=setTimeout(function(){c.abort();},15000);
+    return fetch(CONFIG.GAMMA+'?closed=false&active=true&limit=100&offset='+off,{signal:c.signal})
+      .then(function(r){
+        // Hinter dem letzten Eintrag antwortet Gamma mit 422 statt mit einer
+        // leeren Liste. Das ist das Ende, kein Fehler.
+        if(r.status===422) return null;
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.json();
+      })
+      .then(function(list){
+        clearTimeout(t);
+        if(!Array.isArray(list)||!list.length) return raus;
+        raus=raus.concat(list);
+        off+=100;
+        if(list.length<100 || off>=CONFIG.GAMMA_MAX) return raus;
+        return seite();
+      })
+      .catch(function(e){
+        clearTimeout(t);
+        if(raus.length) return raus;    // was schon da ist, wird verwendet
+        throw e;
+      });
+  }
+  return seite();
+}
+
+// Preise im Stapel holen: ein Aufruf für bis zu 250 Token statt zwei je Markt.
+// /books liefert zusätzlich die Tiefe, damit Quoten ohne echten Gegenspieler rausfallen.
+function bookStapel(tokens){
+  var out={};
+  function teil(i){
+    if(i>=tokens.length) return Promise.resolve(out);
+    var chunk=tokens.slice(i,i+CONFIG.PM_CHUNK);
+    var c=new AbortController(); var t=setTimeout(function(){c.abort();},20000);
+    return fetch(CONFIG.CLOB+'/books',{
+      method:'POST', headers:{'content-type':'application/json'},
+      body:JSON.stringify(chunk.map(function(x){return {token_id:x};})), signal:c.signal
+    }).then(function(r){ return r.json(); })
+      .then(function(arr){
+        if(Array.isArray(arr)) arr.forEach(function(b){
+          if(!b||!b.asks||!b.asks.length)return;
+          // Die asks kommen absteigend — der Kaufpreis ist der NIEDRIGSTE.
+          var best=null;
+          for(var k=0;k<b.asks.length;k++){ var pf=+b.asks[k].price; if(pf>0&&pf<1&&(best===null||pf<best.p)) best={p:pf,s:+b.asks[k].size}; }
+          if(best) out[String(b.asset_id)]=best;
+        });
+      })
+      .catch(function(){})
+      // Bewusst .then und nicht .finally: finally reicht den ALTEN Wert weiter,
+      // die Rekursion würde dort verschluckt und die Preistabelle käme leer an.
+      .then(function(){ clearTimeout(t); return teil(i+CONFIG.PM_CHUNK); });
+  }
+  return teil(0);
 }
 function pollPM(){
   if(state.polling)return Promise.resolve();
   state.polling=true;
   var needList=(Date.now()-lastGamma>60000)||pmPicks.length===0;
   var listP = needList
-    ? fetchJSON(CONFIG.GAMMA+'?closed=false&active=true&limit=500&order=volume&ascending=false',12000).then(function(list){
-        // Namen aus den anderen Büchern sammeln -> diese Märkte BEVORZUGT scannen,
-        // sonst fallen kleine Events (z.B. Tennis) durch das Umsatz-Raster.
+    ? gammaAlle().then(function(list){
+        // Namen aus den anderen Büchern sammeln -> diese Märkte zuerst,
+        // damit der WebSocket sie sicher mitbekommt.
         var gegen=[];
         (bfRaw||[]).forEach(function(b){ (b.key||'').split(' vs ').forEach(function(n){ var w=nrm(n).split(' '); var k=w[w.length-1]; if(k&&k.length>3)gegen.push(k); }); });
         (sxRaw||[]).forEach(function(s){ [s.teamA,s.teamB].forEach(function(n){ var w=nrm(n||'').split(' '); var k=w[w.length-1]; if(k&&k.length>3)gegen.push(k); }); });
@@ -658,38 +743,35 @@ function pollPM(){
           if(!outs||outs.length!==2||!toks||toks.length!==2||!m.enableOrderBook)continue;
           var eintrag={m:m,outs:outs,toks:toks};
           var q=nrm(m.question);
-          var passt=gegen.some(function(k){ return q.indexOf(k)>=0; });
-          if(passt) passend.push(eintrag);                                  // Treffer: immer scannen
-          else if(parseFloat(m.liquidity||0)>=CONFIG.MIN_LIQ) rest.push(eintrag);
+          if(gegen.some(function(k){ return q.indexOf(k)>=0; })) passend.push(eintrag);
+          else rest.push(eintrag);
         }
-        pmPicks = passend.concat(rest).slice(0, CONFIG.MAX);
+        // Kein Deckel mehr: alle Märkte werden abgefragt. Der Stapelabruf schafft das.
+        pmPicks = passend.concat(rest);
         state.pmMatchPicks = passend.length;
         lastGamma=Date.now();
       })
     : Promise.resolve();
+
   return listP.then(function(){
-      // REST-Seed: alle bei Listen-Refresh (60s); zwischendrin macht der WebSocket die Echtzeit.
-      // Nur falls WS aus ist, als Netz die Top-18 nachziehen.
-      var seedList = needList ? pmPicks : (state._wsOn ? [] : pmPicks.slice(0,18));
-      if(!seedList.length)return;
-      // In Häppchen abfragen, damit Polymarket nicht drosselt (sonst brechen Kurse weg)
-      var alle=[], i=0;
-      function haeppchen(){
-        if(i>=seedList.length){
-          var fresh=alle.filter(Boolean);
-          if(fresh.length){ mergeMarkets(fresh, needList); state.lastUpd=Date.now(); }
-          return Promise.resolve();
+      // Ohne WebSocket jede Runde alles neu, mit WebSocket nur beim Listenwechsel —
+      // dazwischen liefert der Datenstrom die Echtzeitkurse.
+      if(!needList && state._wsOn) return;
+      if(!pmPicks.length) return;
+      var tokens=[];
+      pmPicks.forEach(function(p){ tokens.push(p.toks[0],p.toks[1]); });
+      return bookStapel(tokens).then(function(preise){
+        var frisch=[];
+        for(var i=0;i<pmPicks.length;i++){
+          var p=pmPicks[i];
+          var a=preise[String(p.toks[0])], b=preise[String(p.toks[1])];
+          if(!a||!b)continue;
+          // Beide Seiten müssen handelbar sein — tote Märkte (100.00/1.00) raus
+          if(a.p<CONFIG.MIN_ASK||a.p>CONFIG.MAX_ASK||b.p<CONFIG.MIN_ASK||b.p>CONFIG.MAX_ASK)continue;
+          frisch.push(mkObj(p,a.p,b.p,a.s,b.s));
         }
-        var teil=seedList.slice(i, i+20); i+=20;
-        return Promise.all(teil.map(seedAsks)).then(function(res){
-          alle=alle.concat(res);
-          // Zwischendurch schon anzeigen, was da ist
-          var fresh=alle.filter(Boolean);
-          if(fresh.length){ mergeMarkets(fresh, false); state.lastUpd=Date.now(); }
-          return haeppchen();
-        });
-      }
-      return haeppchen();
+        if(frisch.length){ mergeMarkets(frisch, needList); state.lastUpd=Date.now(); }
+      });
     })
     .then(function(){
       state.accounts.pm.status='live'; state.pmErr='';
@@ -712,7 +794,19 @@ function mergeMarkets(fresh, prune){
 var ws=null, wsTokenMap={}, wsBooks={}, wsSubKey='', _wsRT=0;
 function wsBestAsk(assetId){ var m=wsBooks[assetId]; if(!m)return null; var best=null; for(var pr in m){ var pf=+pr; if(m[pr]>0 && pf>0 && pf<1){ if(best===null||pf<best)best=pf; } } return best; }
 function wsApply(assetId){ var info=wsTokenMap[assetId]; if(!info)return; var mk=mkMap.get(info.mktId); if(!mk)return; var ba=wsBestAsk(assetId); if(ba===null)return; if(info.slot===0)mk.ask0=ba; else mk.ask1=ba; var now=Date.now(); if(now-_wsRT>=300){ _wsRT=now; processSignals(); render(); } }
-function wsBuildIds(){ wsTokenMap={}; var ids=[]; pmPicks.forEach(function(p){ var id='pm_'+p.m.id; wsTokenMap[p.toks[0]]={mktId:id,slot:0}; wsTokenMap[p.toks[1]]={mktId:id,slot:1}; ids.push(p.toks[0],p.toks[1]); }); return ids; }
+// Der Datenstrom bekommt nicht alle 2000 Märkte, sondern die vordersten —
+// das sind genau die, die zu einem anderen Buch passen. Der Rest wird per
+// Stapelabruf aktualisiert. Zu viele Abos lassen die Verbindung abreissen.
+function wsBuildIds(){
+  wsTokenMap={}; var ids=[];
+  for(var i=0;i<pmPicks.length && ids.length<CONFIG.WS_MAX;i++){
+    var p=pmPicks[i], id='pm_'+p.m.id;
+    wsTokenMap[p.toks[0]]={mktId:id,slot:0};
+    wsTokenMap[p.toks[1]]={mktId:id,slot:1};
+    ids.push(p.toks[0],p.toks[1]);
+  }
+  return ids;
+}
 function ensureWS(){
   if(state.mode==='demo'||!state.srcOn.pm){ if(ws){try{ws.close();}catch(e){} ws=null;} state._wsOn=false; return; }
   var ids=wsBuildIds(); if(!ids.length)return;
@@ -778,8 +872,77 @@ function pollBF(){
     bfLast=Date.now();
     state.bfAge=res&&res.age_seconds;
     state.accounts.bf.status = (res&&res.live&&bfRaw.length)? 'live' : (bfRaw.length? 'stale':'nobridge');
+    state.bfOpps=(res&&res.opps)||[];
+    state.bfArbs=(res&&res.arbs)||[];
+    state.bfStats=(res&&res.stats)||{};
     applyBF();
+    renderOpps();
   }).catch(function(){ state.accounts.bf.status='error'; });
+}
+
+/* ---- Anzeige der fertig gerechneten Chancen aus der Bridge ----
+   Die Einsätze werden hier aus den EFFEKTIVQUOTEN gerechnet, nicht aus dem
+   gerundeten Prozentsatz. Nur so zahlen beide Ausgänge auf den Cent gleich. */
+function renderOpps(){
+  var wrap=document.getElementById('oppWrap'); if(!wrap)return;
+  var opps=(state.bfOpps||[]).slice();
+  // Hohe Rendite zuerst — danach wird gefiltert, was zu dünn ist
+  opps=opps.filter(function(o){
+    if(!o || !o.legs || o.legs.length!==2) return false;
+    if(!(o.roi>=state.minRoi)) return false;
+    // Sicherheitsnetz: selbst nachrechnen. Was hier nicht wirklich unter 1 liegt,
+    // ist keine Arbitrage und wird nicht angezeigt — egal was mitgeliefert wurde.
+    var q1=+o.legs[0].qEff, q2=+o.legs[1].qEff;
+    if(!(q1>1) || !(q2>1)) return false;
+    return (1/q1 + 1/q2) < 1;
+  });
+  opps.sort(function(a,b){ return b.roi-a.roi; });
+
+  if(!opps.length){ wrap.style.display='none'; return; }
+  wrap.style.display='';
+
+  var alter=state.bfAge==null?'–':(state.bfAge<90?'aktuell':(Math.round(state.bfAge/60)+' Min alt'));
+  var sub=document.getElementById('oppSub');
+  if(sub) sub.textContent=opps.length+' Chance'+(opps.length===1?'':'n')+' · Daten '+alter+
+    (state.bfStats&&state.bfStats.bf_katalog? ' · '+state.bfStats.bf_katalog+' Betfair-Märkte gelesen':'');
+
+  var S=Math.max(+state.stdStake||100,1);
+  var esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
+
+  document.getElementById('oppList').innerHTML=opps.slice(0,12).map(function(o){
+    var q1=+o.legs[0].qEff, q2=+o.legs[1].qEff;
+    var inv=1/q1+1/q2;
+    var s1=S*(1/q1)/inv, s2=S-s1;
+    var aus=S/inv, gew=aus-S;
+    var deckel=o.maxStake&&o.maxStake<S;
+
+    var beine=o.legs.map(function(l,i){
+      var betrag=i===0?s1:s2;
+      return '<div class="oppLeg">'+
+        '<span class="bk">'+esc(l.book)+'</span>'+
+        '<span class="amt">'+betrag.toFixed(2)+'</span>'+
+        '<span class="what">'+esc(l.pick)+
+          '<small>Quote '+l.q+' → nach '+l.fee+' % Gebühr '+l.qEff+
+          ' · max '+(l.size||0)+' · Anteil '+(+l.anteil).toFixed(2)+' %</small></span>'+
+        '<a href="'+esc(l.link)+'" target="_blank" rel="noopener">öffnen ↗</a>'+
+      '</div>';
+    }).join('');
+
+    return '<div class="opp">'+
+      '<div class="oppTop">'+
+        '<span class="oppRoi">+'+(+o.roi).toFixed(2)+' %</span>'+
+        '<span class="oppEv">'+esc(o.ev)+'</span>'+
+        '<span class="oppRisk '+esc(o.risk)+'">'+esc(o.risk)+'</span>'+
+        '<span class="oppMeta">max ~'+(o.maxStake||0)+(o.tage!=null?' · '+o.tage+' Tage':'')+'</span>'+
+      '</div>'+
+      beine+
+      '<div class="oppProof">Bei '+S.toFixed(2)+' Gesamteinsatz: '+
+        s1.toFixed(2)+' + '+s2.toFixed(2)+' → Auszahlung <b>'+aus.toFixed(2)+
+        '</b> bei BEIDEN Ausgängen · Gewinn <b>+'+gew.toFixed(2)+'</b>'+
+        (deckel? ' · <span style="color:#d98c4a">Achtung: nur ~'+o.maxStake+' im Buch verfügbar</span>':'')+
+      '</div>'+
+    '</div>';
+  }).join('');
 }
 function matchBF(mk){
   if(!bfRaw.length)return null;

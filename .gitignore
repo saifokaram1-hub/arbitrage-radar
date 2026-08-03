@@ -4,3 +4,6 @@ _verify.mjs
 _*.mjs
 _*.js
 bridge/bridge-config.json
+bridge/sea-prep.blob
+bridge/betfair-bridge.exe
+_opp-test.html
