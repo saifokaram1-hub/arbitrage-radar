@@ -72,8 +72,19 @@ if (offen.length) {
 }
 
 const INTERVAL_MS = (CFG.intervalSeconds || 20) * 1000;
-const MAX_MARKETS = CFG.maxMarkets || 100;
-const EVENT_TYPE_IDS = CFG.eventTypeIds || ['1', '2', '7522', '6423']; // Fußball, Tennis, Basketball, Am. Football
+const MAX_MARKETS = Math.max(CFG.maxMarkets || 0, 300);
+
+// Sportarten: alles, was Polymarket ebenfalls listet (Fussball, Tennis, Basketball,
+// Am. Football, Baseball, Golf, Cricket, Boxen, MMA, Esports, Eishockey, Motorsport).
+// Die Liste aus der Konfigurationsdatei wird ERGAENZT, nicht ersetzt -> bestehende
+// Installationen bekommen die neuen Sportarten automatisch dazu.
+const STANDARD_SPORTS = ['1','2','7522','6423','7511','3','4','6','26420387','61420','7524','8'];
+const EVENT_TYPE_IDS = Array.from(new Set([].concat(CFG.eventTypeIds || [], STANDARD_SPORTS)));
+
+// Nur Markttypen mit echten Teilnehmernamen ("A vs B") — dadurch bleibt der
+// Abgleich mit Polymarket zuverlaessig. (Ueber/Unter wuerde "Over 2.5 vs Under 2.5"
+// liefern, also ohne Event-Namen, und liesse sich nicht zuordnen.)
+const MARKET_TYPES = ['MATCH_ODDS','MONEY_LINE','TO_QUALIFY','DRAW_NO_BET'];
 
 let sessionToken = null;
 let lastLogin = 0;
@@ -156,7 +167,7 @@ async function fetchOdds() {
   const cat = await rpc('listMarketCatalogue', {
     filter: {
       eventTypeIds: EVENT_TYPE_IDS,
-      marketTypeCodes: ['MATCH_ODDS'],
+      marketTypeCodes: MARKET_TYPES,
       marketStartTime: { from: new Date(Date.now() - 3 * 3600e3).toISOString() }
     },
     maxResults: MAX_MARKETS,

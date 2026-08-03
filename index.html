@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=17"></script>
+<script src="config.js?v=18"></script>
 <style>
   :root{
     --void:#060704; --void2:#0a0b07;
@@ -585,7 +585,11 @@ var CONFIG={
   CLOB:'https://clob.polymarket.com',
   SX:'https://noexklrgtqveiclijdwp.supabase.co/functions/v1/sx-proxy',
   BF:'https://noexklrgtqveiclijdwp.supabase.co/functions/v1/bf-bridge',
-  POLL_MS:5000, MAX:50, MIN_LIQ:300
+  POLL_MS:5000, MAX:250, MIN_LIQ:150,
+  // Qualität: beide Seiten müssen echt handelbar sein.
+  // Kurse unter 2% / über 98% bedeuten: eine Seite ist praktisch tot
+  // (z.B. 100.00 / 1.00) — dort kann man nichts sinnvoll setzen.
+  MIN_ASK:0.02, MAX_ASK:0.98
 };
 var state={
   mode:'live', running:true, sound:true, desktop:false,
@@ -630,7 +634,10 @@ function seedAsks(p){
   ]).then(function(a){
     var a0=parseFloat(a[0].price), a1=parseFloat(a[1].price);
     // NUR echte Kaufpreise (asks). Keine Mid-Preis-Notlösung -> sonst Fake-Surebets.
-    return (a0>0&&a0<1&&a1>0&&a1<1)?mkObj(p,a0,a1):null;
+    if(!(a0>0&&a0<1&&a1>0&&a1<1)) return null;
+    // Qualität: beide Seiten müssen handelbar sein — tote Märkte (z.B. 100.00/1.00) raus
+    if(a0<CONFIG.MIN_ASK||a0>CONFIG.MAX_ASK||a1<CONFIG.MIN_ASK||a1>CONFIG.MAX_ASK) return null;
+    return mkObj(p,a0,a1);
   }).catch(function(){return null;});
 }
 function pollPM(){
@@ -665,10 +672,24 @@ function pollPM(){
       // Nur falls WS aus ist, als Netz die Top-18 nachziehen.
       var seedList = needList ? pmPicks : (state._wsOn ? [] : pmPicks.slice(0,18));
       if(!seedList.length)return;
-      return Promise.all(seedList.map(seedAsks)).then(function(res){
-        var fresh=res.filter(Boolean);
-        if(fresh.length){ mergeMarkets(fresh, needList); state.lastUpd=Date.now(); }
-      });
+      // In Häppchen abfragen, damit Polymarket nicht drosselt (sonst brechen Kurse weg)
+      var alle=[], i=0;
+      function haeppchen(){
+        if(i>=seedList.length){
+          var fresh=alle.filter(Boolean);
+          if(fresh.length){ mergeMarkets(fresh, needList); state.lastUpd=Date.now(); }
+          return Promise.resolve();
+        }
+        var teil=seedList.slice(i, i+20); i+=20;
+        return Promise.all(teil.map(seedAsks)).then(function(res){
+          alle=alle.concat(res);
+          // Zwischendurch schon anzeigen, was da ist
+          var fresh=alle.filter(Boolean);
+          if(fresh.length){ mergeMarkets(fresh, false); state.lastUpd=Date.now(); }
+          return haeppchen();
+        });
+      }
+      return haeppchen();
     })
     .then(function(){
       state.accounts.pm.status='live'; state.pmErr='';
