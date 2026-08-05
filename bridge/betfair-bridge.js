@@ -155,6 +155,8 @@ const O = {
   // Schwelle für schnelle Märkte, solange der Schlüssel verzögerte Kurse liefert
   minRoiSchnell: zahl(CFG.minRoiSchnellPercent, 2.5),
   minStake:     zahl(CFG.minStake, 20),
+  // Obergrenze fuer eine glaubwuerdige Rendite zwischen zwei Boersen
+  maxPlausibel: zahl(CFG.maxPlausibelPercent, 20),
   minInternalRoi: zahl(CFG.minInternalRoiPercent, 0.3),
   maxDataAge:   zahl(CFG.maxDataAgeSeconds, 0),   // 0 = automatisch nach Marktgeschwindigkeit
   scanPolymarket: CFG.scanPolymarket !== false,
@@ -472,8 +474,13 @@ async function pmListe() {
       const fs = m.feeSchedule || {};
       const anAus = m.feesEnabled !== false;
       const satz = anAus ? (isFinite(+fs.rate) && +fs.rate >= 0 ? +fs.rate : O.pmFallbackFee) : 0;
+      // ACHTUNG: für die Adresse zählt der EVENT-Slug, nicht der Markt-Slug.
+      // polymarket.com/event/<markt-slug> liefert durchweg 404, weil ein Event
+      // mehrere Märkte bündelt und die Seite unter dem Event läuft.
+      const ereignis = Array.isArray(m.events) && m.events[0] ? m.events[0] : null;
+      const adresse = (ereignis && ereignis.slug) || m.slug || '';
       gefunden.set(String(m.id), {
-        q: m.question || '', outs, toks, slug: m.slug || '',
+        q: m.question || '', outs, toks, slug: adresse,
         liq: parseFloat(m.liquidity || 0), vol: parseFloat(m.volume || 0),
         cat: kategorie(m.question),
         feeSatz: satz,
@@ -791,7 +798,7 @@ function crossBookChancen() {
   const idx = bfIndex();
   if (!idx.size) return [];
   const treffer = [];
-  let verworfenAlt = 0;
+  let verworfenAlt = 0, unplausibel = 0;
 
   PM.forEach((pm, pmId) => {
     const zu = zuordnen(pm, idx);
@@ -855,6 +862,10 @@ function crossBookChancen() {
       if (!r || !r.ok) continue;
       // Schwelle hängt davon ab, wie schnell der Markt ist und ob die Kurse verzögert sind
       if (r.roi < minRoiFuer(m)) continue;
+      // Obergrenze: zwei liquide Börsen liegen nie zweistellig auseinander.
+      // Was darüber liegt, ist keine Chance, sondern eine falsche Zuordnung,
+      // eine vertauschte Seite oder ein längst entschiedener Markt.
+      if (r.roi > O.maxPlausibel) { unplausibel++; continue; }
       if (r.maxStake < O.minStake) continue;
       if (!best || r.roi > best.r.roi) best = { v, r, pmBein, bfBein: v.bf, preis };
     }
@@ -923,6 +934,7 @@ function crossBookChancen() {
 
   treffer.sort((a, b) => b.roi - a.roi);
   treffer.verworfenAlt = verworfenAlt;
+  treffer.unplausibel = unplausibel;
   return treffer;
 }
 
@@ -1143,6 +1155,7 @@ async function durchlauf() {
       bf_katalog: KATALOG.size, bf_gelesen: gelesen, pm_handelbar: pmAnzahl,
       stufe, sweep_s: dauer, hochgeladen: markets.length,
       opps: opps.length, arbs: arbs.length, veraltet: opps.verworfenAlt || 0,
+      unplausibel: opps.unplausibel || 0,
       key_art: KEY_ART, key_name: KEY_NAME,
       schwelle: O.minRoi, schwelle_schnell: istVerzoegert() ? O.minRoiSchnell : O.minRoi,
       takt_ms: minGap, takt_hot: O.hotSeconds, takt_warm: O.warmSeconds, takt_cold: O.coldSeconds,

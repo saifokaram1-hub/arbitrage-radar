@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=23"></script>
+<script src="config.js?v=24"></script>
 <style>
   :root{
     --void:#060704; --void2:#0a0b07;
@@ -684,7 +684,10 @@ var CONFIG={
   GAMMA_MAX:8000,   // Sicherheitsnetz beim Blättern
   PM_CHUNK:250,     // Token je Stapelabruf (/books nimmt bis 500)
   WS_MAX:600,       // so viele Token hält eine WebSocket-Verbindung zuverlässig
-  PM_FULL_MS:20000  // in diesem Takt wird der KOMPLETTE Bestand neu bepreist
+  PM_FULL_MS:20000, // in diesem Takt wird der KOMPLETTE Bestand neu bepreist
+  // Ab dieser Rendite ist es kein Fund mehr, sondern ein Fehler. Zwei liquide
+  // Börsen liegen nie zweistellig auseinander.
+  MAX_PLAUSIBEL:20
 };
 var state={
   mode:'live', running:true, sound:true, desktop:false,
@@ -731,12 +734,19 @@ function pmFee(m){
            exp: (isFinite(parseFloat(fs.exponent))&&parseFloat(fs.exponent)>0)? parseFloat(fs.exponent):1,
            typ: String(m.feeType||'unbekannt') };
 }
+// ACHTUNG: für die Adresse zählt der EVENT-Slug, nicht der Markt-Slug.
+// polymarket.com/event/<markt-slug> liefert durchweg 404, weil ein Event
+// mehrere Märkte bündelt und die Seite unter dem Event läuft.
+function pmSlug(m){
+  var e = Array.isArray(m.events) && m.events[0] ? m.events[0] : null;
+  return (e && e.slug) || m.slug || '';
+}
 function mkObj(p,a0,a1,s0,s1){
   var f=pmFee(p.m);
   return {id:'pm_'+p.m.id, cat:categorize(p.m.question), ev:p.m.question, o1:p.outs[0], o2:p.outs[1],
     ask0:a0, ask1:a1, sz0:s0||0, sz1:s1||0,
     feeSatz:f.satz, feeExp:f.exp, feeTyp:f.typ,
-    liq:parseFloat(p.m.liquidity||0), vol:parseFloat(p.m.volume||0), slug:p.m.slug||''};
+    liq:parseFloat(p.m.liquidity||0), vol:parseFloat(p.m.volume||0), slug:pmSlug(p.m)};
 }
 
 // Gamma liefert HÖCHSTENS 100 Einträge pro Aufruf — egal welches limit man setzt.
@@ -939,9 +949,8 @@ function matchSX(mk){
     var a=keyWord(s.teamA), b=keyWord(s.teamB);
     if(a.length<3||b.length<3)continue;
     if(q.indexOf(a)>=0 && q.indexOf(b)>=0){
-      // Ausrichtung: steht Team A im ersten Polymarket-Ausgang?
-      var o1=nrm(mk.o1);
-      var flip = (o1.indexOf(a)<0 && o1.indexOf(b)>=0);
+      // Gleiche Ausrichtung wie bei Betfair — auch hier war Ja/Nein vorher blind
+      var flip = ausrichten(q, mk.o1, mk.o2, a, b);
       return flip ? {o1:s.q2,o2:s.q1,link:s.link,ev:s.ev} : {o1:s.q1,o2:s.q2,link:s.link,ev:s.ev};
     }
   }
@@ -1072,6 +1081,25 @@ function renderOpps(){
     '</div>';
   }).join('');
 }
+/* Welche Seite gehört zu welcher?
+   Der frühere Code suchte den Teamnamen im Text des Ausgangs. Bei einer
+   Ja/Nein-Frage steht dort aber nur "Yes" bzw. "No" — kein Name. Damit fand er
+   nie einen Grund zu tauschen und nahm immer an, JA gehöre zum ERSTEN
+   Betfair-Teilnehmer. Fragt Polymarket aber nach dem zweiten, war das Paar
+   vertauscht: ein Außenseiter wurde gegen einen Favoriten gerechnet, und
+   heraus kamen Renditen von 50 % und mehr, die es nie gab.
+   Jetzt gilt: bei Ja/Nein ist das Subjekt der Teilnehmer, der in der Frage
+   ZUERST genannt wird — genauso wie es die Bridge macht. */
+function ausrichten(frage, o1Text, o2Text, a, b){
+  var o1=nrm(o1Text), o2=nrm(o2Text);
+  var jaNein=/^(yes|ja|no|nein)$/.test(o1)||/^(yes|ja|no|nein)$/.test(o2);
+  if(!jaNein) return (o1.indexOf(a)<0 && o1.indexOf(b)>=0);
+  var pa=frage.indexOf(a), pb=frage.indexOf(b);
+  var subjektIstB = (pb>=0 && (pa<0 || pb<pa));
+  var jaZuerst = /^(yes|ja)$/.test(o1);
+  return jaZuerst ? subjektIstB : !subjektIstB;
+}
+
 function matchBF(mk){
   if(!bfRaw.length)return null;
   var q=nrm(mk.ev);
@@ -1080,8 +1108,7 @@ function matchBF(mk){
     var a=keyWord(t[0]||''), b=keyWord(t[1]||'');
     if(a.length<3||b.length<3)continue;
     if(q.indexOf(a)>=0 && q.indexOf(b)>=0){
-      var o1=nrm(mk.o1);
-      var flip=(o1.indexOf(a)<0 && o1.indexOf(b)>=0);
+      var flip=ausrichten(q, mk.o1, mk.o2, a, b);
       return flip? {o1:+s.o2,o2:+s.o1,link:s.link} : {o1:+s.o1,o2:+s.o2,link:s.link};
     }
   }
@@ -1148,7 +1175,15 @@ function evalMarket(mk){
   var s1=pick(c1), s2=pick(c2);
   if(!(s1.oddsEff>1)||!(s2.oddsEff>1)) return {m:mk,s1:s1,s2:s2,arbPct:999,roi:-100,ok:false,cross:false};
   var invE=1/s1.oddsEff + 1/s2.oddsEff;   // Netto-Summe (Gebühren eingerechnet)
-  return {m:mk,s1:s1,s2:s2,arbPct:invE*100,roi:(1/invE-1)*100,ok:invE<1,cross:s1.src!==s2.src};
+  var roi=(1/invE-1)*100, cross=s1.src!==s2.src;
+
+  /* Plausibilitätsgrenze. Zwei liquide Börsen liegen nie zweistellig auseinander.
+     Wer 50 oder 700 % sieht, sieht keinen Gewinn, sondern einen Fehler: falsch
+     zugeordnete Märkte, vertauschte Seiten oder einen bereits entschiedenen
+     Markt. So etwas darf nicht als sichere Chance erscheinen. */
+  var verdacht = invE<1 && roi>CONFIG.MAX_PLAUSIBEL;
+  return {m:mk, s1:s1, s2:s2, arbPct:invE*100, roi:roi,
+          ok: invE<1 && !verdacht, verdacht:verdacht, cross:cross};
 }
 
 /* ---- Demo-Modus (klar gekennzeichnet, simuliert) ---- */

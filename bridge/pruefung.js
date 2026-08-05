@@ -450,7 +450,30 @@ console.log('\n══════════ 13. Gebühren: je Markt und je Buc
          B.effektiv(3.00,0.02) > B.effektiv(3.00,0.05) && B.effektiv(3.00,0.05) > B.effektiv(3.00,0.065));
 }
 
-console.log('\n══════════ 14. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
+console.log('\n══════════ 14. Unglaubwürdige Renditen dürfen nicht durchgehen ══════════\n');
+{
+  B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
+  // Beide Seiten Außenseiter — das kann nur eine falsche Zuordnung sein
+  B.PM.set('x', { q:'Will the Lakers beat the Celtics?', outs:['Yes','No'], toks:['1','2'],
+    slug:'x', liq:9e3, vol:9e3, cat:'Basketball', ask:[0.05,0.06], size:[9e3,9e3],
+    feeSatz:0, feeExp:1, feeTyp:'keine', ts:Date.now() });
+  B.KATALOG.set('1.X', { ev:'Lakers v Celtics', mn:'Money Line', mt:'MONEY_LINE', satz:0.05,
+    start:new Date(Date.now()+3*3600e3).toISOString(), etId:'7522',
+    runners:[{id:1,name:'Los Angeles Lakers'},{id:2,name:'Boston Celtics'}] });
+  B.BUCH.set('1.X', { status:'OPEN', inplay:false, ts:Date.now(),
+    runners:[{id:1,st:'ACTIVE',b:18.0,bs:900,l:19,ls:900},
+             {id:2,st:'ACTIVE',b:20.0,bs:900,l:21,ls:900}] });
+
+  const c=B.crossBookChancen();
+  pruefe('unsinnige Rendite wird verworfen', c.length===0,
+         '(als unplausibel aussortiert: '+(c.unplausibel||0)+')');
+  pruefe('und dabei gezählt, nicht stillschweigend geschluckt', (c.unplausibel||0) > 0);
+  console.log('  Obergrenze: ' + B.O.maxPlausibel + ' % — darüber ist es ein Fehler, kein Fund');
+
+  B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
+}
+
+console.log('\n══════════ 15. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
 {
   B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
   B.PM.set('test2', {
