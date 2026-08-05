@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=26"></script>
+<script src="config.js?v=27"></script>
 <style>
   :root{
     --void:#060704; --void2:#0a0b07;
@@ -334,6 +334,24 @@
   .paar a:hover{color:var(--gold-b);border-color:var(--gold-d)}
   .schnitt .leer{padding:14px 11px;font-size:11px;color:var(--dim);font-family:var(--mono);line-height:1.6}
 
+  /* --- Hinweis auf eine veraltete Bridge --- */
+  .upd{border:1px solid #7a5220;background:linear-gradient(180deg,#161009,#0c0906);margin:0 0 14px}
+  .upd .uh{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid #3a2a12}
+  .upd .uh b{font-size:14px;color:var(--warn)}
+  .upd .uv{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .upd .ub{padding:13px 16px;font-size:13px;color:var(--muted);line-height:1.62}
+  .upd .ub p{margin:0}
+  .upd .ub b{color:var(--txt)}
+  .upd .ub code{font-family:var(--mono);font-size:11.5px;color:var(--gold-b);background:#0a0b06;
+    border:1px solid var(--line2);padding:1px 4px}
+  .upd .ub ul{margin:5px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+  .upd .ub li{font-size:12.5px}
+  .upd .ua{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap}
+  .upd .ubtn{padding:9px 15px;border:1px solid var(--warn);background:#2a1c0a;color:#f0c48a;
+    text-decoration:none;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+  .upd .ubtn:hover{background:#3a2710}
+  .upd .ubtn.grau{border-color:var(--line3);background:#0a0b06;color:var(--txt)}
+
   /* --- Fertig gerechnete Chancen aus der Bridge --- */
   #oppWrap{border:1px solid var(--line3);background:linear-gradient(180deg,#0d0f0a,#080905);margin:0 0 14px}
   .oppHead{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line2);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
@@ -531,6 +549,9 @@
       <div class="ss"><div class="ssv pos" id="sbRange">–</div><div class="ssl">Rendite-Range</div></div>
     </div>
   </div>
+
+  <!-- Hinweis, wenn auf einem PC noch eine veraltete Bridge läuft -->
+  <div id="updBox" style="display:none"></div>
 
   <!-- Fertig gerechnete Chancen der lokalen Bridge: beide Beine, beide Links -->
   <div id="oppWrap" style="display:none">
@@ -1063,11 +1084,62 @@ function pollBF(){
     applyBF();
     renderOpps();
     updateAccountsUI();
+    try{ pruefeBridgeFassung(); }catch(e){}
   }).catch(function(e){
     state.accounts.bf.status='error';
     state.bfGrund = 'Die Website erreicht den Bridge-Dienst nicht ('+(e&&e.message||'unbekannt')+')';
   });
 }
+
+/* ---- Veraltete Bridge erkennen ---------------------------------------
+   Die Website kann sich per F5 selbst aktualisieren, das Programm auf dem PC
+   nicht. Läuft dort eine ältere Fassung, rechnet sie mit alter Logik weiter,
+   ohne dass es jemand merkt. Deshalb meldet die Bridge ihre Fassung mit, und
+   hier wird sie gegen die geforderte verglichen. */
+var SOLL=null;
+function pruefeBridgeFassung(){
+  var box=document.getElementById('updBox'); if(!box)return;
+  var st=state.bfStats||{};
+  // Ohne Lebenszeichen gibt es nichts zu melden
+  if(!st.zeit && !state.bfCount){ box.style.display='none'; return; }
+  if(!SOLL){ box.style.display='none'; return; }
+
+  var ist = (st.build!=null)? +st.build : 0;   // alte Fassungen melden nichts -> 0
+  if(ist >= +SOLL.bridgeBuild){ box.style.display='none'; return; }
+
+  var esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var wer = st.quelle || (state.bfStats&&state.bfStats.von) || '';
+  var aend = (SOLL.aenderungen||[]).map(function(z){ return '<li>'+esc(z)+'</li>'; }).join('');
+
+  box.style.display='';
+  box.innerHTML=
+    '<div class="upd">'+
+      '<div class="uh"><b>Veraltete Bridge im Einsatz</b>'+
+        '<span class="uv">'+(ist? 'Fassung '+esc(st.version||ist) : 'Fassung unbekannt')+
+        ' → neu: '+esc(SOLL.bridgeVersion)+'</span></div>'+
+      '<div class="ub">'+
+        '<p>Auf dem PC, der die Betfair-Quoten liefert, läuft noch eine ältere Fassung. '+
+        'Sie scannt weiter, rechnet aber mit der alten Logik — die angezeigten Chancen '+
+        'können dadurch falsch sein.</p>'+
+        (aend? '<p style="margin-top:8px"><b>Was in der neuen Fassung behoben ist:</b></p><ul>'+aend+'</ul>':'')+
+        '<p style="margin-top:10px"><b>So geht es:</b> neue Datei herunterladen, das laufende '+
+        'Bridge-Fenster schließen, die alte <code>betfair-bridge.exe</code> durch die neue '+
+        'ersetzen, wieder doppelklicken. Die <code>bridge-config.json</code> bleibt liegen — '+
+        'Betfair-Zugang und Token müssen <b>nicht</b> neu eingetragen werden.</p>'+
+        '<div class="ua">'+
+          '<a class="ubtn" href="'+esc(SOLL.exe||'#')+'">⬇ Neue Bridge herunterladen</a>'+
+          '<a class="ubtn grau" href="'+esc(SOLL.anleitung||'bridge-setup.html')+'">Anleitung öffnen</a>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+}
+// Sollstand einmal beim Laden holen
+(function(){
+  fetch('version.json?t='+Date.now()).then(function(r){ return r.ok? r.json():null; })
+    .then(function(v){ if(v && v.bridgeBuild){ SOLL=v; try{ pruefeBridgeFassung(); }catch(e){} } })
+    .catch(function(){});
+})();
 
 /* ---- Anzeige der fertig gerechneten Chancen aus der Bridge ----
    Die Einsätze werden hier aus den EFFEKTIVQUOTEN gerechnet, nicht aus dem

@@ -165,6 +165,13 @@ const O = {
   maxBookPerSweep: zahl(CFG.maxBookPerSweep, 6000)
 };
 
+/* Fassung dieses Programms. Beim Hochladen mitgeschickt, damit die Website
+   erkennt, ob auf einem PC noch eine veraltete Bridge läuft, und den Nutzer
+   auffordern kann, die neue Datei zu holen. BEI JEDER inhaltlichen Änderung
+   an der Suchlogik hochzählen — sonst merkt niemand, dass er alt ist. */
+const BRIDGE_BUILD = 6;
+const BRIDGE_VERSION = '2.6';
+
 const BF_LOGIN = 'https://identitysso.betfair.com/api/login';
 const BF_KEEP  = 'https://identitysso.betfair.com/api/keepAlive';
 const BF_RPC   = 'https://api.betfair.com/exchange/betting/json-rpc/v1';   // Exchange, NICHT Sportsbook
@@ -1206,6 +1213,7 @@ async function durchlauf() {
       stufe, sweep_s: dauer, hochgeladen: markets.length,
       opps: opps.length, arbs: arbs.length, veraltet: opps.verworfenAlt || 0,
       unplausibel: opps.unplausibel || 0,
+      build: BRIDGE_BUILD, version: BRIDGE_VERSION,
       key_art: KEY_ART, key_name: KEY_NAME,
       schwelle: O.minRoi, schwelle_schnell: istVerzoegert() ? O.minRoiSchnell : O.minRoi,
       takt_ms: minGap, takt_hot: O.hotSeconds, takt_warm: O.warmSeconds, takt_cold: O.coldSeconds,
@@ -1249,6 +1257,7 @@ async function durchlauf() {
       await push([], [], [], {
         bf_ok: false, bf_fehler: bfFehler, pm_ok: !pmFehler, pm_fehler: pmFehler,
         bf_katalog: KATALOG.size, bf_gelesen: 0, pm_handelbar: PM.size, pm_gelistet: pmGelistet,
+        build: BRIDGE_BUILD, version: BRIDGE_VERSION,
         key_art: KEY_ART, stufe: 'fehler', zeit: new Date().toISOString()
       });
     } catch (e2) { /* Website nicht erreichbar — dann bleibt nur das Fenster */ }
@@ -1299,6 +1308,39 @@ if (!ALS_PROGRAMM) return;
   console.log('  (bei verzoegertem App-Key gilt fuer laufende und bald startende');
   console.log('   Spiele stattdessen ' + O.minRoiSchnell + '% — die Art des Keys erkennt das Programm selbst)');
   console.log('Beenden: Strg+C\n');
+
+  // Laeuft hier noch eine veraltete Fassung? Das gehoert an den Anfang, damit
+  // niemand stundenlang mit alter Logik scannt, ohne es zu merken.
+  try {
+    const r = await fetch('https://saifokaram1-hub.github.io/orion-panel/version.json?t=' + Date.now());
+    if (r.ok) {
+      const v = await r.json();
+      if (v && +v.bridgeBuild > BRIDGE_BUILD) {
+        console.log('');
+        console.log('  ┌─────────────────────────────────────────────────────────────┐');
+        console.log('  │  NEUE FASSUNG VERFUEGBAR                                     │');
+        console.log('  └─────────────────────────────────────────────────────────────┘');
+        console.log('  Du hast Fassung ' + BRIDGE_VERSION + ', aktuell ist ' + (v.bridgeVersion || v.bridgeBuild) + '.');
+        if (Array.isArray(v.aenderungen)) {
+          console.log('');
+          console.log('  Was sich geaendert hat:');
+          v.aenderungen.forEach(z => console.log('   - ' + z));
+        }
+        console.log('');
+        console.log('  Neue Datei holen:');
+        console.log('   ' + (v.exe || 'siehe Website'));
+        console.log('');
+        console.log('  Danach: dieses Fenster schliessen, die alte betfair-bridge.exe');
+        console.log('  durch die neue ersetzen und wieder doppelklicken.');
+        console.log('  Deine bridge-config.json bleibt unveraendert — nichts neu eintragen.');
+        console.log('');
+        console.log('  Das Programm laeuft weiter, rechnet aber mit der alten Logik.');
+        console.log('');
+      } else {
+        log('✔ Fassung ' + BRIDGE_VERSION + ' ist aktuell.');
+      }
+    }
+  } catch (e) { /* Versionspruefung ist Beiwerk, sie darf den Start nie verhindern */ }
 
   // Token vorab pruefen, damit ein Tippfehler nicht erst nach dem ersten Vollscan auffaellt
   try {

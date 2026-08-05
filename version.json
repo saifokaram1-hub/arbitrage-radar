@@ -1,0 +1,13 @@
+{
+  "_hinweis": "Zentrale Fassungsangabe. Bei jeder inhaltlichen Aenderung an der Bridge bridgeBuild hochzaehlen — Website und Bridge pruefen sich beide dagegen.",
+  "bridgeBuild": 6,
+  "bridgeVersion": "2.6",
+  "exe": "https://github.com/saifokaram1-hub/orion-panel/releases/download/bridge-v1/betfair-bridge.exe",
+  "anleitung": "https://saifokaram1-hub.github.io/orion-panel/bridge-setup.html",
+  "aenderungen": [
+    "Fehlpaarung behoben: Parteinamen wurden alle zu \"party\" verkuerzt, dadurch passte jeder Wahlmarkt auf jeden anderen",
+    "Polymarket-Links zeigten auf den Markt-Slug statt auf den Event-Slug und liefen ins Leere",
+    "Gebuehren werden je Markt aus der Quelle gelesen statt pauschal angenommen",
+    "Beide Buecher werden unmittelbar vor der Rechnung noch einmal frisch gelesen"
+  ]
+}
