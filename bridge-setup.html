@@ -55,6 +55,8 @@
   .codebox .copy{position:absolute;top:8px;right:8px;padding:5px 10px;border:1px solid var(--line3);background:#12150e;color:var(--muted);font:inherit;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
   .codebox .copy:hover{color:var(--gold-b);border-color:var(--gold-d)}
   .fill{color:#d98c4a}
+  code{font-family:var(--mono);font-size:11.5px;color:var(--gold-b);background:#15180f;
+    border:1px solid var(--line2);padding:1px 5px}
 
   table{width:100%;border-collapse:collapse;margin-top:10px}
   th{text-align:left;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding:8px 10px;border-bottom:1px solid var(--line2)}
@@ -176,6 +178,24 @@
       </div>
     </div>
 
+    <!-- AKTUALISIEREN -->
+    <div class="step">
+      <div class="h"><span class="num">↻</span><b>Wenn eine neue Fassung kommt<span class="sub">Dauert 30 Sekunden · nichts neu eintragen</span></b></div>
+      <div class="body">
+        <p>Die Website aktualisiert sich beim Neuladen von selbst. Das Programm auf deinem PC <b>nicht</b> — es läuft weiter mit der Logik, mit der es ausgeliefert wurde. Deshalb meldet es sich, sobald es veraltet ist: oben in der App erscheint ein Hinweis, und im Bridge-Fenster steht es beim Start.</p>
+        <ol>
+          <li>Neue Datei herunterladen:
+            <br><a class="btnlink" href="https://github.com/saifokaram1-hub/orion-panel/releases/download/bridge-v1/betfair-bridge.exe">⬇ Aktuelle Bridge herunterladen</a></li>
+          <li>Das laufende <b>Bridge-Fenster schließen</b> (Strg+C oder einfach zumachen)</li>
+          <li>Die alte <b>betfair-bridge.exe</b> in deinem Ordner durch die neue <b>ersetzen</b></li>
+          <li><b>Doppelklick</b> — fertig</li>
+        </ol>
+        <div class="hint"><b>Deine Zugangsdatei bleibt liegen.</b> <code>bridge-config.json</code> wird nicht angefasst. Betfair-Login, App-Key und Token musst du <b>nicht</b> neu eintragen. Es wird wirklich nur die eine Programmdatei getauscht.</div>
+        <div class="hint">Woran du erkennst, dass es geklappt hat: beim Start steht <b>„✔ Fassung 2.x ist aktuell"</b> im Fenster, und der Hinweis in der App verschwindet.</div>
+        <div class="warn">Solange die alte Fassung läuft, scannt sie zwar weiter, rechnet aber mit der alten Logik. Angezeigte Chancen können dann falsch sein — deshalb bitte zeitnah tauschen.</div>
+      </div>
+    </div>
+
     <!-- VERZÖGERUNG & LIVE-KEY -->
     <div class="step">
       <div class="h"><span class="num">⏱</span><b>Wie aktuell sind die Quoten?<span class="sub">Delayed-Key vs. Live-Key</span></b></div>
@@ -223,7 +243,7 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=29"></script>
+<script src="config.js?v=30"></script>
 <script>
 var SB=null, TOKEN='';
 function copyBox(id){

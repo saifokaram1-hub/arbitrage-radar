@@ -169,8 +169,8 @@ const O = {
    erkennt, ob auf einem PC noch eine veraltete Bridge läuft, und den Nutzer
    auffordern kann, die neue Datei zu holen. BEI JEDER inhaltlichen Änderung
    an der Suchlogik hochzählen — sonst merkt niemand, dass er alt ist. */
-const BRIDGE_BUILD = 8;
-const BRIDGE_VERSION = "2.8";
+const BRIDGE_BUILD = 9;
+const BRIDGE_VERSION = "2.9";
 
 const BF_LOGIN = 'https://identitysso.betfair.com/api/login';
 const BF_KEEP  = 'https://identitysso.betfair.com/api/keepAlive';
@@ -490,6 +490,11 @@ async function pmListe() {
         q: m.question || '', outs, toks, slug: adresse,
         liq: parseFloat(m.liquidity || 0), vol: parseFloat(m.volume || 0),
         cat: kategorie(m.question),
+        // Zeitpunkte: gameStartTime steht bei konkreten Spielen, endDate ist
+        // der Auflösungstermin. Damit lässt sich prüfen, ob zwei Märkte
+        // überhaupt dasselbe Ereignis meinen können.
+        spielStart: m.gameStartTime ? Date.parse(String(m.gameStartTime).replace(' ', 'T')) : null,
+        endet: m.endDate ? Date.parse(m.endDate) : null,
         feeSatz: satz,
         feeExp: isFinite(+fs.exponent) && +fs.exponent > 0 ? +fs.exponent : 1,
         feeTyp: String(m.feeType || (anAus ? 'unbekannt' : 'keine'))
@@ -732,7 +737,33 @@ function layBein(runner, gebuehr) {
  * null wenn er gar nicht passt. Eine einzige Stelle, damit der Abgleich in
  * BEIDE Richtungen nach exakt denselben Regeln bewertet wird.
  */
-function bewerte(fragWoerter, kontextDerFrage, e) {
+/**
+ * Können zwei Märkte zeitlich überhaupt dasselbe Ereignis meinen?
+ *
+ * Nennt Polymarket einen Anpfiff (gameStartTime), muss der Betfair-Markt
+ * innerhalb weniger Stunden davon starten — sonst ist es ein anderes Spiel.
+ * Sonst gilt nur die schwache Bedingung: ein Ereignis kann nicht stattfinden,
+ * nachdem der Markt darüber längst aufgelöst wurde.
+ */
+function zeitPasst(pm, e) {
+  const bfStart = e.start ? Date.parse(e.start) : null;
+  if (!bfStart) return true;                       // ohne Angabe nicht blockieren
+  if (pm.spielStart) {
+    return Math.abs(bfStart - pm.spielStart) <= 12 * 3600e3;
+  }
+  if (pm.endet) {
+    // Ein Tag Nachlauf, weil Auflösung und Anpfiff selten exakt zusammenfallen
+    return bfStart <= pm.endet + 86400e3;
+  }
+  return true;
+}
+
+function bewerte(fragWoerter, kontextDerFrage, e, pm) {
+  // Zeitliche Gegenprobe zuerst: sie ist billig und schliesst ganze Klassen
+  // von Verwechslungen aus, etwa ein Spiel heute Abend gegen einen Markt,
+  // der ueber den Turniersieger in zwei Wochen entscheidet.
+  if (pm && !zeitPasst(pm, e)) return null;
+
   const echte = e.runners.filter(r => !istUnentschieden(r.name));
   if (echte.length < 2) return null;
 
@@ -795,7 +826,7 @@ function bestaetigtRueckwaerts(pmId, e, punkte) {
   PM.forEach((p, id) => {
     if (besser || id === pmId) return;
     wortMengen(p);
-    const s = bewerte(p.fw, p.kf, e);
+    const s = bewerte(p.fw, p.kf, e, p);
     if (s != null && s > punkte) besser = true;
   });
   return !besser;
@@ -827,7 +858,7 @@ function zuordnen(pm, idx, pmId) {
   );
 
   kandidaten.forEach(e => {
-    const score = bewerte(fragWoerter, kontextDerFrage, e);
+    const score = bewerte(fragWoerter, kontextDerFrage, e, pm);
     if (score == null) return;
     const frueher = !bester || (e.start && bester.start && Date.parse(e.start) < Date.parse(bester.start));
     if (score > besterScore || (score === besterScore && frueher)) {
@@ -980,7 +1011,7 @@ function crossBookChancen() {
     let pm = null, pmId = null, besteWertung = -1;
     kandidaten.forEach((kandidat, id) => {
       wortMengen(kandidat);
-      const s = bewerte(kandidat.fw, kandidat.kf, m);
+      const s = bewerte(kandidat.fw, kandidat.kf, m, kandidat);
       if (s != null && s > besteWertung) { besteWertung = s; pm = kandidat; pmId = id; }
     });
     if (!pm) return;

@@ -663,7 +663,46 @@ console.log('\n══════════ 18. Suchrichtung: Betfair zuerst �
   B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
 }
 
-console.log('\n══════════ 19. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
+console.log('\n══════════ 19. Zeitliche Gegenprobe ══════════\n');
+{
+  // Zwei Maerkte koennen nur dasselbe Ereignis meinen, wenn sie zeitlich
+  // zusammenpassen. Ein Spiel heute Abend ist nicht der Turniersieger in
+  // zwei Wochen, auch wenn beide dieselben Namen tragen.
+  const inVier=new Date(Date.now()+4*3600e3).toISOString();
+  const markt={ mid:'1.Z', ev:'Alcaraz v Sinner', mn:'Match Odds', mt:'MATCH_ODDS', anzahl:2,
+    satz:0.05, start:inVier, inplay:false, ts:Date.now(),
+    runners:[{name:'Carlos Alcaraz',q:1.6,size:900,lq:1.62,lsize:900},
+             {name:'Jannik Sinner',q:2.5,size:900,lq:2.55,lsize:900}] };
+
+  function frage(q, extra){
+    const w=B.nrm(q).split(' ');
+    return Object.assign({ q:q, outs:['Yes','No'],
+      fw:new Set(w.filter(x=>x.length>2)), kf:new Set(w.filter(x=>x.length>1)) }, extra||{});
+  }
+
+  // Dasselbe Spiel: Anpfiff passt
+  const gleich=frage('Will Carlos Alcaraz beat Jannik Sinner?',
+                     { spielStart: Date.now()+4*3600e3 });
+  pruefe('gleicher Anpfiff wird akzeptiert', B.bewerte(gleich.fw,gleich.kf,markt,gleich)!=null);
+
+  // Anderes Spiel derselben Paarung, drei Tage spaeter
+  const spaeter=frage('Will Carlos Alcaraz beat Jannik Sinner?',
+                      { spielStart: Date.now()+3*86400e3 });
+  pruefe('Spiel drei Tage spaeter wird abgelehnt', B.bewerte(spaeter.fw,spaeter.kf,markt,spaeter)===null);
+
+  // Markt, der laengst aufgeloest ist, bevor das Spiel stattfindet
+  const vorbei=frage('Will Carlos Alcaraz beat Jannik Sinner?',
+                     { endet: Date.now()-10*86400e3 });
+  pruefe('bereits aufgeloester Markt wird abgelehnt', B.bewerte(vorbei.fw,vorbei.kf,markt,vorbei)===null);
+
+  // Ohne Zeitangabe darf nicht blockiert werden
+  const ohne=frage('Will Carlos Alcaraz beat Jannik Sinner?');
+  pruefe('ohne Zeitangabe wird nicht blockiert', B.bewerte(ohne.fw,ohne.kf,markt,ohne)!=null);
+
+  console.log('  Toleranz bei genanntem Anpfiff: 12 Stunden');
+}
+
+console.log('\n══════════ 20. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
 {
   B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
   B.PM.set('test2', {
