@@ -115,6 +115,44 @@
   a:focus-visible,*:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   .foot{border-top:1px solid var(--line2);padding-top:18px;color:var(--dim);font-size:12px;font-family:var(--mono)}
   @media(max-width:560px){.wrap{padding:18px 14px 60px}}
+
+  /* ── Druck / PDF ──────────────────────────────────────────────────────
+     Auf Papier hilft der dunkle Terminal-Look nicht, deshalb hier heller
+     Grund mit schwarzer Schrift. Kästen bleiben zusammen statt mitten
+     im Satz umzubrechen. */
+  @media print{
+    @page{margin:14mm 12mm}
+    :root{--void:#fff;--void2:#fff;--panel:#fff;--panel2:#fafaf5;
+      --line:#ccc;--line2:#999;--line3:#777;
+      --txt:#000;--muted:#333;--dim:#666;
+      --gold:#6b5c10;--gold-b:#403708;--gold-d:#8a7c3a;
+      --pos:#2f5c00;--neg:#8a2c14;--warn:#7d4a00}
+    body{background:#fff;color:#000;font-size:10.5pt;line-height:1.45}
+    .cmd,.noprint{display:none!important}
+    .wrap{max-width:none;padding:0;gap:14px}
+    section{break-inside:auto}
+    h3{font-size:9pt;color:#000;border-bottom:1.5pt solid #000;margin-top:6pt}
+    h4{font-size:11pt}
+    .intro{border:1pt solid #999;background:#fff;page-break-after:avoid}
+    .intro h2{font-size:15pt;color:#000}
+    .gauges{border:1pt solid #999}
+    .g{border-color:#ddd}
+    .g .v{font-size:14pt;color:#000}
+    .stage,.row,.vs,.g{break-inside:avoid;page-break-inside:avoid}
+    .ba div{background:#fff}
+    .ba .jetzt{background:#f2f6ea}
+    pre{border:1pt solid #999;background:#fafaf5;color:#000;font-size:8.5pt;white-space:pre-wrap}
+    pre .c{color:#666}
+    table{font-size:9pt}
+    th{color:#000;border-bottom:1pt solid #000}
+    td.num,td.k{color:#000}
+    .call{background:#fafaf5;border-left:2.5pt solid #666}
+    .tag{border-color:#666;color:#333}
+    .scroll{overflow:visible;border:1pt solid #999}
+    a{color:#000;text-decoration:none}
+    a[href^="http"]::after{content:" (" attr(href) ")";font-size:7.5pt;color:#555;word-break:break-all}
+    .foot{border-top:1pt solid #999;color:#333}
+  }
 </style>
 </head>
 <body>
@@ -122,6 +160,7 @@
     <div class="mark"></div>
     <h1>Such<span>logik</span></h1>
     <div class="sp"></div>
+    <button class="lnk" id="pdfBtn" style="cursor:pointer;font-family:inherit">⤓ Als PDF speichern</button>
     <a class="lnk" href="bridge-setup.html">Einrichtung</a>
     <a class="lnk" href="index.html">← Zurück zur App</a>
   </div>
@@ -139,8 +178,8 @@
       <div class="g"><div class="v pos">1 251</div><div class="l">beidseitig handelbar</div><div class="s">838 mit echter Tiefe</div></div>
       <div class="g"><div class="v">6,5 s</div><div class="l">Vollscan Polymarket</div><div class="s">38 Anfragen</div></div>
       <div class="g"><div class="v">20 s</div><div class="l">schnellster Takt</div><div class="s">breit 150 s · voll 900 s</div></div>
-      <div class="g"><div class="v pos">51</div><div class="l">Prüfungen bestanden</div><div class="s">0 fehlgeschlagen</div></div>
-      <div class="g"><div class="v">15</div><div class="l">Denkfehler behoben</div><div class="s">1 offen</div></div>
+      <div class="g"><div class="v pos">55</div><div class="l">Prüfungen bestanden</div><div class="s">0 fehlgeschlagen</div></div>
+      <div class="g"><div class="v">16</div><div class="l">Denkfehler behoben</div><div class="s">1 offen</div></div>
     </div>
 
     <section>
@@ -172,11 +211,16 @@
           <span class="d">Aus jedem Teilnehmernamen wird ein Schlüsselwort gebildet, Vereinszusätze fallen weg. Beim Zweikampf müssen beide Namen in der Polymarket-Frage stehen. Bei großen Feldern wie dem Ballon d'Or muss genau ein Name passen und zusätzlich der Markttitel, damit „Mbappé trifft zuerst" nicht mit „Mbappé gewinnt" verwechselt wird.</span>
         </div></div>
         <div class="stage"><div class="n">6</div><div class="b">
+          <span class="t">Gleichstand herstellen</span>
+          <span class="d">Verglichen werden darf nur, was es auf <em>beiden</em> Büchern gibt. Genau diese Schnittmenge wird deshalb unmittelbar vor der Rechnung noch einmal frisch gelesen. Ohne diesen Schritt läge zwischen den beiden Seiten der halbe Durchlauf, und man würde zwei verschiedene Zeitpunkte miteinander verrechnen statt zweier Kurse desselben Augenblicks.</span>
+          <span class="m">Schnittmenge und Nachlesezahl stehen im Bridge-Fenster</span>
+        </div></div>
+        <div class="stage"><div class="n">7</div><div class="b">
           <span class="t">Frische prüfen</span>
           <span class="d">Jeder Kurs trägt seinen Lesezeitpunkt. Sind die beiden Beine unterschiedlich alt und überschreitet eines die Grenze für dieses Markttempo, wird die Chance verworfen statt gemeldet.</span>
           <span class="m">laufend 60 s · vor Anpfiff 180 s · Langzeit 1 800 s</span>
         </div></div>
-        <div class="stage"><div class="n">7</div><div class="b">
+        <div class="stage"><div class="n">8</div><div class="b">
           <span class="t">Rechnen, melden, protokollieren</span>
           <span class="d">Gemeldet wird nur, was über der Renditeschwelle liegt <em>und</em> genug Geld im Buch hat. Jede Chance kommt mit beiden Direktlinks, dem Einsatz je Seite und der Gegenrechnung. Gleichzeitig wandert sie dauerhaft in die Historie.</span>
         </div></div>
@@ -314,6 +358,14 @@ Maximum = verfügbare Größe × (L − 1)</pre>
         </div></div>
 
         <div class="row mit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Die beiden Seiten wurden zu unterschiedlichen Zeitpunkten gelesen</b><span class="tag mit">mittel</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">vorher</span>Erst lief der Betfair-Durchlauf, danach der Polymarket-Scan, dann wurde gerechnet. Je nach Stufe lagen zwischen den beiden Kursen bis zu zwei Minuten. Die Altersprüfung hat solche Paare verworfen, aber damit fielen auch brauchbare Chancen weg.</div>
+            <div class="jetzt"><span class="lab">jetzt</span>Vor jeder Rechnung wird ermittelt, welche Märkte es auf beiden Büchern gibt, und genau diese werden noch einmal frisch gelesen. Beide Beine liegen dadurch Sekunden auseinander statt Minuten, und es werden wirklich dieselben Märkte verglichen.</div>
+          </div>
+        </div></div>
+
+        <div class="row mit"><div class="stripe"></div><div class="body">
           <div class="ttl"><b>Fußball fiel komplett durch</b><span class="tag mit">mittel</span></div>
           <div class="ba">
             <div class="vor"><span class="lab">vorher</span>Märkte mit drei Ausgängen wurden übersprungen. Weil Fußball fast immer Sieg, Unentschieden, Niederlage hat, war die größte Sportart praktisch ausgeschlossen.</div>
@@ -384,7 +436,7 @@ Maximum = verfügbare Größe × (L − 1)</pre>
       <h3>Selbst nachprüfen</h3>
       <p>Im Bridge-Ordner rechnet ein Prüfprogramm die komplette Logik mit Zahlen durch und rechnet beide Ausgänge gegen. Es meldet sich nirgends an und lädt nichts hoch.</p>
       <pre>node pruefung.js</pre>
-      <p class="note">51 Prüfungen, darunter die Lay-Rechnung von Hand gegengerechnet und der Nachweis, dass bei jeder gemeldeten Chance beide Ausgänge auf den Cent denselben Betrag zurückzahlen.</p>
+      <p class="note">55 Prüfungen, darunter die Lay-Rechnung von Hand gegengerechnet, der Nachweis, dass bei jeder gemeldeten Chance beide Ausgänge auf den Cent denselben Betrag zurückzahlen, und die Kontrolle, dass wirklich nur Märkte verglichen werden, die es auf beiden Büchern gibt.</p>
       <div class="call"><b>Diese Seite gehört zum Programm.</b> Ändert sich die Suchlogik, wird zuerst die Datei geändert, die man herunterlädt, und danach diese Erklärung nachgezogen. Was hier steht, gilt für die Fassung, die gerade zum Download bereitliegt.</div>
     </section>
 
@@ -392,8 +444,23 @@ Maximum = verfügbare Größe × (L − 1)</pre>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=20"></script>
+<script src="config.js?v=21"></script>
 <script>
+// PDF: über den Druckdialog des Browsers, dort "Als PDF speichern" wählen.
+// Kein Zusatzprogramm nötig, und das Ergebnis enthält immer den aktuellen Stand.
+document.getElementById('pdfBtn').addEventListener('click', function(){
+  var alt = document.title;
+  var d = new Date();
+  var p = function(n){ return (n<10?'0':'')+n; };
+  // Der Dateiname im Speichern-Dialog kommt vom Seitentitel
+  document.title = 'Orion-Panel-Suchlogik-' + d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate());
+  window.addEventListener('afterprint', function zurueck(){
+    document.title = alt;
+    window.removeEventListener('afterprint', zurueck);
+  });
+  window.print();
+});
+
 (async function(){
   var auth = await window.arRequireAuth();
   if(!auth) return;

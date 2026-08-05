@@ -356,7 +356,53 @@ console.log('\n══════════ 11. Delayed oder Live: wirkt sich 
   B.setKeyArt('unbekannt');
 }
 
-console.log('\n══════════ 12. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
+console.log('\n══════════ 12. Werden wirklich dieselben Märkte verglichen? ══════════\n');
+{
+  B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
+
+  // Zwei Polymarket-Märkte: einer hat ein Betfair-Gegenstück, einer nicht.
+  B.PM.set('a', { q:'Will the Lakers beat the Celtics?', outs:['Yes','No'], toks:['1','2'],
+    slug:'x', liq:1, vol:1, cat:'Basketball', ask:[0.50,0.52], size:[900,900], ts:Date.now() });
+  B.PM.set('b', { q:'Will Bitcoin close above 200000 dollars?', outs:['Yes','No'], toks:['3','4'],
+    slug:'y', liq:1, vol:1, cat:'Krypto', ask:[0.30,0.72], size:[900,900], ts:Date.now() });
+
+  // Drei Betfair-Märkte: nur einer davon kommt auch bei Polymarket vor.
+  B.KATALOG.set('1.A', { ev:'Lakers v Celtics', mn:'Money Line', mt:'MONEY_LINE',
+    start:new Date(Date.now()+3*3600e3).toISOString(), etId:'7522',
+    runners:[{id:1,name:'Los Angeles Lakers'},{id:2,name:'Boston Celtics'}] });
+  B.KATALOG.set('1.B', { ev:'Arsenal v Chelsea', mn:'Match Odds', mt:'MATCH_ODDS',
+    start:new Date(Date.now()+5*3600e3).toISOString(), etId:'1',
+    runners:[{id:3,name:'Arsenal'},{id:4,name:'Chelsea'}] });
+  B.KATALOG.set('1.C', { ev:'Nadal v Alcaraz', mn:'Match Odds', mt:'MATCH_ODDS',
+    start:new Date(Date.now()+7*3600e3).toISOString(), etId:'2',
+    runners:[{id:5,name:'Rafael Nadal'},{id:6,name:'Carlos Alcaraz'}] });
+  ['1.A','1.B','1.C'].forEach((mid,i)=>{
+    B.BUCH.set(mid,{ status:'OPEN', inplay:false, ts:Date.now(),
+      runners:[{id:i*2+1,st:'ACTIVE',b:2.00,bs:500,l:2.02,ls:500},
+               {id:i*2+2,st:'ACTIVE',b:2.00,bs:500,l:2.02,ls:500}] });
+  });
+
+  const gemeinsam = B.schnittmengeIds();
+  console.log('  Polymarket: 2 Märkte · Betfair: 3 Märkte');
+  console.log('  auf beiden Büchern gefunden: ' + gemeinsam.length + ' → ' + JSON.stringify(gemeinsam));
+  pruefe('genau die Schnittmenge wird erkannt', gemeinsam.length === 1 && gemeinsam[0] === '1.A');
+  pruefe('Betfair-Märkte ohne Polymarket-Gegenstück fallen raus',
+         gemeinsam.indexOf('1.B') < 0 && gemeinsam.indexOf('1.C') < 0);
+  pruefe('Polymarket-Märkte ohne Betfair-Gegenstück stören nicht', gemeinsam.length === 1);
+
+  // Und nach dem Nachlesen müssen beide Beine denselben Zeitpunkt tragen
+  const jetzt = Date.now();
+  B.BUCH.get('1.A').ts = jetzt;
+  B.PM.get('a').ts = jetzt;
+  const c = B.crossBookChancen();
+  pruefe('bei gleichem Lesezeitpunkt ist der Altersabstand null',
+         c.length === 0 || Math.abs((c[0].alterBf||0)-(c[0].alterPm||0)) <= 1,
+         c.length ? '(Betfair ' + c[0].alterBf + ' s, Polymarket ' + c[0].alterPm + ' s)' : '(keine Chance, Quoten zu eng)');
+
+  B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
+}
+
+console.log('\n══════════ 13. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
 {
   B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
   B.PM.set('test2', {

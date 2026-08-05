@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=20"></script>
+<script src="config.js?v=21"></script>
 <style>
   :root{
     --void:#060704; --void2:#0a0b07;
@@ -274,6 +274,25 @@
   .radar .blip.show{animation:blip 1s ease}
   @keyframes blip{0%{opacity:1;transform:scale(.4)}100%{opacity:0;transform:scale(1.8)}}
   .scaninfo{flex:1 1 260px;min-width:0;overflow:hidden}
+  /* --- Was jede Quelle gerade tut --- */
+  #srcAnalyse{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:0 0 14px}
+  .srcCard{border:1px solid var(--line2);background:linear-gradient(180deg,#0b0c07,#080905);padding:12px 14px}
+  .srcCard.ok{border-color:#3d4a1c}
+  .srcCard.bad{border-color:#5c2a1e}
+  .srcCard .sh{display:flex;align-items:center;gap:8px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+  .srcCard .sh b{font-size:13px;flex:1}
+  .srcCard .dot{width:9px;height:9px;flex:none;background:var(--dim)}
+  .srcCard.ok .dot{background:var(--pos);box-shadow:0 0 7px var(--pos)}
+  .srcCard.bad .dot{background:var(--neg)}
+  .srcCard .sst{font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+  .srcCard.ok .sst{color:var(--pos)}
+  .srcCard.bad .sst{color:var(--neg)}
+  .srcCard .sgrund{margin-top:8px;padding:7px 9px;border-left:2px solid var(--neg);background:rgba(176,64,46,.08);
+    font-size:11.5px;color:#d98c7c;line-height:1.5}
+  .srcCard .sk{display:flex;flex-direction:column;margin-top:8px}
+  .srcCard .skr{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:11.5px;color:var(--muted)}
+  .srcCard .skr b{font-family:var(--mono);color:var(--gold-b);font-variant-numeric:tabular-nums;text-align:right}
+
   /* --- Fertig gerechnete Chancen aus der Bridge --- */
   #oppWrap{border:1px solid var(--line3);background:linear-gradient(180deg,#0d0f0a,#080905);margin:0 0 14px}
   .oppHead{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line2);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
@@ -472,6 +491,9 @@
     </div>
   </div>
 
+  <!-- Was jede Quelle gerade tut: echte laufende Zahlen -->
+  <div id="srcAnalyse"></div>
+
   <!-- Fertig gerechnete Chancen der lokalen Bridge: beide Beine, beide Links -->
   <div id="oppWrap" style="display:none">
     <div class="oppHead">
@@ -626,7 +648,8 @@ var CONFIG={
   MIN_ASK:0.02, MAX_ASK:0.98,
   GAMMA_MAX:8000,   // Sicherheitsnetz beim Blättern
   PM_CHUNK:250,     // Token je Stapelabruf (/books nimmt bis 500)
-  WS_MAX:600        // so viele Token hält eine WebSocket-Verbindung zuverlässig
+  WS_MAX:600,       // so viele Token hält eine WebSocket-Verbindung zuverlässig
+  PM_FULL_MS:20000  // in diesem Takt wird der KOMPLETTE Bestand neu bepreist
 };
 var state={
   mode:'live', running:true, sound:true, desktop:false,
@@ -662,7 +685,7 @@ function categorize(q){
 }
 
 /* ---- Polymarket: breite Abdeckung, Echtzeit via WebSocket, REST als Auffrischung/Netz ---- */
-var pmPicks=[], lastGamma=0;
+var pmPicks=[], lastGamma=0, lastFullPrices=0;
 function mkObj(p,a0,a1,s0,s1){ return {id:'pm_'+p.m.id, cat:categorize(p.m.question), ev:p.m.question, o1:p.outs[0], o2:p.outs[1], ask0:a0, ask1:a1, sz0:s0||0, sz1:s1||0, liq:parseFloat(p.m.liquidity||0), vol:parseFloat(p.m.volume||0), slug:p.m.slug||''}; }
 
 // Gamma liefert HÖCHSTENS 100 Einträge pro Aufruf — egal welches limit man setzt.
@@ -754,13 +777,21 @@ function pollPM(){
     : Promise.resolve();
 
   return listP.then(function(){
-      // Ohne WebSocket jede Runde alles neu, mit WebSocket nur beim Listenwechsel —
-      // dazwischen liefert der Datenstrom die Echtzeitkurse.
-      if(!needList && state._wsOn) return;
+      // Der Datenstrom deckt nur die vordersten Märkte ab. Alle übrigen bleiben
+      // sonst auf dem Stand des letzten Listenwechsels. Deshalb wird der komplette
+      // Bestand zusätzlich in festem Takt neu abgefragt — so ist wirklich alles aktuell.
       if(!pmPicks.length) return;
+      var faellig = needList || (Date.now()-lastFullPrices > CONFIG.PM_FULL_MS);
+      if(!faellig) return;
+      lastFullPrices=Date.now();
       var tokens=[];
       pmPicks.forEach(function(p){ tokens.push(p.toks[0],p.toks[1]); });
+      state.pmTokens=tokens.length;
+      var tStart=Date.now();
       return bookStapel(tokens).then(function(preise){
+        state.pmScanMs=Date.now()-tStart;
+        state.pmPreise=Object.keys(preise||{}).length;
+        state.pmAnfragen=Math.ceil(tokens.length/CONFIG.PM_CHUNK);
         var frisch=[];
         for(var i=0;i<pmPicks.length;i++){
           var p=pmPicks[i];
@@ -774,11 +805,26 @@ function pollPM(){
       });
     })
     .then(function(){
-      state.accounts.pm.status='live'; state.pmErr='';
+      var n=0; mkMap.forEach(function(m){ if(!m.demo)n++; });
+      state.pmHandelbar=n;
+      if(!n){ state.accounts.pm.status='error'; state.pmErr='Polymarket antwortet, liefert aber keine handelbaren Kurse'; }
+      else { state.accounts.pm.status='live'; state.pmErr=''; }
       if(!state._pmLogged){ state._pmLogged=true; if(window.__ar)window.__ar.logConn('pm','polymarket'); }
     })
-    .catch(function(e){ state.accounts.pm.status='error'; state.pmErr=String(e&&e.message||e); })
+    .catch(function(e){ state.accounts.pm.status='error'; state.pmErr=grundText(e); })
     .finally(function(){ state.polling=false; });
+}
+
+/* ---- Technische Fehler in Klartext, damit dort ein Grund steht und nicht nur "Fehler" ---- */
+function grundText(e){
+  var s=String((e&&e.message)||e||'');
+  if(/Failed to fetch|NetworkError|load failed/i.test(s)) return 'Keine Verbindung — Internet, VPN oder Werbeblocker prüfen';
+  if(/aborted|abort|timeout/i.test(s))                    return 'Zeitüberschreitung — Gegenstelle antwortet zu langsam';
+  if(/HTTP 4\d\d/i.test(s))                               return 'Abgewiesen ('+s+') — Anfrage wurde nicht akzeptiert';
+  if(/HTTP 5\d\d/i.test(s))                               return 'Gegenstelle hat eine Störung ('+s+')';
+  if(/CORS/i.test(s))                                     return 'Browser blockt die Anfrage (CORS)';
+  if(/JSON|Unexpected token/i.test(s))                    return 'Unerwartete Antwort — Gegenstelle liefert kein sauberes Format';
+  return s.slice(0,120)||'unbekannter Fehler';
 }
 function mergeMarkets(fresh, prune){
   var seen={};
@@ -857,10 +903,11 @@ function pollSX(){
       return {teamA:t[0]||'', teamB:t[1]||'', q1:+d.q1, q2:+d.q2, link:d.link, ev:d.ev, arb:d.arb, league:d.league};
     }).filter(function(x){return x.q1>1&&x.q2>1;});
     sxLast=Date.now();
-    state.accounts.ob.status = sxRaw.length? 'live':'error';
+    if(sxRaw.length){ state.accounts.ob.status='live'; state.sxGrund=''; }
+    else { state.accounts.ob.status='error'; state.sxGrund='Proxy antwortet, liefert aber keine Quoten'; }
     applySX();
     if(!state._sxLogged){ state._sxLogged=true; if(window.__ar)window.__ar.logConn('ob','sxbet'); }
-  }).catch(function(){ state.accounts.ob.status='error'; });
+  }).catch(function(e){ state.accounts.ob.status='error'; state.sxGrund=grundText(e); });
 }
 /* ---- Betfair/Orbit über die lokale Bridge (PC des Nutzers) ---- */
 var bfRaw=[], bfLast=0;
@@ -871,13 +918,37 @@ function pollBF(){
     bfRaw=arr.filter(function(d){return d&&d.key&&+d.o1>1&&+d.o2>1;});
     bfLast=Date.now();
     state.bfAge=res&&res.age_seconds;
-    state.accounts.bf.status = (res&&res.live&&bfRaw.length)? 'live' : (bfRaw.length? 'stale':'nobridge');
     state.bfOpps=(res&&res.opps)||[];
     state.bfArbs=(res&&res.arbs)||[];
-    state.bfStats=(res&&res.stats)||{};
+    var st=state.bfStats=(res&&res.stats)||{};
+
+    // Ehrlicher Zustand statt bloss "live". Eine laufende Bridge, bei der Betfair
+    // klemmt, ist NICHT live — sie meldet nur, dass sie noch da ist.
+    var laeuft = !!(res && res.live);
+    if(!laeuft && !bfRaw.length){
+      state.accounts.bf.status='nobridge';
+      state.bfGrund = st.zeit
+        ? 'Bridge läuft nicht mehr — letzter Lauf vor '+Math.round((state.bfAge||0)/60)+' Min'
+        : 'Auf keinem PC läuft eine Bridge';
+    } else if(laeuft && st.bf_ok===false){
+      state.accounts.bf.status='err';
+      state.bfGrund = st.bf_fehler || 'Betfair antwortet nicht';
+    } else if(laeuft && bfRaw.length){
+      state.accounts.bf.status='live'; state.bfGrund='';
+    } else if(laeuft && !bfRaw.length){
+      state.accounts.bf.status='err';
+      state.bfGrund = 'Bridge läuft, liefert aber keine Betfair-Quoten';
+    } else {
+      state.accounts.bf.status='stale';
+      state.bfGrund = 'Daten sind '+Math.round((state.bfAge||0)/60)+' Min alt — läuft der PC noch?';
+    }
     applyBF();
     renderOpps();
-  }).catch(function(){ state.accounts.bf.status='error'; });
+    updateAccountsUI();
+  }).catch(function(e){
+    state.accounts.bf.status='error';
+    state.bfGrund = 'Die Website erreicht den Bridge-Dienst nicht ('+(e&&e.message||'unbekannt')+')';
+  });
 }
 
 /* ---- Anzeige der fertig gerechneten Chancen aus der Bridge ----
@@ -1037,19 +1108,73 @@ function processSignals(){
 
 /* ---- Konten-UI ---- */
 var ACC=[['pm','Polymarket','PM'],['ob','SX Bet','SX'],['bf','Betfair / Orbit','BF']];
+// Grund der Störung je Quelle — damit nie nur "Fehler" dasteht
+function grundVon(k){
+  if(k==='pm')return state.pmErr||'';
+  if(k==='ob')return state.sxGrund||'';
+  if(k==='bf')return state.bfGrund||'';
+  return '';
+}
 function statusText(k){
   if(!state.srcOn[k])return['off','Getrennt — klick zum Verbinden'];
-  var s=state.accounts[k].status;
+  var s=state.accounts[k].status, g=grundVon(k);
   if(s==='live')return['live','Live verbunden — klick zum Trennen'];
-  if(s==='error')return['err','Getrennt / Fehler'];
+  if(s==='error'||s==='err')return['err',g||'Getrennt / Fehler'];
   if(s==='demo')return['demo','Demo (simuliert)'];
   if(s==='needkey')return['demo','Proxy erreichbar · Betfair-Zugang fehlt'];
-  if(s==='nobridge')return['','Bridge nicht gestartet — klicken für Anleitung'];
-  if(s==='stale')return['demo','Bridge veraltet (PC aus?)'];
+  if(s==='nobridge')return['',g||'Bridge nicht gestartet — klicken für Anleitung'];
+  if(s==='stale')return['demo',g||'Bridge veraltet (PC aus?)'];
   if(s==='offline')return['','Getrennt · Proxy nötig'];
   return['','…'];
 }
+
+/* ---- Was jede Quelle GERADE tut: echte Zahlen, keine Höchstwerte ---- */
+function renderQuellen(){
+  var el=document.getElementById('srcAnalyse'); if(!el)return;
+  var st=state.bfStats||{};
+  var sek=function(ms){ return ms? (ms/1000).toFixed(1)+' s':'–'; };
+  var vor=function(s){ return s==null? '–' : (s<90? s+' s':Math.round(s/60)+' Min'); };
+
+  var quellen=[
+    { k:'pm', name:'Polymarket', zeilen:[
+        ['Märkte gelistet',      (pmPicks.length||0)+''],
+        ['davon handelbar',      (state.pmHandelbar||0)+''],
+        ['Kurse erhalten',       (state.pmPreise||0)+' von '+(state.pmTokens||0)],
+        ['letzte Vollabfrage',   sek(state.pmScanMs)+' · '+(state.pmAnfragen||0)+' Anfragen'],
+        ['Echtzeit-Abo',         state._wsOn? (Math.min(pmPicks.length*2,CONFIG.WS_MAX)+' Token'):'aus'],
+        ['Takt',                 'alles neu alle '+(CONFIG.PM_FULL_MS/1000)+' s']
+      ]},
+    { k:'bf', name:'Betfair / 96ex', zeilen:[
+        ['Bestand erfasst',      (st.bf_katalog||0)+' Märkte'],
+        ['zuletzt gelesen',      (st.bf_gelesen||0)+' Märkte ('+(st.stufe||'–')+')'],
+        ['auf beiden Büchern',   (st.gemeinsam!=null? st.gemeinsam:'–')+(st.sync_gelesen? ' · '+st.sync_gelesen+' nachgelesen':'')],
+        ['Durchlauf',            (st.sweep_s!=null? st.sweep_s+' s':'–')+' · Takt '+(st.takt_ms||'–')+' ms'],
+        ['App-Key',              st.key_art==='live'?'LIVE (Echtzeit)':(st.key_art==='delayed'?'DELAYED (verzögert)':'unbekannt')],
+        ['Schwelle',             (st.schwelle!=null? st.schwelle+' %':'–')+(st.schwelle_schnell&&st.schwelle_schnell!==st.schwelle? ' · schnell '+st.schwelle_schnell+' %':'')],
+        ['Daten von',            vor(state.bfAge)+' her']
+      ]},
+    { k:'ob', name:'SX Bet', zeilen:[
+        ['Märkte erhalten',      (state.sxCount||0)+''],
+        ['davon zugeordnet',     (state.sxMatches||0)+'']
+      ]}
+  ];
+
+  el.innerHTML=quellen.map(function(q){
+    var s=statusText(q.k), grund=grundVon(q.k);
+    var an=state.srcOn[q.k];
+    var kl=s[0]==='live'?'ok':(s[0]==='err'?'bad':'idle');
+    return '<div class="srcCard '+kl+'">'+
+      '<div class="sh"><span class="dot"></span><b>'+q.name+'</b>'+
+        '<span class="sst">'+(an?(s[0]==='live'?'Live':(s[0]==='err'?'Störung':'wartet')):'aus')+'</span></div>'+
+      (grund? '<div class="sgrund">'+grund.replace(/[<>]/g,'')+'</div>':'')+
+      '<div class="sk">'+q.zeilen.map(function(z){
+        return '<div class="skr"><span>'+z[0]+'</span><b>'+z[1]+'</b></div>';
+      }).join('')+'</div>'+
+    '</div>';
+  }).join('');
+}
 function updateAccountsUI(){
+  try{ renderQuellen(); }catch(e){}
   $('#acctList').innerHTML=ACC.map(function(a){
     var k=a[0], st=statusText(k), on=state.srcOn[k]&&(st[0]==='live'||st[0]==='demo');
     var bal=k==='pm'?state.balPm:state.balOb;

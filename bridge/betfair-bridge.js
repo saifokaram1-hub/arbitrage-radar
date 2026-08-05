@@ -493,6 +493,7 @@ async function pmKurse(markets) {
 
 async function polymarketScan() {
   const liste = await pmListe();
+  pmGelistet = liste.size;
   if (!liste.size) return 0;
   const preise = await pmKurse(liste);
   PM.clear();
@@ -706,6 +707,24 @@ function maxAlterMs(markt) {
   if (bis < 2 * 3600e3)  return 180e3;
   if (bis < 7 * 86400e3) return 600e3;
   return 1800e3;
+}
+
+/**
+ * Die Schnittmenge: welche Betfair-Märkte gibt es auch bei Polymarket?
+ * Nur diese sind für einen Vergleich überhaupt brauchbar. Sie werden unmittelbar
+ * vor der Rechnung noch einmal frisch gelesen, damit BEIDE Seiten denselben
+ * Zeitpunkt haben. Ohne das läge zwischen den Büchern der halbe Durchlauf.
+ */
+function schnittmengeIds() {
+  if (!PM.size || !KATALOG.size) return [];
+  const idx = bfIndex();
+  if (!idx.size) return [];
+  const ids = new Set();
+  PM.forEach(pm => {
+    const zu = zuordnen(pm, idx);
+    if (zu) ids.add(zu.markt.mid);
+  });
+  return Array.from(ids);
 }
 
 function crossBookChancen() {
@@ -945,6 +964,26 @@ async function push(markets, arbs, opps, stats) {
 
 let letzteEntdeckung = 0, letzteWarm = 0, letztePM = 0, laeuft = false;
 
+// Letzter Fehler je Quelle, damit die Website nicht nur "Fehler" anzeigt,
+// sondern auch woran es liegt. Wird bei Erfolg wieder geleert.
+let bfFehler = '', pmFehler = '', pmGelistet = 0;
+
+// Technische Meldungen in Klartext übersetzen — der Nutzer soll wissen, was zu tun ist.
+function klartext(m) {
+  const s = String(m || '');
+  if (/INVALID_USERNAME_OR_PASSWORD/i.test(s)) return 'Betfair-Benutzername oder Passwort in der Zugangsdatei ist falsch';
+  if (/INVALID_APP_KEY|APP_KEY/i.test(s))      return 'App-Key wird von Betfair nicht akzeptiert';
+  if (/ACCOUNT_PENDING_PASSWORD_CHANGE/i.test(s)) return 'Betfair verlangt eine Passwortänderung — erst im Browser erledigen';
+  if (/SUSPENDED|KYC/i.test(s))                return 'Betfair-Konto eingeschränkt — Kurse lesen geht, wetten nicht';
+  if (/Cloudflare|HTML/i.test(s))              return 'Betfair blockt die Verbindung — VPN oder Proxy ausschalten';
+  if (/INVALID_SESSION|session/i.test(s))      return 'Sitzung abgelaufen, meldet sich neu an';
+  if (/TOO_MANY_REQUESTS|DSC-0018/i.test(s))   return 'Betfair drosselt gerade — das Tempo wird automatisch gesenkt';
+  if (/Upload fehlgeschlagen/i.test(s))        return 'Website nimmt die Daten nicht an: ' + s.replace(/^Upload fehlgeschlagen:\s*/, '');
+  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|network/i.test(s)) return 'Keine Internetverbindung erreichbar';
+  if (/abort|timeout/i.test(s))                return 'Zeitüberschreitung — Gegenstelle antwortet nicht';
+  return s.slice(0, 140);
+}
+
 function heisseIds() {
   // Heiss = worauf Polymarket gerade Märkte hat, plus alles was läuft oder bald startet
   const woerter = new Set();
@@ -991,12 +1030,30 @@ async function durchlauf() {
 
     const t0 = Date.now();
     const gelesen = await buecherHolen(ids);
+    bfFehler = gelesen ? '' : 'Betfair lieferte in diesem Durchlauf keine Kurse';
 
     // Polymarket eigenständig, im eigenen Takt (die API ist schnell und offen)
     let pmAnzahl = PM.size;
     if (O.scanPolymarket && jetzt - letztePM > Math.max(O.hotSeconds, 15) * 1000) {
-      try { pmAnzahl = await polymarketScan(); letztePM = jetzt; }
-      catch (e) { log('⚠ Polymarket: ' + e.message.slice(0, 90)); }
+      try {
+        pmAnzahl = await polymarketScan();
+        letztePM = jetzt;
+        pmFehler = pmAnzahl ? '' : 'Polymarket antwortet, liefert aber keine handelbaren Kurse';
+      } catch (e) {
+        pmFehler = klartext(e.message);
+        log('⚠ Polymarket: ' + pmFehler);
+      }
+    }
+
+    // ── Gleichstand herstellen ────────────────────────────────────────────
+    // Jetzt stehen beide Bestände. Genau die Märkte, die es auf BEIDEN Büchern
+    // gibt, werden unmittelbar vor der Rechnung noch einmal gelesen. Erst dadurch
+    // vergleichen wir zwei Kurse desselben Augenblicks statt zweier Zeitpunkte.
+    const gemeinsam = schnittmengeIds();
+    let syncGelesen = 0;
+    if (gemeinsam.length) {
+      try { syncGelesen = await buecherHolen(gemeinsam); }
+      catch (e) { bfFehler = klartext(e.message); }
     }
 
     const dauer = Math.round((Date.now() - t0) / 1000);
@@ -1008,14 +1065,25 @@ async function durchlauf() {
       bf_katalog: KATALOG.size, bf_gelesen: gelesen, pm_handelbar: pmAnzahl,
       stufe, sweep_s: dauer, hochgeladen: markets.length,
       opps: opps.length, arbs: arbs.length, veraltet: opps.verworfenAlt || 0,
-      key_art: KEY_ART, schwelle: O.minRoi, schwelle_schnell: istVerzoegert() ? O.minRoiSchnell : O.minRoi,
-      takt_ms: minGap, zeit: new Date().toISOString()
+      key_art: KEY_ART, key_name: KEY_NAME,
+      schwelle: O.minRoi, schwelle_schnell: istVerzoegert() ? O.minRoiSchnell : O.minRoi,
+      takt_ms: minGap, takt_hot: O.hotSeconds, takt_warm: O.warmSeconds, takt_cold: O.coldSeconds,
+      // Zustand je Quelle, damit die Website den Grund nennen kann statt nur "Fehler"
+      bf_ok: bfFehler ? false : true, bf_fehler: bfFehler || '',
+      pm_ok: pmFehler ? false : true, pm_fehler: pmFehler || '',
+      pm_gelistet: pmGelistet,
+      // Wie viele Märkte gibt es auf BEIDEN Büchern, und wie viele davon
+      // wurden direkt vor der Rechnung noch einmal frisch gelesen
+      gemeinsam: gemeinsam.length, sync_gelesen: syncGelesen,
+      zeit: new Date().toISOString()
     };
 
     const res = await push(markets, arbs.slice(0, 200), opps.slice(0, 200), stats);
 
     log('📊 Betfair ' + gelesen + '/' + KATALOG.size + ' · Polymarket ' + pmAnzahl +
         ' · ' + stufe + ' · ' + dauer + 's  →  ' + markets.length + ' Maerkte hochgeladen');
+    log('   auf beiden Buechern: ' + gemeinsam.length + ' Maerkte' +
+        (syncGelesen ? ' (' + syncGelesen + " direkt vor der Rechnung nachgelesen)" : ''));
 
     if (opps.length) {
       log('🎯 ' + opps.length + ' Cross-Book-Chance(n)' +
@@ -1032,7 +1100,18 @@ async function durchlauf() {
     if (!opps.length && !arbs.length) log('   (gerade keine Chance über ' + O.minRoi + '% mit mindestens ' + O.minStake + ' Einsatz)');
 
   } catch (e) {
+    bfFehler = klartext(e.message);
     log('❌ ' + e.message);
+    if (bfFehler !== e.message) log('   → ' + bfFehler);
+    // Auch im Fehlerfall melden, damit die Website den Grund anzeigen kann
+    try {
+      await push([], [], [], {
+        bf_ok: false, bf_fehler: bfFehler, pm_ok: !pmFehler, pm_fehler: pmFehler,
+        bf_katalog: KATALOG.size, bf_gelesen: 0, pm_handelbar: PM.size, pm_gelistet: pmGelistet,
+        key_art: KEY_ART, stufe: 'fehler', zeit: new Date().toISOString()
+      });
+    } catch (e2) { /* Website nicht erreichbar — dann bleibt nur das Fenster */ }
+
     if (/session|invalid|auth|expired|INVALID_SESSION/i.test(e.message)) sessionToken = null;
     if (/Login fehlgeschlagen/i.test(e.message)) {
       loginFehler++;
@@ -1055,7 +1134,7 @@ module.exports = {
   effektiv, rechne, buendeln, layBein, bfIndex, zuordnen, maxAlterMs, minRoiFuer,
   schluessel, nrm, istUnentschieden,
   setKeyArt: (a) => { KEY_ART = a; }, getKeyArt: () => KEY_ART, istVerzoegert,
-  crossBookChancen, betfairIntern, polymarketIntern,
+  crossBookChancen, schnittmengeIds, betfairIntern, polymarketIntern,
   pmListe, pmKurse, polymarketScan, kategorie,
   PM, KATALOG, BUCH, O
 };
