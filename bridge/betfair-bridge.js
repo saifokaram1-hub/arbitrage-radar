@@ -147,6 +147,8 @@ const O = {
   feeBf:        zahl(CFG.feeBetfairPercent, 5) / 100,
   feePm:        zahl(CFG.feePolymarketPercent, 0) / 100,
   minRoi:       zahl(CFG.minRoiPercent, 0.5),
+  // Schwelle für schnelle Märkte, solange der Schlüssel verzögerte Kurse liefert
+  minRoiSchnell: zahl(CFG.minRoiSchnellPercent, 2.5),
   minStake:     zahl(CFG.minStake, 20),
   minInternalRoi: zahl(CFG.minInternalRoiPercent, 0.3),
   maxDataAge:   zahl(CFG.maxDataAgeSeconds, 0),   // 0 = automatisch nach Marktgeschwindigkeit
@@ -159,6 +161,7 @@ const O = {
 const BF_LOGIN = 'https://identitysso.betfair.com/api/login';
 const BF_KEEP  = 'https://identitysso.betfair.com/api/keepAlive';
 const BF_RPC   = 'https://api.betfair.com/exchange/betting/json-rpc/v1';   // Exchange, NICHT Sportsbook
+const BF_ACCOUNT = 'https://api.betfair.com/exchange/account/json-rpc/v1'; // nur zum Auslesen der App-Keys
 const PM_GAMMA = 'https://gamma-api.polymarket.com/markets';
 const PM_CLOB  = 'https://clob.polymarket.com';
 const BOOK_CHUNK = 40;    // EX_BEST_OFFERS: Gewicht 5, Betfair erlaubt 200 pro Aufruf
@@ -205,6 +208,21 @@ async function login() {
     log('   ⚠ Konto eingeschraenkt (' + (j.error || j.status) + '): Wetten ueber die API gesperrt,');
     log('     Quoten werden trotzdem gelesen.');
   }
+
+  // Einmal je Anmeldung klaeren, womit wir es zu tun haben
+  await schluesselArtErkennen();
+  if (KEY_ART === 'live') {
+    log('🔑 App-Key: LIVE' + (KEY_NAME ? ' ("' + KEY_NAME + '")' : '') + ' — Kurse in Echtzeit.');
+    log('   Schwelle bleibt bei ' + O.minRoi + '% auch fuer laufende Spiele.');
+  } else if (KEY_ART === 'delayed') {
+    log('🔑 App-Key: DELAYED' + (KEY_NAME ? ' ("' + KEY_NAME + '")' : '') + ' — Kurse kommen verzoegert.');
+    log('   Langsame Maerkte (Politik, Langzeitwetten): Schwelle ' + O.minRoi + '%');
+    log('   Schnelle Maerkte (laufend / <2 h bis Anpfiff): Schwelle ' + O.minRoiSchnell + '%,');
+    log('   weil eine verzoegerte Quote dort meist schon weg ist, wenn du klickst.');
+  } else {
+    log('🔑 App-Key: Art nicht feststellbar — es wird vorsichtshalber wie DELAYED gerechnet.');
+    log('   (Der Schluessel gehoert womoeglich zu einem anderen Betfair-Konto.)');
+  }
 }
 
 async function keepAlive() {
@@ -214,6 +232,60 @@ async function keepAlive() {
     if (j.status !== 'SUCCESS' && !j.token) { log('⚠ Sitzung abgelaufen — logge neu ein'); await login(); }
     else lastLogin = Date.now();
   } catch (e) { log('⚠ keepAlive Fehler:', e.message); }
+}
+
+/* ═══════════════ Welcher Schlüssel steckt drin: verzögert oder echtzeit? ═══════════════ */
+// Betfair sagt es selbst. Die Kontoschnittstelle listet alle App-Keys des Nutzers,
+// und jede Fassung trägt ein Feld "delayData": true heisst verzögert, false heisst live.
+// Wir suchen darin unseren eingetragenen Schlüssel und lesen den Wert ab.
+// Solange das nicht sicher geklärt ist, wird VORSICHTIG gerechnet, also wie verzögert.
+let KEY_ART = 'unbekannt';   // 'delayed' | 'live' | 'unbekannt'
+let KEY_NAME = '';
+
+async function schluesselArtErkennen() {
+  try {
+    const r = await fetch(BF_ACCOUNT, {
+      method: 'POST',
+      headers: {
+        'X-Application': CFG.betfairAppKey, 'X-Authentication': sessionToken,
+        'Content-Type': 'application/json', 'Accept': 'application/json'
+      },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'AccountAPING/v1.0/getDeveloperAppKeys', params: {}, id: 1 })
+    });
+    const txt = await r.text();
+    if (txt.trim().startsWith('<')) throw new Error('HTML statt Antwort');
+    const j = JSON.parse(txt);
+    const erg = (Array.isArray(j) ? j[0] : j).result;
+    if (!Array.isArray(erg)) throw new Error('unerwartete Antwort');
+
+    const meiner = String(CFG.betfairAppKey).trim();
+    for (const app of erg) {
+      for (const v of (app.appVersions || [])) {
+        if (String(v.applicationKey || '').trim() === meiner) {
+          KEY_ART = v.delayData ? 'delayed' : 'live';
+          KEY_NAME = app.appName || '';
+          return KEY_ART;
+        }
+      }
+    }
+    // Schlüssel nicht in der Liste: kann an einem fremden Konto liegen
+    KEY_ART = 'unbekannt';
+    return KEY_ART;
+  } catch (e) {
+    KEY_ART = 'unbekannt';
+    return KEY_ART;
+  }
+}
+
+const istVerzoegert = () => KEY_ART !== 'live';   // unbekannt wird wie verzögert behandelt
+
+// Mit verzögerten Kursen braucht ein schneller Markt mehr Luft: was man sieht,
+// ist bereits Vergangenheit. Langsame Märkte sind davon kaum betroffen.
+function minRoiFuer(markt) {
+  if (!istVerzoegert()) return O.minRoi;
+  const bis = markt.start ? Date.parse(markt.start) - Date.now() : Infinity;
+  const schnell = markt.inplay || bis < 2 * 3600e3;
+  return schnell ? Math.max(O.minRoi, O.minRoiSchnell) : O.minRoi;
 }
 
 async function rpc(method, params, versuch) {
@@ -697,7 +769,8 @@ function crossBookChancen() {
       };
       const r = rechne(pmBein, v.bf);
       if (!r || !r.ok) continue;
-      if (r.roi < O.minRoi) continue;
+      // Schwelle hängt davon ab, wie schnell der Markt ist und ob die Kurse verzögert sind
+      if (r.roi < minRoiFuer(m)) continue;
       if (r.maxStake < O.minStake) continue;
       if (!best || r.roi > best.r.roi) best = { v, r, pmBein, bfBein: v.bf, preis };
     }
@@ -935,6 +1008,7 @@ async function durchlauf() {
       bf_katalog: KATALOG.size, bf_gelesen: gelesen, pm_handelbar: pmAnzahl,
       stufe, sweep_s: dauer, hochgeladen: markets.length,
       opps: opps.length, arbs: arbs.length, veraltet: opps.verworfenAlt || 0,
+      key_art: KEY_ART, schwelle: O.minRoi, schwelle_schnell: istVerzoegert() ? O.minRoiSchnell : O.minRoi,
       takt_ms: minGap, zeit: new Date().toISOString()
     };
 
@@ -978,7 +1052,9 @@ async function durchlauf() {
 /* ═══════════════ Nach aussen sichtbar: die Rechenlogik zum Nachprüfen ═══════════════ */
 
 module.exports = {
-  effektiv, rechne, buendeln, layBein, bfIndex, zuordnen, maxAlterMs, schluessel, nrm, istUnentschieden,
+  effektiv, rechne, buendeln, layBein, bfIndex, zuordnen, maxAlterMs, minRoiFuer,
+  schluessel, nrm, istUnentschieden,
+  setKeyArt: (a) => { KEY_ART = a; }, getKeyArt: () => KEY_ART, istVerzoegert,
   crossBookChancen, betfairIntern, polymarketIntern,
   pmListe, pmKurse, polymarketScan, kategorie,
   PM, KATALOG, BUCH, O
@@ -995,6 +1071,8 @@ if (!ALS_PROGRAMM) return;
   console.log('Takt: heiss ' + O.hotSeconds + 's | breit ' + O.warmSeconds + 's | Neuerfassung ' + O.coldSeconds + 's');
   console.log('Gebuehren: Betfair ' + (O.feeBf * 100) + '% · Polymarket ' + (O.feePm * 100) + '%');
   console.log('Meldeschwelle: ab ' + O.minRoi + '% Rendite und ' + O.minStake + ' moeglichem Einsatz');
+  console.log('  (bei verzoegertem App-Key gilt fuer laufende und bald startende');
+  console.log('   Spiele stattdessen ' + O.minRoiSchnell + '% — die Art des Keys erkennt das Programm selbst)');
   console.log('Beenden: Strg+C\n');
 
   // Token vorab pruefen, damit ein Tippfehler nicht erst nach dem ersten Vollscan auffaellt

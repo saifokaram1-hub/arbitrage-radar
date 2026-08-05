@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orion Panel — Suchlogik</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{--void:#060704;--void2:#0a0b07;--panel:#0b0c07;--panel2:#0d0f0a;--line:#211f12;--line2:#2f2b18;--line3:#41391f;
+    --txt:#f2f1e7;--muted:#8b8c7c;--dim:#5c5d50;--gold:#c7b24c;--gold-b:#e7d882;--gold-d:#7f7130;
+    --pos:#9fbf3b;--neg:#b0402e;--warn:#d98c4a;
+    --mono:ui-monospace,"Cascadia Code",Consolas,monospace;--sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Arial,sans-serif}
+  *{box-sizing:border-box}html,body{margin:0;padding:0}
+  body{background:var(--void);color:var(--txt);font-family:var(--sans);font-size:15px;line-height:1.62;
+    background-image:radial-gradient(120% 50% at 100% 0%,rgba(199,178,76,.05),transparent 55%)}
+
+  .cmd{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:14px;padding:12px 20px;
+    background:linear-gradient(180deg,#0b0c07,#080905);border-bottom:1px solid var(--line2)}
+  .mark{width:30px;height:30px;position:relative;border:1px solid var(--gold-d);background:#0a0b06;flex:none}
+  .mark::before,.mark::after{content:"";position:absolute;background:var(--gold)}
+  .mark::before{left:8px;top:14px;width:13px;height:1px;box-shadow:0 -5px 0 var(--gold-d),0 5px 0 var(--gold-d)}
+  .mark::after{left:14px;top:8px;width:1px;height:13px;box-shadow:-5px 0 0 var(--gold-d),5px 0 0 var(--gold-d)}
+  h1{margin:0;font-size:12.5px;letter-spacing:.24em;text-transform:uppercase;font-weight:700}
+  h1 span{color:var(--gold-b)}
+  .cmd .sp{flex:1}
+  .lnk{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);border:1px solid var(--line3);
+    padding:8px 12px;text-decoration:none;background:#0a0b06;white-space:nowrap}
+  .lnk:hover{color:var(--gold-b);border-color:var(--gold-d)}
+
+  .wrap{max-width:900px;margin:0 auto;padding:28px 20px 80px;display:flex;flex-direction:column;gap:32px}
+  .intro{border:1px solid var(--line2);background:linear-gradient(180deg,#0d0f0a,#080905);padding:22px 24px;display:flex;flex-direction:column;gap:10px}
+  .intro h2{margin:0;font-size:19px;color:var(--gold-b);text-wrap:balance}
+  .intro p{margin:0;color:var(--muted);font-size:14.5px;max-width:66ch}
+  .stamp{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.05em}
+
+  .gauges{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border:1px solid var(--line2);background:var(--panel)}
+  .g{padding:14px 15px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .g .v{font-family:var(--mono);font-size:23px;font-weight:700;color:var(--gold-b);font-variant-numeric:tabular-nums;line-height:1.1}
+  .g .v.pos{color:var(--pos)}
+  .g .l{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);margin-top:5px}
+  .g .s{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px}
+
+  section{display:flex;flex-direction:column;gap:15px}
+  h3{margin:0;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);font-weight:700;
+    padding-bottom:9px;border-bottom:1px solid var(--line2)}
+  h4{margin:0;font-size:15.5px;font-weight:650;text-wrap:balance}
+  p{margin:0;max-width:68ch}
+  .note{color:var(--muted);font-size:14px}
+  strong{color:var(--gold-b);font-weight:650}
+
+  .flow{display:flex;flex-direction:column;border:1px solid var(--line2);background:var(--panel)}
+  .stage{display:grid;grid-template-columns:42px 1fr;border-bottom:1px solid var(--line)}
+  .stage:last-child{border-bottom:0}
+  .stage .n{display:flex;align-items:flex-start;justify-content:center;padding:14px 0 0;font-family:var(--mono);
+    font-size:12px;color:var(--gold-d);border-right:1px solid var(--line);font-variant-numeric:tabular-nums}
+  .stage .b{padding:13px 16px;display:flex;flex-direction:column;gap:5px}
+  .stage .t{font-weight:650;font-size:14.5px}
+  .stage .d{color:var(--muted);font-size:13.5px}
+  .stage .m{font-family:var(--mono);font-size:11.5px;color:var(--gold);font-variant-numeric:tabular-nums}
+
+  .scroll{overflow-x:auto;border:1px solid var(--line2);background:var(--panel)}
+  table{width:100%;border-collapse:collapse;min-width:520px}
+  th{text-align:left;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+    padding:11px 13px;border-bottom:1px solid var(--line2);font-weight:700;white-space:nowrap}
+  td{padding:10px 13px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--gold-b);white-space:nowrap}
+  td.k{font-family:var(--mono);font-size:12.5px;color:var(--muted);white-space:nowrap}
+
+  pre{margin:0;padding:15px 17px;overflow-x:auto;border:1px solid var(--line3);background:var(--panel2);
+    font-family:var(--mono);font-size:12.5px;line-height:1.85;color:var(--gold-b);font-variant-numeric:tabular-nums}
+  pre .c{color:var(--dim)}
+
+  .versus{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line2);background:var(--panel)}
+  .vs{padding:17px 18px;display:flex;flex-direction:column;gap:11px}
+  .vs:first-child{border-right:1px solid var(--line2)}
+  .vs .cap{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+  .vs .nm{font-size:17px;font-weight:700;color:var(--gold-b)}
+  .vs .price{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .vs ul{margin:0;padding-left:17px;display:flex;flex-direction:column;gap:6px}
+  .vs li{font-size:13.5px;color:var(--muted)}
+  .vs li b{color:var(--txt);font-weight:600}
+  @media(max-width:640px){.versus{grid-template-columns:1fr}.vs:first-child{border-right:0;border-bottom:1px solid var(--line2)}}
+
+  .ledger{display:flex;flex-direction:column;border:1px solid var(--line2);background:var(--panel)}
+  .row{display:grid;grid-template-columns:4px 1fr;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:0}
+  .row .stripe{background:var(--gold-d)}
+  .row.krit .stripe{background:var(--neg)}
+  .row.mit .stripe{background:var(--warn)}
+  .row.offen .stripe{background:var(--neg)}
+  .row .body{padding:13px 16px;display:flex;flex-direction:column;gap:9px}
+  .row .ttl{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .row .ttl b{font-size:14.5px;font-weight:650}
+  .tag{font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;padding:2px 7px;
+    border:1px solid var(--line3);color:var(--dim);white-space:nowrap}
+  .tag.krit{color:var(--neg);border-color:var(--neg)}
+  .tag.mit{color:var(--warn);border-color:var(--warn)}
+  .tag.offen{color:var(--neg);border-color:var(--neg)}
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+  .ba div{padding:9px 12px;background:var(--panel2);font-size:13px}
+  .ba .lab{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}
+  .ba .vor .lab{color:var(--neg)}
+  .ba .jetzt .lab{color:var(--pos)}
+  .ba .jetzt{background:rgba(159,191,59,.07)}
+  @media(max-width:600px){.ba{grid-template-columns:1fr}}
+
+  .call{border-left:3px solid var(--gold-d);background:var(--panel2);padding:13px 16px;font-size:14px;color:var(--muted)}
+  .call.warn{border-left-color:var(--warn);background:rgba(217,140,74,.07)}
+  .call.bad{border-left-color:var(--neg);background:rgba(176,64,46,.07)}
+  .call.good{border-left-color:var(--pos);background:rgba(159,191,59,.07)}
+  .call b{color:var(--txt)}
+  code{font-family:var(--mono);font-size:12.5px;color:var(--gold-b);background:var(--void2);padding:1px 5px;border:1px solid var(--line)}
+  a{color:var(--gold)}
+  a:focus-visible,*:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .foot{border-top:1px solid var(--line2);padding-top:18px;color:var(--dim);font-size:12px;font-family:var(--mono)}
+  @media(max-width:560px){.wrap{padding:18px 14px 60px}}
+</style>
+</head>
+<body>
+  <div class="cmd">
+    <div class="mark"></div>
+    <h1>Such<span>logik</span></h1>
+    <div class="sp"></div>
+    <a class="lnk" href="bridge-setup.html">Einrichtung</a>
+    <a class="lnk" href="index.html">← Zurück zur App</a>
+  </div>
+
+  <div class="wrap">
+
+    <div class="intro">
+      <h2>Wie gesucht wird, wie schnell, und was der Schlüssel daran ändert</h2>
+      <p>Der Scanner vergleicht Polymarket mit der Betfair-Börse und meldet nur Wetten, bei denen beide Ausgänge zusammen mehr zurückzahlen als eingesetzt wurde. Hier steht, wie das abläuft, wie lange es dauert, wie das Programm selbst erkennt, ob dein Schlüssel verzögerte oder echtzeitfähige Kurse liefert, und welche Denkfehler dabei gefunden und behoben wurden.</p>
+      <div class="stamp" id="stamp">Bridge v2 · Endpunkt bf-bridge unverändert</div>
+    </div>
+
+    <div class="gauges" id="gauges">
+      <div class="g"><div class="v">2 100</div><div class="l">Polymarket-Märkte</div><div class="s">vorher 100</div></div>
+      <div class="g"><div class="v pos">1 251</div><div class="l">beidseitig handelbar</div><div class="s">838 mit echter Tiefe</div></div>
+      <div class="g"><div class="v">6,5 s</div><div class="l">Vollscan Polymarket</div><div class="s">38 Anfragen</div></div>
+      <div class="g"><div class="v">20 s</div><div class="l">schnellster Takt</div><div class="s">breit 150 s · voll 900 s</div></div>
+      <div class="g"><div class="v pos">51</div><div class="l">Prüfungen bestanden</div><div class="s">0 fehlgeschlagen</div></div>
+      <div class="g"><div class="v">15</div><div class="l">Denkfehler behoben</div><div class="s">1 offen</div></div>
+    </div>
+
+    <section>
+      <h3>Wie gesucht wird</h3>
+      <p>Beide Seiten liest das Programm auf deinem PC, nicht der Browser. Deshalb sammelt sich die Historie auch nachts, wenn niemand die Seite offen hat.</p>
+      <div class="flow">
+        <div class="stage"><div class="n">1</div><div class="b">
+          <span class="t">Polymarket: Marktliste durchblättern</span>
+          <span class="d">Die Schnittstelle gibt höchstens 100 Einträge pro Anfrage zurück, egal welche Anzahl man verlangt. Deshalb wird geblättert, bis das Ende erreicht ist. Hinter dem letzten Eintrag antwortet sie mit einem Fehlercode statt mit einer leeren Liste, das wird als Ende gewertet.</span>
+          <span class="m">21 Anfragen · 2,2 s · 2 100 Märkte</span>
+        </div></div>
+        <div class="stage"><div class="n">2</div><div class="b">
+          <span class="t">Polymarket: Preise im Stapel holen</span>
+          <span class="d">Statt zwei Einzelanfragen je Markt gehen bis zu 250 Wertpapiere gebündelt raus. Zurück kommt das ganze Orderbuch, also auch die Tiefe. Der Kaufpreis ist immer der <em>niedrigste</em> Verkaufskurs, nicht der erste in der Liste.</span>
+          <span class="m">17 Anfragen · 4,3 s · 3 893 Kurse</span>
+        </div></div>
+        <div class="stage"><div class="n">3</div><div class="b">
+          <span class="t">Betfair: Bestand erfassen</span>
+          <span class="d">Alle Sportarten außer Pferde- und Windhundrennen. Die Katalogabfrage bricht bei 1 000 Treffern ab, deshalb wird der Bestand in Zeitfenster zerlegt und ein volles Fenster automatisch halbiert, bis nichts mehr verloren geht.</span>
+          <span class="m">alle 900 s · nur Börse, nie Buchmacher</span>
+        </div></div>
+        <div class="stage"><div class="n">4</div><div class="b">
+          <span class="t">Betfair: Kurse in drei Takten</span>
+          <span class="d">Laufende und bald startende Spiele sowie alles, was namentlich zu einem Polymarket-Markt passt, alle 20 Sekunden. Der gesamte Bestand alle 150 Sekunden. Gelesen werden Zurückwetten <em>und</em> Dagegenhalten, jeweils mit dem Geld, das dahinter liegt.</span>
+          <span class="m">40 Märkte je Anfrage · 4 Anfragen/s</span>
+        </div></div>
+        <div class="stage"><div class="n">5</div><div class="b">
+          <span class="t">Zuordnen</span>
+          <span class="d">Aus jedem Teilnehmernamen wird ein Schlüsselwort gebildet, Vereinszusätze fallen weg. Beim Zweikampf müssen beide Namen in der Polymarket-Frage stehen. Bei großen Feldern wie dem Ballon d'Or muss genau ein Name passen und zusätzlich der Markttitel, damit „Mbappé trifft zuerst" nicht mit „Mbappé gewinnt" verwechselt wird.</span>
+        </div></div>
+        <div class="stage"><div class="n">6</div><div class="b">
+          <span class="t">Frische prüfen</span>
+          <span class="d">Jeder Kurs trägt seinen Lesezeitpunkt. Sind die beiden Beine unterschiedlich alt und überschreitet eines die Grenze für dieses Markttempo, wird die Chance verworfen statt gemeldet.</span>
+          <span class="m">laufend 60 s · vor Anpfiff 180 s · Langzeit 1 800 s</span>
+        </div></div>
+        <div class="stage"><div class="n">7</div><div class="b">
+          <span class="t">Rechnen, melden, protokollieren</span>
+          <span class="d">Gemeldet wird nur, was über der Renditeschwelle liegt <em>und</em> genug Geld im Buch hat. Jede Chance kommt mit beiden Direktlinks, dem Einsatz je Seite und der Gegenrechnung. Gleichzeitig wandert sie dauerhaft in die Historie.</span>
+        </div></div>
+      </div>
+    </section>
+
+    <section>
+      <h3>Die Rechnung</h3>
+      <p>Zwei sich ausschließende Ausgänge, je einer auf einem anderen Buch. Die Kommission trifft nur den Gewinn, nicht den Einsatz.</p>
+      <pre>qE  = 1 + (q − 1) × (1 − Gebühr)      <span class="c">Effektivquote nach Kommission</span>
+inv = 1/qE1 + 1/qE2                  <span class="c">Arbitrage liegt vor, wenn inv &lt; 1</span>
+
+S1  = S × (1/qE1) / inv              <span class="c">Einsatz Seite 1</span>
+S2  = S − S1                         <span class="c">Einsatz Seite 2</span>
+
+Auszahlung = S / inv                 <span class="c">bei BEIDEN Ausgängen derselbe Betrag</span>
+Rendite    = (1/inv − 1) × 100 %</pre>
+      <p class="note">Ausdrücklich nicht halbe-halbe. Die Aufteilung folgt den Quoten, sonst gewinnt man bei einem Ausgang und verliert beim anderen. Beispiel bei 1 000 Einsatz, Polymarket 0,44 gegen Betfair 2,50 mit 5 % Kommission: 516,21 und 483,79, Auszahlung 1 173,20 in beiden Fällen, Gewinn 173,20.</p>
+
+      <h4>Dagegenhalten statt zurückwetten</h4>
+      <p>Bei Märkten mit vielen Teilnehmern gibt es keine sinnvolle Gegenseite zum Zurückwetten. Dort hält man dagegen, und die Haftung ist der Einsatz.</p>
+      <pre>qE      = 1 + (1 − Gebühr) / (L − 1)   <span class="c">L = Lay-Quote</span>
+Einsatz = Haftung = stake × (L − 1)
+Maximum = verfügbare Größe × (L − 1)</pre>
+      <div class="call good"><b>Von Hand gegengerechnet:</b> Lay-Quote 5,00, Gegenüber setzt 200, deine Haftung 800. Verliert der Teilnehmer, bekommst du 800 + 200 − 5 % = 990 zurück. Das sind 1,2375 je eingesetztem Euro, exakt der Wert, den die Formel liefert.</div>
+    </section>
+
+    <section>
+      <h3>Wie lange es dauert</h3>
+      <p>Die Polymarket-Zahlen sind gemessen. Die Betfair-Zahlen sind aus den dokumentierten Grenzen gerechnet, nicht gemessen. Sobald eine Bridge läuft, meldet sie die echten Werte selbst.</p>
+      <div class="scroll">
+        <table>
+          <tr><th>Vorgang</th><th>Grenze</th><th>Anfragen</th><th>Dauer</th><th>Herkunft</th></tr>
+          <tr><td>Polymarket Marktliste</td><td class="k">100 je Anfrage</td><td class="num">21</td><td class="num">2,2 s</td><td class="k">gemessen</td></tr>
+          <tr><td>Polymarket Preise</td><td class="k">250 Token je Anfrage</td><td class="num">17</td><td class="num">4,3 s</td><td class="k">gemessen</td></tr>
+          <tr><td>Betfair Bestandserfassung</td><td class="k">1 000 je Abfrage</td><td class="num">~150+</td><td class="num">40–90 s</td><td class="k">gerechnet</td></tr>
+          <tr><td>Betfair 2 000 Märkte</td><td class="k">40 je Abfrage</td><td class="num">50</td><td class="num">12,5 s</td><td class="k">gerechnet</td></tr>
+          <tr><td>Betfair 5 000 Märkte</td><td class="k">40 je Abfrage</td><td class="num">125</td><td class="num">31 s</td><td class="k">gerechnet</td></tr>
+          <tr><td>Betfair 10 000 Märkte</td><td class="k">40 je Abfrage</td><td class="num">250</td><td class="num">63 s</td><td class="k">gerechnet</td></tr>
+          <tr><td>Betfair 20 000 Märkte</td><td class="k">40 je Abfrage</td><td class="num">500</td><td class="num">125 s</td><td class="k">gerechnet</td></tr>
+        </table>
+      </div>
+      <p class="note">Die Rechnung dahinter ist einfach: Betfair liefert 40 Märkte pro Kursabfrage, das Programm fragt viermal pro Sekunde. Macht 160 Märkte pro Sekunde. Drosselt Betfair, senkt das Programm das Tempo von allein und meldet das im Fenster.</p>
+    </section>
+
+    <section>
+      <h3>Delayed Key gegen Live Key</h3>
+
+      <div class="versus">
+        <div class="vs">
+          <span class="cap">im Einsatz</span>
+          <span class="nm">Delayed App Key</span>
+          <span class="price">0 € · sofort verfügbar</span>
+          <ul>
+            <li>Kurse kommen <b>verzögert</b>, Betfair nennt keine feste Zahl. In der Praxis Sekunden bis rund eine Minute.</li>
+            <li>Lesen ist uneingeschränkt möglich, auch bei eingeschränktem Konto.</li>
+            <li>Taugt für <b>langsame Märkte</b>: Politik, Langzeitwetten, Ballon d'Or, Meisterschaftssieger.</li>
+            <li>Bei laufenden Spielen praktisch unbrauchbar, das Fenster ist zu, bevor man klickt.</li>
+          </ul>
+        </div>
+        <div class="vs">
+          <span class="cap">Aufrüstung</span>
+          <span class="nm">Live App Key</span>
+          <span class="price">£ 499 einmalig</span>
+          <ul>
+            <li>Kurse in <b>Echtzeit</b>, beide Beine sind gleich aktuell.</li>
+            <li>Erst damit werden laufende Spiele und schnelle Sportmärkte nutzbar.</li>
+            <li>Dünne Margen ab etwa 0,5 % werden greifbar, weil sie beim Klicken noch da sind.</li>
+            <li>Umstieg ist <b>ein Handgriff</b>: in der Zugangsdatei den Schlüssel ersetzen, Programm neu starten. Am Code ändert sich nichts.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h4>Woher das Programm weiß, welchen Schlüssel du eingetragen hast</h4>
+      <p>Du musst nichts angeben. Das Programm fragt Betfair direkt und richtet sich danach.</p>
+      <div class="flow">
+        <div class="stage"><div class="n">A</div><div class="b">
+          <span class="t">Es fragt beim Anmelden deine Schlüsselliste ab</span>
+          <span class="d">Betfair führt zu jedem Konto seine App-Keys, und jede Fassung trägt ein Merkmal, ob sie verzögerte Daten liefert. Das Programm sucht darin genau den Schlüssel, den du eingetragen hast.</span>
+          <span class="m">AccountAPING · getDeveloperAppKeys · delayData</span>
+        </div></div>
+        <div class="stage"><div class="n">B</div><div class="b">
+          <span class="t">Es schreibt das Ergebnis ins Fenster</span>
+          <span class="d">Beim Start steht dort entweder „App-Key: DELAYED — Kurse kommen verzögert" oder „App-Key: LIVE — Kurse in Echtzeit". Du siehst also sofort, woran du bist, ohne irgendwo nachzusehen.</span>
+        </div></div>
+        <div class="stage"><div class="n">C</div><div class="b">
+          <span class="t">Es passt die Schwelle selbst an</span>
+          <span class="d">Bei einem verzögerten Schlüssel brauchen schnelle Märkte mehr Luft, weil die Quote beim Klicken schon weg sein kann. Langsame Märkte sind davon kaum betroffen und behalten die normale Schwelle.</span>
+          <span class="m">verzögert: langsam 0,5 % · schnell 2,5 %   |   live: überall 0,5 %</span>
+        </div></div>
+        <div class="stage"><div class="n">D</div><div class="b">
+          <span class="t">Im Zweifel wird vorsichtig gerechnet</span>
+          <span class="d">Lässt sich die Art nicht klären, etwa weil der Schlüssel zu einem anderen Betfair-Konto gehört, behandelt das Programm ihn wie einen verzögerten. Lieber eine Chance zu wenig als eine, die es nicht mehr gibt.</span>
+        </div></div>
+      </div>
+      <p class="note">Beide Schwellen lassen sich in der Zugangsdatei überschreiben: <code>minRoiPercent</code> für langsame Märkte, <code>minRoiSchnellPercent</code> für schnelle bei verzögertem Schlüssel.</p>
+
+      <div class="call warn"><b>Der unangenehme Teil:</b> Gerade eine auffällig hohe Rendite auf einem schnellen Markt ist mit verzögerten Daten verdächtig. Große sichtbare Spannen entstehen meist, weil der Kurs sich schon bewegt hat und man das alte Bild sieht. Auf langsamen Märkten gilt das nicht, dort ist eine gefundene Spanne echt. Deshalb ist der Delayed Key für Politik und Langzeitwetten brauchbar und für Live-Sport nicht.</div>
+    </section>
+
+    <section>
+      <h3>Was war kaputt, was ist jetzt</h3>
+      <div class="ledger">
+
+        <div class="row krit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Der Scanner sah 100 von 2 100 Märkten</b><span class="tag krit">kritisch</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">vorher</span>Im Code stand „bis zu 500 Märkte". Die Schnittstelle liefert aber nie mehr als 100 pro Anfrage, egal was man verlangt. 95 % des Bestands waren nie im Scan.</div>
+            <div class="jetzt"><span class="lab">jetzt</span>Es wird geblättert, bis alles da ist. 2 100 Märkte, davon 1 251 beidseitig handelbar. Das ist der eigentliche Grund, warum wochenlang nichts gefunden wurde.</div>
+          </div>
+        </div></div>
+
+        <div class="row krit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Kurse aus dem Volldurchlauf galten als frisch</b><span class="tag krit">kritisch</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">vorher</span>Betfair-Kurse blieben zwischen den Durchläufen im Speicher. Ein Markt, den nur der 15-Minuten-Durchlauf anfasst, wurde gegen einen sekundenfrischen Polymarket-Preis gerechnet und als aktuelle Chance gemeldet.</div>
+            <div class="jetzt"><span class="lab">jetzt</span>Jeder Kurs trägt seinen Lesezeitpunkt. Ist ein Bein zu alt für das Tempo dieses Marktes, wird die Chance verworfen und im Protokoll gezählt.</div>
+          </div>
+        </div></div>
+
+        <div class="row krit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Dagegenhalten gab es nicht</b><span class="tag krit">kritisch</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">vorher</span>Nur Zurückwetten. Damit waren alle Märkte mit vielen Teilnehmern unerreichbar, obwohl genau dort Polymarkets Bestand liegt.</div>
+            <div class="jetzt"><span class="lab">jetzt</span>Lay wird mitgerechnet, Formel von Hand gegengeprüft. Das öffnet eine ganze Marktklasse, die vorher gar nicht sichtbar war.</div>
+          </div>
+        </div></div>
+
+        <div class="row mit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Die Art des Schlüssels war dem Programm egal</b><span class="tag mit">mittel</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">vorher</span>Ob verzögert oder Echtzeit wurde nirgends geprüft. Mit einem Delayed Key wurden dieselben dünnen Margen auf laufenden Spielen gemeldet wie mit einem Live Key, obwohl sie dort praktisch nie erreichbar sind.</div>
+            <div class="jetzt"><span class="lab">jetzt</span>Das Programm liest die Art beim Anmelden bei Betfair aus, schreibt sie ins Fenster und hebt die Schwelle für schnelle Märkte automatisch an, solange die Kurse verzögert kommen.</div>
+          </div>
+        </div></div>
+
+        <div class="row mit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Fußball fiel komplett durch</b><span class="tag mit">mittel</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">vorher</span>Märkte mit drei Ausgängen wurden übersprungen. Weil Fußball fast immer Sieg, Unentschieden, Niederlage hat, war die größte Sportart praktisch ausgeschlossen.</div>
+            <div class="jetzt"><span class="lab">jetzt</span>Die Gegenseite wird gebündelt: „nicht Bayern" heißt Unentschieden plus Dortmund, so aufgeteilt, dass beide Teilausgänge gleich auszahlen.</div>
+          </div>
+        </div></div>
+
+        <div class="row mit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Quoten ohne Geld dahinter zählten mit</b><span class="tag mit">mittel</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">vorher</span>Nur der Preis wurde gelesen, nicht die dahinterliegende Summe. Eine Traumquote mit drei Euro Volumen sah aus wie eine echte Chance.</div>
+            <div class="jetzt"><span class="lab">jetzt</span>Beide Seiten müssen eine Mindestsumme hinter sich haben, und der maximal mögliche Einsatz wird mitgeliefert.</div>
+          </div>
+        </div></div>
+
+        <div class="row mit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Die Historie füllte sich nur bei offenem Tab</b><span class="tag mit">mittel</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">vorher</span>Gescannt wurde im Browser. Nachts oder bei geschlossenem Laptop lief nichts, und es wurde auch nichts aufgezeichnet.</div>
+            <div class="jetzt"><span class="lab">jetzt</span>Das Programm auf dem PC liest beide Seiten selbst und schreibt gefundene Chancen dauerhaft mit.</div>
+          </div>
+        </div></div>
+
+        <div class="row"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Ende der Marktliste galt als Fehler</b><span class="tag">klein</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">vorher</span>Hinter dem letzten Eintrag antwortet die Schnittstelle mit einem Fehlercode statt mit einer leeren Liste. Das hätte den Scan mittendrin abgebrochen.</div>
+            <div class="jetzt"><span class="lab">jetzt</span>Wird als Ende der Daten gewertet. Was bis dahin gesammelt wurde, bleibt nutzbar.</div>
+          </div>
+        </div></div>
+
+        <div class="row"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Gerundete Prozentsätze verschoben die Auszahlung</b><span class="tag">klein</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">vorher</span>Die Aufteilung wurde auf zwei Stellen gerundet ausgegeben, was vier Cent Unterschied je 1 000 Einsatz zwischen den beiden Ausgängen ergab.</div>
+            <div class="jetzt"><span class="lab">jetzt</span>Sechs Stellen bei den Quoten, vier beim Anteil. Abweichung 0,0004 je 1 000.</div>
+          </div>
+        </div></div>
+
+        <div class="row"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Die Oberfläche glaubte ungeprüft, was ankam</b><span class="tag">klein</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">vorher</span>Angezeigt wurde, was geliefert wurde. Bei verfälschten Daten hätte dort ein garantierter Gewinn gestanden, der keiner ist.</div>
+            <div class="jetzt"><span class="lab">jetzt</span>Jede Chance wird vor der Anzeige nachgerechnet. Was nicht wirklich unter 1 liegt, erscheint nicht.</div>
+          </div>
+        </div></div>
+
+        <div class="row"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Halbfertige Zugangsdatei galt als fertig</b><span class="tag">klein</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">vorher</span>Geprüft wurde nur auf „HIER-" mit Bindestrich. Eine Datei mit „HIER_" rutschte als vollständig durch und scheiterte erst später unverständlich.</div>
+            <div class="jetzt"><span class="lab">jetzt</span>Alle Platzhalterformen werden erkannt, und das Token wird beim Start geprüft, bevor Betfair überhaupt angefasst wird.</div>
+          </div>
+        </div></div>
+
+        <div class="row offen"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Zwei Anzeigefelder kommen noch nicht durch</b><span class="tag offen">offen</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">Zustand</span>Die Serverseite reicht nur bekannte Felder weiter. Das Alter der beiden Kurse und die Tage bis zur Entscheidung werden dadurch noch nicht angezeigt.</div>
+            <div class="jetzt"><span class="lab">Auswirkung</span>Keine auf die Sicherheit: veraltete Chancen werden schon auf dem PC aussortiert und erreichen den Server gar nicht. Es fehlt nur die Anzeige.</div>
+          </div>
+        </div></div>
+
+      </div>
+    </section>
+
+    <section>
+      <h3>Selbst nachprüfen</h3>
+      <p>Im Bridge-Ordner rechnet ein Prüfprogramm die komplette Logik mit Zahlen durch und rechnet beide Ausgänge gegen. Es meldet sich nirgends an und lädt nichts hoch.</p>
+      <pre>node pruefung.js</pre>
+      <p class="note">51 Prüfungen, darunter die Lay-Rechnung von Hand gegengerechnet und der Nachweis, dass bei jeder gemeldeten Chance beide Ausgänge auf den Cent denselben Betrag zurückzahlen.</p>
+      <div class="call"><b>Diese Seite gehört zum Programm.</b> Ändert sich die Suchlogik, wird zuerst die Datei geändert, die man herunterlädt, und danach diese Erklärung nachgezogen. Was hier steht, gilt für die Fassung, die gerade zum Download bereitliegt.</div>
+    </section>
+
+    <div class="foot">Orion Panel · Bridge v2 · Endpunkt bf-bridge und Datenformat unverändert, alle Neuerungen additiv</div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js?v=20"></script>
+<script>
+(async function(){
+  var auth = await window.arRequireAuth();
+  if(!auth) return;
+  // Wenn eine Bridge läuft, die echten Zahlen statt der Beispielwerte zeigen
+  try{
+    var r = await fetch('https://noexklrgtqveiclijdwp.supabase.co/functions/v1/bf-bridge?meta=1');
+    var j = await r.json();
+    var s = j && j.stats || {};
+    if(s.zeit){
+      var art = s.key_art==='live' ? 'LIVE (Echtzeit)' : (s.key_art==='delayed' ? 'DELAYED (verzögert)' : 'Art unbekannt');
+      document.getElementById('stamp').textContent =
+        'Bridge v2 · letzter Lauf: ' + (s.bf_gelesen||0) + ' von ' + (s.bf_katalog||0) + ' Betfair-Märkten · '
+        + (s.pm_handelbar||0) + ' Polymarket handelbar · ' + (s.sweep_s||0) + ' s · Schlüssel: ' + art;
+    }
+  }catch(e){}
+})();
+</script>
+</body>
+</html>

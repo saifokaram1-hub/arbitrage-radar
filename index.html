@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=19"></script>
+<script src="config.js?v=20"></script>
 <style>
   :root{
     --void:#060704; --void2:#0a0b07;
@@ -1106,7 +1106,8 @@ function openSrcPanel(k,x,y){
       '6. Terminal im Ordner öffnen → <b>node betfair-bridge.js</b><br>'+
       '7. Fenster offen lassen → hier springt der Status auf <b style="color:var(--pos)">Live</b></div>'+
       '<div class="bal2">Bridge-Status: '+age+' · '+(state.bfCount||0)+' Quoten · '+(state.bfMatches||0)+' gematcht</div>'+
-      '<a href="bridge-setup.html" style="text-align:center;padding:9px;border:1px solid var(--gold-d);background:#1a1608;color:var(--gold-b);text-decoration:none;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">📖 Schritt-für-Schritt-Anleitung öffnen</a>';
+      '<a href="bridge-setup.html" style="text-align:center;padding:9px;border:1px solid var(--gold-d);background:#1a1608;color:var(--gold-b);text-decoration:none;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">📖 Schritt-für-Schritt-Anleitung öffnen</a>'+
+      '<a href="logik.html" style="text-align:center;padding:9px;margin-top:7px;border:1px solid var(--line3);background:#0a0b06;color:var(--txt);text-decoration:none;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">Suchlogik &amp; Delayed vs Live Key</a>';
   } else {
     body+='<label>Eigener Proxy (optional)</label><input class="in2" id="sp_proxy" value="'+(state.obProxy||'')+'">'+
       '<div class="nt"><b>SX Bet</b> ist eine echte Wettbörse (Krypto/USDC) — <b>kein Key, kein Login</b> nötig zum Scannen. Zum Setzen brauchst du dort ein eigenes Konto mit Guthaben.<br>Feld oben nur für einen eigenen Proxy (optional).</div>';

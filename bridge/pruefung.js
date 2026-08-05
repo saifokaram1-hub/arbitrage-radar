@@ -330,7 +330,33 @@ console.log('\n══════════ 10. Veraltete Kurse dürfen nicht 
     ' · Langzeit ' + B.maxAlterMs({start:new Date(Date.now()+200*86400e3).toISOString()})/1000 + ' s');
 }
 
-console.log('\n══════════ 11. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
+console.log('\n══════════ 11. Delayed oder Live: wirkt sich die Erkennung aus? ══════════\n');
+{
+  const laufend  = { inplay: true,  start: new Date(Date.now() + 600e3).toISOString() };
+  const bald     = { inplay: false, start: new Date(Date.now() + 3600e3).toISOString() };
+  const langsam  = { inplay: false, start: new Date(Date.now() + 90 * 86400e3).toISOString() };
+
+  B.setKeyArt('live');
+  pruefe('Live-Key: keine Sonderschwelle für laufende Spiele',
+         B.minRoiFuer(laufend) === B.O.minRoi, '(' + B.minRoiFuer(laufend) + ' %)');
+  pruefe('Live-Key: wird nicht als verzögert behandelt', B.istVerzoegert() === false);
+
+  B.setKeyArt('delayed');
+  pruefe('Delayed: laufendes Spiel braucht mehr Luft',
+         B.minRoiFuer(laufend) === B.O.minRoiSchnell, '(' + B.minRoiFuer(laufend) + ' % statt ' + B.O.minRoi + ' %)');
+  pruefe('Delayed: kurz vor Anpfiff ebenfalls',
+         B.minRoiFuer(bald) === B.O.minRoiSchnell, '(' + B.minRoiFuer(bald) + ' %)');
+  pruefe('Delayed: Langzeitwette bleibt bei der normalen Schwelle',
+         B.minRoiFuer(langsam) === B.O.minRoi, '(' + B.minRoiFuer(langsam) + ' %)');
+
+  B.setKeyArt('unbekannt');
+  pruefe('Unbekannter Schlüssel wird vorsichtshalber wie Delayed behandelt',
+         B.istVerzoegert() === true && B.minRoiFuer(laufend) === B.O.minRoiSchnell);
+
+  B.setKeyArt('unbekannt');
+}
+
+console.log('\n══════════ 12. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
 {
   B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
   B.PM.set('test2', {
