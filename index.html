@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=24"></script>
+<script src="config.js?v=25"></script>
 <style>
   :root{
     --void:#060704; --void2:#0a0b07;
@@ -240,6 +240,10 @@
   .linkbtn{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);border-bottom:1px solid var(--gold-d);padding-bottom:1px;align-self:flex-start}
   .linkbtn:hover{color:var(--gold-b)}
 
+  .toast.klickbar{cursor:pointer}
+  .toast.klickbar:hover{border-color:var(--gold-d);background:#12100a}
+  .toast .go{margin-top:7px;padding-top:6px;border-top:1px solid var(--line);
+    font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
   .toasts{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;flex-direction:column;gap:10px;width:320px;max-width:calc(100vw - 36px)}
   .toast{border:1px solid var(--gold-d);background:linear-gradient(180deg,#14140b,#0b0c07);box-shadow:0 0 30px rgba(0,0,0,.6),0 0 24px rgba(199,178,76,.12);padding:12px 14px;animation:tin .3s ease;position:relative;overflow:hidden}
   .toast::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold);box-shadow:0 0 12px var(--gold)}
@@ -281,6 +285,15 @@
   .radar .blip.show{animation:blip 1s ease}
   @keyframes blip{0%{opacity:1;transform:scale(.4)}100%{opacity:0;transform:scale(1.8)}}
   .scaninfo{flex:1 1 260px;min-width:0;overflow:hidden}
+  /* Polymarket-Prozentwert neben der Quote — so wie er auf polymarket.com steht */
+  .odds .pmpc{font-family:var(--mono);font-size:10px;color:var(--dim);margin-left:5px;white-space:nowrap}
+  /* Direktlinks je Zeile, damit sich jede Meldung nachprüfen lässt */
+  .act .rowlink{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:var(--gold);
+    border:1px solid var(--line3);padding:3px 5px;text-decoration:none;background:#0a0b06;margin-right:4px}
+  .act .rowlink:hover{color:var(--gold-b);border-color:var(--gold-d);background:#141206}
+  .roi .verd{display:inline-block;margin-left:5px;width:13px;height:13px;line-height:12px;text-align:center;
+    border:1px solid var(--neg);color:var(--neg);font-size:9px;font-family:var(--mono);cursor:help}
+
   /* --- Was jede Quelle gerade tut (in der Seitenleiste unter den Konten) --- */
   #srcAnalyse{display:flex;flex-direction:column;gap:8px;margin:2px 0 0}
   .srcCard{border:1px solid var(--line2);background:#0a0b06;padding:10px 11px}
@@ -940,19 +953,55 @@ function ensureWS(){
 var sxRaw=[], sxLast=0;
 // Team-Namen normalisieren -> Abgleich Polymarket <-> SX Bet
 function nrm(s){ return (s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
-function keyWord(team){ var w=nrm(team).split(' '); return w[w.length-1]||''; }   // "Los Angeles Rams" -> "rams"
+/* Wörter, die einen Markt NICHT eindeutig machen. Vorher wurde nur das letzte
+   Wort eines Namens genommen: "Republican Party" und "Democratic Party" wurden
+   damit beide zu "party", und die Bedingung "beide Teilnehmer stehen in der
+   Frage" war erfüllt, sobald irgendwo das Wort Party vorkam. Dadurch passte
+   jeder US-Wahlmarkt auf jeden anderen — daher die Renditen von 200 % und mehr. */
+var STOPP=new Set(['the','and','for','with','from','not','win','wins','won','beat','beats','vs','versus',
+  'yes','no','ja','nein','draw','tie','unentschieden',
+  'party','team','club','city','united','fc','sc','afc','cf','sv','tsv','bsc',
+  'seat','race','house','senate','election','elections','district','state','county',
+  'game','match','round','group','league','cup','open','final','finals','winner',
+  'total','over','under','first','next','new','national','world','championship']);
+function merkmale(name){ return nrm(name).split(' ').filter(function(w){ return w.length>2 && !STOPP.has(w); }); }
+function keyWord(team){ var w=merkmale(team); return w.length? w[w.length-1] : ''; }
+/* Ganze Wörter vergleichen, nicht Zeichenketten. Sonst trifft das Kontextwort
+   "us" mitten in "hoUSe" und ein fremdes Rennen gilt als passend. */
+function wortSatz(text){
+  var s={}; nrm(text).split(' ').forEach(function(w){ if(w) s[w]=1; }); return s;
+}
+// Welches Merkmal dieses Namens steht in der Frage?
+function trefferIn(frage, name){
+  var w=(typeof frage==='string')? wortSatz(frage) : frage;
+  var m=merkmale(name);
+  for(var i=0;i<m.length;i++) if(w[m[i]]) return m[i];
+  return null;
+}
+/* Passt ein Buch-Markt (zwei Teilnehmer) zur Polymarket-Frage?
+   Regel: jeder Teilnehmer muss über ein EIGENES Merkmal getroffen werden.
+   Wird nur einer genannt, muss zusätzlich der Ereignisname passen — sonst ist
+   es ein anderes Rennen mit denselben Teilnehmernamen. */
+function passtZu(frage, n1, n2, kontext){
+  var fw=wortSatz(frage);
+  var t1=trefferIn(fw,n1), t2=trefferIn(fw,n2);
+  if(t1 && t2) return t1!==t2;                   // beide genannt, aber nicht über dasselbe Wort
+  if(!t1 && !t2) return false;
+  var eigen={}; merkmale(n1).concat(merkmale(n2)).forEach(function(w){ eigen[w]=1; });
+  var k=nrm(kontext||'').split(' ').filter(function(w){ return w.length>1 && !STOPP.has(w) && !eigen[w]; });
+  for(var i=0;i<k.length;i++) if(fw[k[i]]) return true;
+  return false;
+}
 function matchSX(mk){
   if(!sxRaw.length)return null;
   var q=nrm(mk.ev);
   for(var i=0;i<sxRaw.length;i++){
     var s=sxRaw[i]; if(!s.teamA||!s.teamB)continue;
-    var a=keyWord(s.teamA), b=keyWord(s.teamB);
-    if(a.length<3||b.length<3)continue;
-    if(q.indexOf(a)>=0 && q.indexOf(b)>=0){
-      // Gleiche Ausrichtung wie bei Betfair — auch hier war Ja/Nein vorher blind
-      var flip = ausrichten(q, mk.o1, mk.o2, a, b);
-      return flip ? {o1:s.q2,o2:s.q1,link:s.link,ev:s.ev} : {o1:s.q1,o2:s.q2,link:s.link,ev:s.ev};
-    }
+    if(!passtZu(q, s.teamA, s.teamB, s.ev||(s.league||'')))continue;
+    var a=trefferIn(q,s.teamA)||keyWord(s.teamA), b=trefferIn(q,s.teamB)||keyWord(s.teamB);
+    // Gleiche Ausrichtung wie bei Betfair — auch hier war Ja/Nein vorher blind
+    var flip = ausrichten(q, mk.o1, mk.o2, a, b);
+    return flip ? {o1:s.q2,o2:s.q1,link:s.link,ev:s.ev} : {o1:s.q1,o2:s.q2,link:s.link,ev:s.ev};
   }
   return null;
 }
@@ -1024,6 +1073,7 @@ function renderOpps(){
   var wrap=document.getElementById('oppWrap'); if(!wrap)return;
   var opps=(state.bfOpps||[]).slice();
   // Hohe Rendite zuerst — danach wird gefiltert, was zu dünn ist
+  var verworfen=0;
   opps=opps.filter(function(o){
     if(!o || !o.legs || o.legs.length!==2) return false;
     if(!(o.roi>=state.minRoi)) return false;
@@ -1031,11 +1081,33 @@ function renderOpps(){
     // ist keine Arbitrage und wird nicht angezeigt — egal was mitgeliefert wurde.
     var q1=+o.legs[0].qEff, q2=+o.legs[1].qEff;
     if(!(q1>1) || !(q2>1)) return false;
-    return (1/q1 + 1/q2) < 1;
+    var inv=1/q1+1/q2;
+    if(!(inv<1)) return false;
+    // Und dieselbe Obergrenze wie in der Liste: zwei liquide Börsen liegen nie
+    // zweistellig auseinander. Alles darüber ist eine Fehlpaarung, kein Fund.
+    if((1/inv-1)*100 > CONFIG.MAX_PLAUSIBEL){ verworfen++; return false; }
+    return true;
   });
+  state.oppsVerworfen=verworfen;
   opps.sort(function(a,b){ return b.roi-a.roi; });
 
-  if(!opps.length){ wrap.style.display='none'; return; }
+  if(!opps.length){
+    // Wenn ALLES wegen Unplausibilität rausflog, das offen sagen statt
+    // wortlos nichts anzuzeigen — sonst wirkt es, als suche der Scanner nicht.
+    if(verworfen){
+      wrap.style.display='';
+      var s=document.getElementById('oppSub');
+      if(s) s.textContent=verworfen+' Meldung'+(verworfen===1?'':'en')+' als unplausibel verworfen';
+      document.getElementById('oppList').innerHTML=
+        '<div class="opp" style="color:var(--muted);font-size:12.5px;line-height:1.6">'+
+        '<b style="color:var(--warn)">Nichts Belastbares dabei.</b> '+verworfen+' gemeldete Chance'+(verworfen===1?'':'n')+
+        ' lag'+(verworfen===1?'':'en')+' über '+CONFIG.MAX_PLAUSIBEL+' % Rendite. '+
+        'Zwei liquide Börsen liegen nie so weit auseinander — das sind falsch zugeordnete '+
+        'oder bereits entschiedene Märkte, keine Gewinne. Sie werden deshalb nicht angezeigt.</div>';
+      return;
+    }
+    wrap.style.display='none'; return;
+  }
   wrap.style.display='';
 
   var alter=state.bfAge==null?'–':(state.bfAge<90?'aktuell':(Math.round(state.bfAge/60)+' Min alt'));
@@ -1105,12 +1177,12 @@ function matchBF(mk){
   var q=nrm(mk.ev);
   for(var i=0;i<bfRaw.length;i++){
     var s=bfRaw[i]; var t=(s.key||'').split(' vs ');
-    var a=keyWord(t[0]||''), b=keyWord(t[1]||'');
-    if(a.length<3||b.length<3)continue;
-    if(q.indexOf(a)>=0 && q.indexOf(b)>=0){
-      var flip=ausrichten(q, mk.o1, mk.o2, a, b);
-      return flip? {o1:+s.o2,o2:+s.o1,link:s.link} : {o1:+s.o1,o2:+s.o2,link:s.link};
-    }
+    var n1=t[0]||'', n2=t[1]||'';
+    if(!passtZu(q, n1, n2, s.ev||s.key))continue;
+    var a=trefferIn(q,n1)||keyWord(n1), b=trefferIn(q,n2)||keyWord(n2);
+    var flip=ausrichten(q, mk.o1, mk.o2, a, b);
+    return flip? {o1:+s.o2,o2:+s.o1,link:s.link,key:s.key}
+               : {o1:+s.o1,o2:+s.o2,link:s.link,key:s.key};
   }
   return null;
 }
@@ -1558,7 +1630,11 @@ function routing(v,S){
 // Gebührenbetrag = Differenz Brutto-Auszahlung (Rohquoten) zu Netto-Auszahlung (nach Gebühr)
 function feeAmount(v,S){ var invG=1/v.s1.odds+1/v.s2.odds, invE=1/v.s1.oddsEff+1/v.s2.oddsEff; return Math.max(0, S/invG - S/invE); }
 function feasibleMax(v){
-  var A={pm:state.balPm,ob:state.balOb};
+  // Betfair fehlte hier komplett: A['bf'] war undefined, dadurch wurde der
+  // moegliche Einsatz bei jeder Cross-Book-Chance mit Betfair-Bein zu 0.
+  // Fuer Betfair gibt es kein Guthabenfeld -> als unbegrenzt behandeln,
+  // die Tiefe im Buch begrenzt ohnehin.
+  var A={pm:state.balPm,ob:state.balOb,bf:1e9};
   var q1=v.s1.oddsEff,q2=v.s2.oddsEff,inv=1/q1+1/q2, f1=(1/q1)/inv, f2=(1/q2)/inv;
   var need={}; need[v.s1.src]=1; need[v.s2.src]=1;
   var anyBal=false; Object.keys(need).forEach(function(s){ if(A[s]>0)anyBal=true; });
@@ -1573,13 +1649,31 @@ function beep(){ if(!state.sound)return; try{ actx=actx||new (window.AudioContex
   [880,1320].forEach(function(f,i){ var o=actx.createOscillator(),g=actx.createGain(); o.type='triangle';o.frequency.value=f;
     g.gain.setValueAtTime(0,t+i*0.09); g.gain.linearRampToValueAtTime(0.14,t+i*0.09+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+i*0.09+0.14);
     o.connect(g);g.connect(actx.destination);o.start(t+i*0.09);o.stop(t+i*0.09+0.16); }); }catch(e){} }
+/* Meldung über eine neu aufgetauchte Chance.
+   Vorher war das eine Sackgasse: sie verschwand nach Sekunden und man kam
+   nirgends hin. Jetzt führt ein Klick direkt zur Chance in der Liste, und die
+   Meldung bleibt stehen, bis man sie wegklickt oder ihr folgt. */
 function toast(h){
-  var wrap=$('#toasts'); var el=document.createElement('div'); el.className='toast';
+  var wrap=$('#toasts'); var el=document.createElement('div'); el.className='toast klickbar';
   el.innerHTML='<button class="x">✕</button><div class="t1"><span class="lab">◈ Hit</span><span class="roi">+'+pct(h.roi,2)+'</span></div>'+
-    '<div class="ev2">'+h.ev+'</div><div class="dt"><span>'+h.cat+'</span><span>Arb '+pct(h.arb,2)+'</span><span>'+(h.cross?'Cross-Book':'Polymarket')+'</span></div>';
-  el.querySelector('.x').onclick=function(){el.remove();}; wrap.appendChild(el);
-  while(wrap.children.length>3)wrap.firstChild.remove();
-  setTimeout(function(){el.style.transition='opacity .4s';el.style.opacity='0';setTimeout(function(){el.remove();},400);},7000);
+    '<div class="ev2">'+h.ev+'</div><div class="dt"><span>'+h.cat+'</span><span>Arb '+pct(h.arb,2)+'</span><span>'+(h.cross?'Cross-Book':'Polymarket')+'</span></div>'+
+    '<div class="go">Anzeigen und nachrechnen →</div>';
+  el.querySelector('.x').onclick=function(e){ e.stopPropagation(); el.remove(); };
+  if(h.id){
+    el.onclick=function(){
+      // Chance auswählen, Filter zurücksetzen damit sie sichtbar ist, hinscrollen
+      state.ticketId=h.id; state.ticketDirty=false;
+      state.cat='Alle'; state.search=''; var si=$('#search'); if(si)si.value='';
+      render(); renderTicket();
+      var z=document.querySelector('.r-o[data-id="'+h.id+'"]');
+      if(z) z.scrollIntoView({behavior:'smooth',block:'center'});
+      el.remove();
+    };
+  }
+  wrap.appendChild(el);
+  while(wrap.children.length>4)wrap.firstChild.remove();
+  // Kein automatisches Verschwinden mehr — verpasste Meldungen waren der
+  // häufigste Grund, warum eine Chance nicht nachgeprüft werden konnte.
 }
 function actToast(ok,title,sub){
   var wrap=$('#toasts'); var el=document.createElement('div'); el.className='toast'+(ok?'':' warn');
@@ -1590,7 +1684,8 @@ function actToast(ok,title,sub){
 }
 function fireHit(v){
   var now=new Date(), t=now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  var h={t:t,ev:v.m.ev,cat:v.m.cat,roi:v.roi,arb:v.arbPct,cross:v.cross};
+  // id mitgeben, damit die Meldung anklickbar ist und zur Chance führt
+  var h={t:t,ev:v.m.ev,cat:v.m.cat,roi:v.roi,arb:v.arbPct,cross:v.cross,id:v.m.id};
   state.hits++; state.log.unshift(h); if(state.log.length>40)state.log.pop();
   state.unread++; $('#bellBadge').textContent=state.unread>9?'9+':state.unread; $('#bellBadge').classList.add('show');
   toast(h); beep(); renderLog();
@@ -1647,8 +1742,10 @@ function renderTicket(){
   if(!state.ticketDirty){ state.ticketStake=Math.min(state.stdStake,max); if(inp&&document.activeElement!==inp)inp.value=state.ticketStake; }
   var S=Math.max(0,Math.floor(state.ticketStake||0)), r=routing(v,S);
   $('#tkEv').textContent=m.ev;
-  $('#tkSrc1').className='src '+v.s1.src; $('#tkSrc1').textContent=v.s1.src==='pm'?'PM':'OB';
-  $('#tkSrc2').className='src '+v.s2.src; $('#tkSrc2').textContent=v.s2.src==='pm'?'PM':'OB';
+  // Betfair wurde hier faelschlich als "OB" (SX Bet) beschriftet
+  var kuerzel=function(s){ return s==='pm'?'PM':(s==='bf'?'BF':'OB'); };
+  $('#tkSrc1').className='src '+v.s1.src; $('#tkSrc1').textContent=kuerzel(v.s1.src);
+  $('#tkSrc2').className='src '+v.s2.src; $('#tkSrc2').textContent=kuerzel(v.s2.src);
   $('#tkOc1').textContent=m.o1; $('#tkOc2').textContent=m.o2;
   $('#tkOdds1').textContent=nf.format(v.s1.odds); $('#tkOdds2').textContent=nf.format(v.s2.odds);
   // Einsatz + prozentuale Aufteilung (nicht 50/50 — so gerechnet, dass beide Seiten gleich auszahlen)
@@ -1769,6 +1866,30 @@ function render(){
 
   var rows=$('#rows');
   if(!view.length){ rows.innerHTML='<div class="empty">'+(all.length? 'Keine Chance passt zu den Filtern.<br>Echte Surebets sind selten — der Scanner läuft weiter.' : (state.accounts.pm.status==='error'?'Polymarket nicht erreichbar. Prüfe die Verbindung.':'Verbinde mit Polymarket …'))+'</div>'; return; }
+  /* Eine Seite der Zeile. Bei Polymarket steht der Kurs auf der Website als
+     PROZENT — deshalb hier beides: die Wahrscheinlichkeit wie drüben, und
+     daneben die daraus umgerechnete Dezimalquote wie bei Betfair. Sonst
+     vergleicht man Äpfel mit Birnen. */
+  function seite(name, s, m, idx){
+    var buch = s.src==='pm'?'PM':(s.src==='bf'?'BF':'OB');
+    var zusatz='';
+    if(s.src==='pm'){
+      var preis = idx===0? m.ask0 : m.ask1;
+      if(preis>0) zusatz='<span class="pmpc">'+(preis*100).toFixed(1).replace('.',',')+' %</span>';
+    }
+    return '<div class="side"><div class="oc">'+name+'</div>'+
+      '<div class="odds"><b>'+nf.format(s.odds)+'</b>'+zusatz+
+      '<span class="src '+s.src+'">'+buch+'</span></div></div>';
+  }
+  /* Direktlink je Zeile — ohne den kann man eine Meldung nicht nachprüfen. */
+  function linkKnopf(m, v){
+    var l=[];
+    l.push('<a class="rowlink" href="'+pmLink(m)+'" target="_blank" rel="noopener" title="Bei Polymarket öffnen" onclick="event.stopPropagation()">PM↗</a>');
+    if(m.bfLink) l.push('<a class="rowlink" href="'+m.bfLink+'" target="_blank" rel="noopener" title="Bei Betfair öffnen" onclick="event.stopPropagation()">BF↗</a>');
+    if(m.obLink) l.push('<a class="rowlink" href="'+m.obLink+'" target="_blank" rel="noopener" title="Bei SX Bet öffnen" onclick="event.stopPropagation()">SX↗</a>');
+    return l.join('');
+  }
+
   rows.innerHTML=view.map(function(v){
     var m=v.m, ag=ageInfo(m.since), hit=v.ok&&v.roi>=state.hitTh;
     var roiCls=!v.ok?'down':(v.roi>=state.hitTh?'big':(v.roi>0?'up':''));
@@ -1778,11 +1899,14 @@ function render(){
         (dnpRisk(m.ev,m.cat)!=='niedrig'?'<span class="dnp '+dnpRisk(m.ev,m.cat)+'" title="DNP/Void-Risiko: bei Nicht-Antreten zahlt Polymarket meist nicht zurück, Orbit voidet — Regeln prüfen">DNP?</span>':'')+
         (m.liq?'<span class="liq">Liq '+nf0.format(Math.round(m.liq))+' $</span>':'')+
         '<span class="age '+ag.cls+'"><span class="adot"></span>'+ag.txt+'</span></div></div>'+
-      '<div class="side"><div class="oc">'+m.o1+'</div><div class="odds"><b>'+nf.format(v.s1.odds)+'</b><span class="src '+v.s1.src+'">'+(v.s1.src==='pm'?'PM':'OB')+'</span></div></div>'+
-      '<div class="side"><div class="oc">'+m.o2+'</div><div class="odds"><b>'+nf.format(v.s2.odds)+'</b><span class="src '+v.s2.src+'">'+(v.s2.src==='pm'?'PM':'OB')+'</span></div></div>'+
+      seite(m.o1, v.s1, m, 0)+
+      seite(m.o2, v.s2, m, 1)+
       '<div class="arb'+(v.ok?' good':'')+'">'+pct(v.arbPct,2)+'</div>'+
-      '<div class="roi '+roiCls+'">'+sign+pct(v.roi,2)+'</div>'+
-      '<div class="act">'+(hit?'<span class="hitbadge">Hit</span>':'')+'<button class="rowcalc" title="In Rechner laden">∑</button></div>'+
+      '<div class="roi '+roiCls+'">'+sign+pct(v.roi,2)+
+        (v.verdacht?'<span class="verd" title="Unplausibel hoch — mit sehr hoher Wahrscheinlichkeit eine Fehlpaarung, keine echte Chance">?</span>':'')+'</div>'+
+      '<div class="act">'+(hit?'<span class="hitbadge">Hit</span>':'')+
+        linkKnopf(m, v)+
+        '<button class="rowcalc" title="In Rechner laden">∑</button></div>'+
     '</div>';
   }).join('');
 }

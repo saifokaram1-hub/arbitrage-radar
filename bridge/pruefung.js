@@ -473,7 +473,64 @@ console.log('\n══════════ 14. Unglaubwürdige Renditen dürf
   B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
 }
 
-console.log('\n══════════ 15. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
+console.log('\n══════════ 15. Die Fehlpaarungen aus dem Live-Betrieb ══════════\n');
+{
+  // Genau die Faelle von den Bildschirmfotos: US-Wahlmaerkte, bei denen
+  // "Republican Party" und "Democratic Party" beide auf "party" verkuerzt
+  // wurden. Dadurch passte jedes Rennen auf jedes andere.
+  pruefe('Parteinamen werden unterscheidbar',
+         B.schluessel('Republican Party') !== B.schluessel('Democratic Party'),
+         '("'+B.schluessel('Republican Party')+'" vs "'+B.schluessel('Democratic Party')+'")');
+  pruefe('"party" gilt nicht mehr als Merkmal',
+         B.merkmale('Republican Party').indexOf('party') < 0,
+         '(Merkmale: '+JSON.stringify(B.merkmale('Republican Party'))+')');
+
+  function bauen(bfEvent, bfMarkt, r1, r2){
+    const markt={ mid:'1.W', ev:bfEvent, mn:bfMarkt, mt:'WINNER', anzahl:2, satz:0.065,
+      start:new Date(Date.now()+40*86400e3).toISOString(), inplay:false, ts:Date.now(),
+      runners:[{name:r1,q:5.1,size:55,lq:5.3,lsize:55},{name:r2,q:1.24,size:900,lq:1.26,lsize:900}] };
+    const idx=new Map();
+    [r1,r2].forEach(function(n){ B.merkmale(n).forEach(function(w){
+      if(!idx.has(w)) idx.set(w,[]); idx.get(w).push(markt); }); });
+    return idx;
+  }
+
+  // Falsches Rennen: Betfair fuehrt das Senatsrennen in Georgia,
+  // Polymarket fragt nach dem Repraesentantenhaus-Sitz UT-03.
+  const idxFalsch=bauen('US Senate Georgia 2026','Winner','Republican Party','Democratic Party');
+  const zuFalsch=B.zuordnen({ q:'Will the Republican Party win the UT-03 House seat?',
+                              outs:['Yes','No'] }, idxFalsch);
+  pruefe('fremdes Rennen wird NICHT mehr zugeordnet', zuFalsch===null,
+         zuFalsch? '(faelschlich → '+zuFalsch.markt.ev+')' : '');
+
+  // Und der Fall mit der falschen Partei aus Foto 5
+  const zuPartei=B.zuordnen({ q:'Will the Democratic Party win the UT-01 House seat?',
+                              outs:['Yes','No'] }, idxFalsch);
+  pruefe('auch die falsche Partei wird abgelehnt', zuPartei===null);
+
+  // Das RICHTIGE Rennen muss weiterhin gefunden werden
+  const idxRichtig=bauen('US House UT-03 2026','Winner','Republican Party','Democratic Party');
+  const zuRichtig=B.zuordnen({ q:'Will the Republican Party win the UT-03 House seat?',
+                               outs:['Yes','No'] }, idxRichtig);
+  pruefe('das passende Rennen wird gefunden', !!zuRichtig,
+         zuRichtig? '(→ '+zuRichtig.markt.ev+')' : '(nichts gefunden)');
+  if(zuRichtig) pruefe('und die richtige Partei als Subjekt',
+    /Republican/.test(zuRichtig.subjekt.name), '('+zuRichtig.subjekt.name+')');
+
+  // Sport bleibt unberuehrt
+  const m={ mid:'1.S', ev:'Lakers v Celtics', mn:'Money Line', mt:'MONEY_LINE', anzahl:2, satz:0.05,
+    start:new Date(Date.now()+3600e3).toISOString(), inplay:false, ts:Date.now(),
+    runners:[{name:'Los Angeles Lakers',q:2.1,size:400,lq:2.12,lsize:400},
+             {name:'Boston Celtics',q:1.95,size:400,lq:1.97,lsize:400}] };
+  const idxS=new Map();
+  ['Los Angeles Lakers','Boston Celtics'].forEach(function(n){ B.merkmale(n).forEach(function(w){
+    if(!idxS.has(w)) idxS.set(w,[]); idxS.get(w).push(m); }); });
+  const zuS=B.zuordnen({ q:'Will the Lakers beat the Celtics?', outs:['Yes','No'] }, idxS);
+  pruefe('Sport-Zweikampf funktioniert weiterhin', !!zuS && /Lakers/.test(zuS.subjekt.name),
+         zuS? '('+zuS.subjekt.name+')':'');
+}
+
+console.log('\n══════════ 16. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
 {
   B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
   B.PM.set('test2', {

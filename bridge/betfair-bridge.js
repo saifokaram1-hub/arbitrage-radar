@@ -543,10 +543,36 @@ async function polymarketScan() {
 /* ═══════════════ Namensabgleich ═══════════════ */
 
 const nrm = s => (s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-const STOPP = new Set(['the', 'draw', 'tie', 'unentschieden', 'fc', 'sc', 'afc', 'cf', 'club', 'team', 'city', 'united']);
+
+/* Wörter, die einen Markt NICHT eindeutig machen.
+   Früher wurde nur das letzte Wort eines Namens als Schlüssel genommen. Damit
+   wurden "Republican Party" und "Democratic Party" beide zu "party" — und die
+   Bedingung "beide Teilnehmer kommen in der Frage vor" war erfüllt, sobald
+   irgendwo das Wort Party stand. Jeder US-Wahlmarkt passte dadurch auf jeden
+   anderen, und heraus kamen Renditen von mehreren hundert Prozent. */
+const STOPP = new Set([
+  'the','and','for','with','from','not','win','wins','won','beat','beats','vs','versus',
+  'yes','no','ja','nein','draw','tie','unentschieden',
+  'party','team','club','city','united','fc','sc','afc','cf','sv','tsv','bsc',
+  'seat','race','house','senate','election','elections','district','state','county',
+  'game','match','round','group','league','cup','open','final','finals','winner',
+  'total','over','under','first','next','new','national','world','championship'
+]);
+
+// Alle unterscheidungskräftigen Wörter eines Namens, nicht nur das letzte
+function merkmale(name) {
+  return nrm(name).split(' ').filter(x => x.length > 2 && !STOPP.has(x));
+}
+// Nur für Anzeigezwecke: ein einzelnes Wort, das den Namen grob kennzeichnet
 function schluessel(name) {
-  const w = nrm(name).split(' ').filter(x => x.length > 2 && !STOPP.has(x));
+  const w = merkmale(name);
   return w.length ? w[w.length - 1] : '';
+}
+// Welches Merkmal dieses Namens steht in der Frage?
+function trefferIn(fragWoerter, name) {
+  const m = merkmale(name);
+  for (const w of m) if (fragWoerter.has(w)) return w;
+  return null;
 }
 const istUnentschieden = n => /^(the )?(draw|tie|unentschieden)$/i.test(String(n || '').trim());
 
@@ -640,11 +666,13 @@ function bfIndex() {
     const eintrag = { mid, ev: k.ev, mn: k.mn, mt: k.mt, start: k.start, inplay: buch.inplay,
                       satz: k.satz != null ? k.satz : O.feeBf,   // Kommission dieses Marktes
                       ts: buch.ts || 0, runners: rs, anzahl: n };
+    // Unter JEDEM unterscheidungskräftigen Wort ablegen, nicht nur unter dem
+    // letzten — sonst findet man "Los Angeles Lakers" nur über "lakers".
     for (const r of rs) {
-      const w = schluessel(r.name);
-      if (!w) continue;
-      if (!idx.has(w)) idx.set(w, []);
-      idx.get(w).push(eintrag);
+      for (const w of merkmale(r.name)) {
+        if (!idx.has(w)) idx.set(w, []);
+        idx.get(w).push(eintrag);
+      }
     }
   });
   return idx;
@@ -687,31 +715,50 @@ function zuordnen(pm, idx) {
 
   let bester = null, besterScore = -1, besterSubjekt = null;
 
+  // Wörter, die den KONTEXT tragen: Ort, Wettbewerb, Kennung des Rennens.
+  // "UT 03", "massachusetts", "wimbledon" — daran hängt, um welches Ereignis
+  // es überhaupt geht. Ohne diesen Abgleich passt jeder Wahlmarkt auf jeden.
+  const kontextDerFrage = new Set(
+    frage.split(' ').filter(w => w.length > 1 && !STOPP.has(w))
+  );
+
   kandidaten.forEach(e => {
     const echte = e.runners.filter(r => !istUnentschieden(r.name));
     if (echte.length < 2) return;
 
-    if (e.anzahl <= 3) {
-      // Direktduell: ALLE benannten Teilnehmer müssen in der Frage stehen.
-      const woerter = echte.map(r => schluessel(r.name)).filter(Boolean);
-      if (woerter.length < 2 || !woerter.every(w => fragWoerter.has(w))) return;
+    // Welches Merkmal jedes Teilnehmers steht in der Frage?
+    const treffer = echte.map(r => ({ r: r, w: trefferIn(fragWoerter, r.name) }));
+    const genannt = treffer.filter(t => t.w);
+    // Ein Wort darf NICHT für zwei Teilnehmer zugleich zählen. Genau daran
+    // scheiterte es vorher: "party" galt für beide Parteien gleichzeitig.
+    const verschieden = new Set(genannt.map(t => t.w)).size === genannt.length;
+    if (!verschieden) return;
+
+    // Kontext des Betfair-Marktes: Ereignisname und Markttitel, ohne die
+    // Teilnehmernamen selbst — sonst bestätigt sich der Treffer selbst.
+    const eigenNamen = new Set();
+    echte.forEach(r => merkmale(r.name).forEach(w => eigenNamen.add(w)));
+    const kontextBf = nrm((e.ev || '') + ' ' + (e.mn || '')).split(' ')
+      .filter(w => w.length > 1 && !STOPP.has(w) && !eigenNamen.has(w));
+    const kontextTreffer = kontextBf.filter(w => kontextDerFrage.has(w)).length;
+
+    let score;
+    if (genannt.length >= 2 && genannt.length === echte.length) {
+      // Beide Seiten des Zweikampfs stehen namentlich in der Frage — eindeutig.
+      score = 10 + kontextTreffer;
+    } else if (genannt.length === 1) {
+      // Nur EIN Teilnehmer genannt (typisch bei "Gewinnt X das Turnier?").
+      // Dann MUSS der Kontext stimmen, sonst ist es ein anderes Rennen.
+      if (kontextTreffer < 1) return;
+      score = kontextTreffer;
     } else {
-      // Großes Feld (Ballon d'Or, Meister, Wahl): genau EIN Teilnehmer muss
-      // genannt sein, UND der Titel des Marktes muss zur Frage passen —
-      // sonst greift "Mbappé" auch bei "Mbappé trifft zuerst".
-      const genannt = echte.filter(r => fragWoerter.has(schluessel(r.name)));
-      if (genannt.length !== 1) return;
-      const titel = nrm((e.ev || '') + ' ' + (e.mn || '')).split(' ')
-                      .filter(w => w.length > 3 && !STOPP.has(w));
-      const treffer = titel.filter(w => fragWoerter.has(w)).length;
-      if (treffer < 2) return;
+      return;
     }
 
-    // Je genauer der Titel passt, desto besser; bei Gleichstand der frühere Start
-    const titel = nrm((e.ev || '') + ' ' + (e.mn || '')).split(' ').filter(w => w.length > 3);
-    const score = titel.filter(w => fragWoerter.has(w)).length;
     const frueher = !bester || (e.start && bester.start && Date.parse(e.start) < Date.parse(bester.start));
-    if (score > besterScore || (score === besterScore && frueher)) { bester = e; besterScore = score; }
+    if (score > besterScore || (score === besterScore && frueher)) {
+      bester = e; besterScore = score;
+    }
   });
   if (!bester) return null;
 
@@ -719,10 +766,10 @@ function zuordnen(pm, idx) {
 
   if (jaNein) {
     // "Will Bayern beat Dortmund?" / "Will Mbappé win the Ballon d'Or?"
-    // Subjekt = der zuerst in der Frage genannte Teilnehmer.
+    // Subjekt = der Teilnehmer, dessen Merkmal in der Frage ZUERST auftaucht.
     let frueh = Infinity;
     for (const r of echte) {
-      const w = schluessel(r.name);
+      const w = trefferIn(fragWoerter, r.name);
       if (!w) continue;
       const p = frage.indexOf(w);
       if (p >= 0 && p < frueh) { frueh = p; besterSubjekt = r; }
@@ -734,7 +781,10 @@ function zuordnen(pm, idx) {
 
   // Ausgänge tragen Namen -> nur beim echten Zweikampf eindeutig
   if (bester.anzahl !== 2) return null;
-  const finde = o => echte.find(r => { const w = schluessel(r.name); return w && o.indexOf(w) >= 0; });
+  const finde = o => {
+    const woerter = new Set(o.split(' ').filter(w => w.length > 2));
+    return echte.find(r => merkmale(r.name).some(w => woerter.has(w)));
+  };
   const r0 = finde(o0), r1 = finde(o1);
   if (!r0 || !r1 || r0 === r1) return null;
   return { markt: bester, subjekt: r0, jaIdx: 0, neinIdx: 1 };
@@ -1223,7 +1273,7 @@ async function durchlauf() {
 
 module.exports = {
   effektiv, pmGebuehr, pmEffektiv, rechne, buendeln, layBein, bfIndex, zuordnen, maxAlterMs, minRoiFuer,
-  schluessel, nrm, istUnentschieden,
+  schluessel, merkmale, trefferIn, nrm, istUnentschieden,
   setKeyArt: (a) => { KEY_ART = a; }, getKeyArt: () => KEY_ART, istVerzoegert,
   crossBookChancen, schnittmengeIds, betfairIntern, polymarketIntern,
   pmListe, pmKurse, polymarketScan, kategorie,
