@@ -1,0 +1,257 @@
+%PDF-1.4
+%âãÏÓ
+1 0 obj
+<</Type/Catalog/Pages 2 0 R>>
+endobj
+2 0 obj
+<</Type/Pages/Kids[6 0 R 8 0 R 10 0 R]/Count 3>>
+endobj
+3 0 obj
+<</Type/Font/Subtype/Type1/BaseFont/Helvetica/Encoding/WinAnsiEncoding>>
+endobj
+4 0 obj
+<</Type/Font/Subtype/Type1/BaseFont/Helvetica-Bold/Encoding/WinAnsiEncoding>>
+endobj
+5 0 obj
+<</Type/Font/Subtype/Type1/BaseFont/Courier/Encoding/WinAnsiEncoding>>
+endobj
+6 0 obj
+<</Type/Page/Parent 2 0 R/MediaBox[0 0 595.28 841.89]/Resources<</Font<</F1 3 0 R/F2 4 0 R/F3 5 0 R>>>>/Contents 7 0 R>>
+endobj
+7 0 obj
+<</Length 6941>>
+stream
+BT /F2 17 Tf 0.12 g 1 0 0 1 42.00 770.94 Tm (Wie gesucht wird, wie schnell, und was der Schlüssel daran) Tj ET
+BT /F2 17 Tf 0.12 g 1 0 0 1 42.00 747.99 Tm (ändert) Tj ET
+BT /F1 9.5 Tf 0.12 g 1 0 0 1 42.00 728.16 Tm (Der Scanner vergleicht Polymarket mit der Betfair-Börse und meldet nur Wetten, bei denen beide Ausgänge zusammen) Tj ET
+BT /F1 9.5 Tf 0.12 g 1 0 0 1 42.00 715.34 Tm (mehr zurückzahlen als eingesetzt wurde.) Tj ET
+BT /F3 8 Tf 0.45 g 1 0 0 1 42.00 699.54 Tm (Bridge v2 · Endpunkt unverändert) Tj ET
+BT /F2 9 Tf 0.35 g 1 0 0 1 42.00 673.39 Tm (KENNZAHLEN) Tj ET
+0.25 G 1 w 42.00 672.39 m 553.28 672.39 l S
+BT /F1 8.5 Tf 0.35 g 1 0 0 1 42.00 654.39 Tm (Polymarket-Märkte) Tj ET
+BT /F2 9 Tf 0.12 g 1 0 0 1 471.74 654.39 Tm (2 100   \(vorher 100\)) Tj ET
+BT /F1 8.5 Tf 0.35 g 1 0 0 1 42.00 640.39 Tm (beidseitig handelbar) Tj ET
+BT /F2 9 Tf 0.12 g 1 0 0 1 433.23 640.39 Tm (1 251   \(838 mit echter Tiefe\)) Tj ET
+BT /F2 9 Tf 0.35 g 1 0 0 1 42.00 617.24 Tm (WIE GESUCHT WIRD) Tj ET
+0.25 G 1 w 42.00 616.24 m 553.28 616.24 l S
+BT /F2 9.5 Tf 0.45 g 1 0 0 1 42.00 597.24 Tm (1.) Tj ET
+BT /F2 9.5 Tf 0.12 g 1 0 0 1 59.00 597.24 Tm (Marktliste durchblättern) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 598.09 Tm (Die Schnittstelle gibt höchstens 100 Einträge pro Anfrage zurück, egal welche Anzahl man verlangt. Deshalb wird geblättert,) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 585.94 Tm (bis das Ende erreicht ist.) Tj ET
+BT /F3 8.2 Tf 0.45 g 1 0 0 1 59.00 573.87 Tm (21 Anfragen · 2,2 s · 2 100 Märkte) Tj ET
+BT /F2 9.5 Tf 0.45 g 1 0 0 1 42.00 555.87 Tm (6.) Tj ET
+BT /F2 9.5 Tf 0.12 g 1 0 0 1 59.00 555.87 Tm (Gleichstand herstellen) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 556.72 Tm (Verglichen werden darf nur, was es auf beiden Büchern gibt.) Tj ET
+BT /F3 8.2 Tf 0.45 g 1 0 0 1 59.00 544.65 Tm (Schnittmenge im Bridge-Fenster) Tj ET
+BT /F2 11 Tf 0.12 g 1 0 0 1 42.00 519.80 Tm (Die Rechnung) Tj ET
+0.955 g 42.00 468.80 511.28 52.00 re f
+BT /F3 8.2 Tf 0.15 g 1 0 0 1 49.00 502.30 Tm (qE  = 1 + \(q - 1\) * \(1 - Gebühr\)) Tj ET
+BT /F3 8.2 Tf 0.15 g 1 0 0 1 49.00 491.80 Tm (inv = 1/qE1 + 1/qE2) Tj ET
+BT /F3 8.2 Tf 0.15 g 1 0 0 1 49.00 481.30 Tm (S1  = S * \(1/qE1\) / inv) Tj ET
+BT /F3 8.2 Tf 0.15 g 1 0 0 1 49.00 470.80 Tm (Auszahlung = S / inv) Tj ET
+0.955 g 42.00 432.40 511.28 33.40 re f
+0.450 g 42.00 432.40 2.20 33.40 re f
+BT /F1 9 Tf 0.20 g 1 0 0 1 52.00 445.60 Tm (Von Hand gegengerechnet: Lay-Quote 5,00, Gegenüber setzt 200, deine Haftung 800. Verliert der Teilnehmer, bekommst) Tj ET
+BT /F1 9 Tf 0.20 g 1 0 0 1 52.00 433.40 Tm (du 990 zurück.) Tj ET
+BT /F2 7.5 Tf 0.40 g 1 0 0 1 42.00 411.40 Tm (VORGANG) Tj ET
+BT /F2 7.5 Tf 0.40 g 1 0 0 1 195.38 411.40 Tm (GRENZE) Tj ET
+BT /F2 7.5 Tf 0.40 g 1 0 0 1 284.86 411.40 Tm (ANFRAGEN) Tj ET
+BT /F2 7.5 Tf 0.40 g 1 0 0 1 374.33 411.40 Tm (DAUER) Tj ET
+BT /F2 7.5 Tf 0.40 g 1 0 0 1 463.81 411.40 Tm (HERKUNFT) Tj ET
+0.30 G 0.8 w 42.00 408.40 m 553.28 408.40 l S
+BT /F1 8.5 Tf 0.20 g 1 0 0 1 42.00 395.40 Tm (Polymarket Marktliste) Tj ET
+BT /F3 8.5 Tf 0.20 g 1 0 0 1 195.38 395.40 Tm (100 je Anfrage) Tj ET
+BT /F3 8.5 Tf 0.20 g 1 0 0 1 284.86 395.40 Tm (21) Tj ET
+BT /F3 8.5 Tf 0.20 g 1 0 0 1 374.33 395.40 Tm (2,2 s) Tj ET
+BT /F3 8.5 Tf 0.20 g 1 0 0 1 463.81 395.40 Tm (gemessen) Tj ET
+0.82 G 0.3 w 42.00 393.40 m 553.28 393.40 l S
+BT /F1 8.5 Tf 0.20 g 1 0 0 1 42.00 382.40 Tm (Polymarket Preise) Tj ET
+BT /F3 8.5 Tf 0.20 g 1 0 0 1 195.38 382.40 Tm (250 Token je Anfrage) Tj ET
+BT /F3 8.5 Tf 0.20 g 1 0 0 1 284.86 382.40 Tm (17) Tj ET
+BT /F3 8.5 Tf 0.20 g 1 0 0 1 374.33 382.40 Tm (4,3 s) Tj ET
+BT /F3 8.5 Tf 0.20 g 1 0 0 1 463.81 382.40 Tm (gemessen) Tj ET
+0.82 G 0.3 w 42.00 380.40 m 553.28 380.40 l S
+BT /F1 8.5 Tf 0.20 g 1 0 0 1 42.00 369.40 Tm (Betfair 20 000 Märkte) Tj ET
+BT /F3 8.5 Tf 0.20 g 1 0 0 1 195.38 369.40 Tm (40 je Abfrage) Tj ET
+BT /F3 8.5 Tf 0.20 g 1 0 0 1 284.86 369.40 Tm (500) Tj ET
+BT /F3 8.5 Tf 0.20 g 1 0 0 1 374.33 369.40 Tm (125 s) Tj ET
+BT /F3 8.5 Tf 0.20 g 1 0 0 1 463.81 369.40 Tm (gerechnet) Tj ET
+0.82 G 0.3 w 42.00 367.40 m 553.28 367.40 l S
+BT /F2 11 Tf 0.12 g 1 0 0 1 42.00 346.40 Tm (Delayed App Key) Tj ET
+BT /F3 8.5 Tf 0.40 g 1 0 0 1 472.49 346.40 Tm (0 ? · sofort verfügbar) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 330.40 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 330.40 Tm (Kurse kommen verzögert, Betfair nennt keine feste Zahl.) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 317.40 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 317.40 Tm (Taugt für langsame Märkte: Politik, Langzeitwetten.) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 304.40 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 304.40 Tm (Bei laufenden Spielen praktisch unbrauchbar.) Tj ET
+BT /F2 10 Tf 0.12 g 1 0 0 1 42.00 284.40 Tm (Der Scanner sah 100 von 2 100 Märkten) Tj ET
+BT /F3 8 Tf 0.45 g 1 0 0 1 523.94 284.40 Tm ([kritisch]) Tj ET
+BT /F1 8.8 Tf 0.32 g 1 0 0 1 52.00 270.52 Tm (VORHER: Im Code stand bis zu 500 Märkte. Die Schnittstelle liefert aber nie mehr als 100 pro Anfrage.) Tj ET
+BT /F1 8.8 Tf 0.18 g 1 0 0 1 52.00 256.64 Tm (JETZT: Es wird geblättert, bis alles da ist. 2 100 Märkte, davon 1 251 beidseitig handelbar.) Tj ET
+BT /F2 9.5 Tf 0.45 g 1 0 0 1 42.00 236.64 Tm (1.) Tj ET
+BT /F2 9.5 Tf 0.12 g 1 0 0 1 59.00 236.64 Tm (Marktliste durchblättern) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 237.49 Tm (Die Schnittstelle gibt höchstens 100 Einträge pro Anfrage zurück, egal welche Anzahl man verlangt. Deshalb wird geblättert,) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 225.34 Tm (bis das Ende erreicht ist.) Tj ET
+BT /F3 8.2 Tf 0.45 g 1 0 0 1 59.00 213.27 Tm (21 Anfragen · 2,2 s · 2 100 Märkte) Tj ET
+0.955 g 42.00 179.87 511.28 33.40 re f
+0.450 g 42.00 179.87 2.20 33.40 re f
+BT /F1 9 Tf 0.20 g 1 0 0 1 52.00 193.07 Tm (Von Hand gegengerechnet: Lay-Quote 5,00, Gegenüber setzt 200, deine Haftung 800. Verliert der Teilnehmer, bekommst) Tj ET
+BT /F1 9 Tf 0.20 g 1 0 0 1 52.00 180.87 Tm (du 990 zurück.) Tj ET
+BT /F2 10 Tf 0.12 g 1 0 0 1 42.00 157.87 Tm (Der Scanner sah 100 von 2 100 Märkten) Tj ET
+BT /F3 8 Tf 0.45 g 1 0 0 1 523.94 157.87 Tm ([kritisch]) Tj ET
+BT /F1 8.8 Tf 0.32 g 1 0 0 1 52.00 143.99 Tm (VORHER: Im Code stand bis zu 500 Märkte. Die Schnittstelle liefert aber nie mehr als 100 pro Anfrage.) Tj ET
+BT /F1 8.8 Tf 0.18 g 1 0 0 1 52.00 130.11 Tm (JETZT: Es wird geblättert, bis alles da ist. 2 100 Märkte, davon 1 251 beidseitig handelbar.) Tj ET
+BT /F2 11 Tf 0.12 g 1 0 0 1 42.00 110.11 Tm (Delayed App Key) Tj ET
+BT /F3 8.5 Tf 0.40 g 1 0 0 1 472.49 110.11 Tm (0 ? · sofort verfügbar) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 94.11 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 94.11 Tm (Kurse kommen verzögert, Betfair nennt keine feste Zahl.) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 81.11 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 81.11 Tm (Taugt für langsame Märkte: Politik, Langzeitwetten.) Tj ET
+BT /F1 7.5 Tf 0.5 g 1 0 0 1 42 26 Tm (Orion Panel - Suchlogik - Stand 05.08.2026) Tj ET BT /F1 7.5 Tf 0.5 g 1 0 0 1 509.50 26 Tm (Seite 1 von 3) Tj ET
+endstream
+endobj
+8 0 obj
+<</Type/Page/Parent 2 0 R/MediaBox[0 0 595.28 841.89]/Resources<</Font<</F1 3 0 R/F2 4 0 R/F3 5 0 R>>>>/Contents 9 0 R>>
+endobj
+9 0 obj
+<</Length 7076>>
+stream
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 786.89 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 786.89 Tm (Bei laufenden Spielen praktisch unbrauchbar.) Tj ET
+BT /F2 9.5 Tf 0.45 g 1 0 0 1 42.00 767.89 Tm (1.) Tj ET
+BT /F2 9.5 Tf 0.12 g 1 0 0 1 59.00 767.89 Tm (Marktliste durchblättern) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 768.74 Tm (Die Schnittstelle gibt höchstens 100 Einträge pro Anfrage zurück, egal welche Anzahl man verlangt. Deshalb wird geblättert,) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 756.59 Tm (bis das Ende erreicht ist.) Tj ET
+BT /F3 8.2 Tf 0.45 g 1 0 0 1 59.00 744.52 Tm (21 Anfragen · 2,2 s · 2 100 Märkte) Tj ET
+0.955 g 42.00 711.12 511.28 33.40 re f
+0.450 g 42.00 711.12 2.20 33.40 re f
+BT /F1 9 Tf 0.20 g 1 0 0 1 52.00 724.32 Tm (Von Hand gegengerechnet: Lay-Quote 5,00, Gegenüber setzt 200, deine Haftung 800. Verliert der Teilnehmer, bekommst) Tj ET
+BT /F1 9 Tf 0.20 g 1 0 0 1 52.00 712.12 Tm (du 990 zurück.) Tj ET
+BT /F2 10 Tf 0.12 g 1 0 0 1 42.00 689.12 Tm (Der Scanner sah 100 von 2 100 Märkten) Tj ET
+BT /F3 8 Tf 0.45 g 1 0 0 1 523.94 689.12 Tm ([kritisch]) Tj ET
+BT /F1 8.8 Tf 0.32 g 1 0 0 1 52.00 675.24 Tm (VORHER: Im Code stand bis zu 500 Märkte. Die Schnittstelle liefert aber nie mehr als 100 pro Anfrage.) Tj ET
+BT /F1 8.8 Tf 0.18 g 1 0 0 1 52.00 661.36 Tm (JETZT: Es wird geblättert, bis alles da ist. 2 100 Märkte, davon 1 251 beidseitig handelbar.) Tj ET
+BT /F2 11 Tf 0.12 g 1 0 0 1 42.00 641.36 Tm (Delayed App Key) Tj ET
+BT /F3 8.5 Tf 0.40 g 1 0 0 1 472.49 641.36 Tm (0 ? · sofort verfügbar) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 625.36 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 625.36 Tm (Kurse kommen verzögert, Betfair nennt keine feste Zahl.) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 612.36 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 612.36 Tm (Taugt für langsame Märkte: Politik, Langzeitwetten.) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 599.36 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 599.36 Tm (Bei laufenden Spielen praktisch unbrauchbar.) Tj ET
+BT /F2 9.5 Tf 0.45 g 1 0 0 1 42.00 580.36 Tm (1.) Tj ET
+BT /F2 9.5 Tf 0.12 g 1 0 0 1 59.00 580.36 Tm (Marktliste durchblättern) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 581.21 Tm (Die Schnittstelle gibt höchstens 100 Einträge pro Anfrage zurück, egal welche Anzahl man verlangt. Deshalb wird geblättert,) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 569.06 Tm (bis das Ende erreicht ist.) Tj ET
+BT /F3 8.2 Tf 0.45 g 1 0 0 1 59.00 556.99 Tm (21 Anfragen · 2,2 s · 2 100 Märkte) Tj ET
+0.955 g 42.00 523.59 511.28 33.40 re f
+0.450 g 42.00 523.59 2.20 33.40 re f
+BT /F1 9 Tf 0.20 g 1 0 0 1 52.00 536.79 Tm (Von Hand gegengerechnet: Lay-Quote 5,00, Gegenüber setzt 200, deine Haftung 800. Verliert der Teilnehmer, bekommst) Tj ET
+BT /F1 9 Tf 0.20 g 1 0 0 1 52.00 524.59 Tm (du 990 zurück.) Tj ET
+BT /F2 10 Tf 0.12 g 1 0 0 1 42.00 501.59 Tm (Der Scanner sah 100 von 2 100 Märkten) Tj ET
+BT /F3 8 Tf 0.45 g 1 0 0 1 523.94 501.59 Tm ([kritisch]) Tj ET
+BT /F1 8.8 Tf 0.32 g 1 0 0 1 52.00 487.71 Tm (VORHER: Im Code stand bis zu 500 Märkte. Die Schnittstelle liefert aber nie mehr als 100 pro Anfrage.) Tj ET
+BT /F1 8.8 Tf 0.18 g 1 0 0 1 52.00 473.83 Tm (JETZT: Es wird geblättert, bis alles da ist. 2 100 Märkte, davon 1 251 beidseitig handelbar.) Tj ET
+BT /F2 11 Tf 0.12 g 1 0 0 1 42.00 453.83 Tm (Delayed App Key) Tj ET
+BT /F3 8.5 Tf 0.40 g 1 0 0 1 472.49 453.83 Tm (0 ? · sofort verfügbar) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 437.83 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 437.83 Tm (Kurse kommen verzögert, Betfair nennt keine feste Zahl.) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 424.83 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 424.83 Tm (Taugt für langsame Märkte: Politik, Langzeitwetten.) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 411.83 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 411.83 Tm (Bei laufenden Spielen praktisch unbrauchbar.) Tj ET
+BT /F2 9.5 Tf 0.45 g 1 0 0 1 42.00 392.83 Tm (1.) Tj ET
+BT /F2 9.5 Tf 0.12 g 1 0 0 1 59.00 392.83 Tm (Marktliste durchblättern) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 393.68 Tm (Die Schnittstelle gibt höchstens 100 Einträge pro Anfrage zurück, egal welche Anzahl man verlangt. Deshalb wird geblättert,) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 381.53 Tm (bis das Ende erreicht ist.) Tj ET
+BT /F3 8.2 Tf 0.45 g 1 0 0 1 59.00 369.46 Tm (21 Anfragen · 2,2 s · 2 100 Märkte) Tj ET
+0.955 g 42.00 336.06 511.28 33.40 re f
+0.450 g 42.00 336.06 2.20 33.40 re f
+BT /F1 9 Tf 0.20 g 1 0 0 1 52.00 349.26 Tm (Von Hand gegengerechnet: Lay-Quote 5,00, Gegenüber setzt 200, deine Haftung 800. Verliert der Teilnehmer, bekommst) Tj ET
+BT /F1 9 Tf 0.20 g 1 0 0 1 52.00 337.06 Tm (du 990 zurück.) Tj ET
+BT /F2 10 Tf 0.12 g 1 0 0 1 42.00 314.06 Tm (Der Scanner sah 100 von 2 100 Märkten) Tj ET
+BT /F3 8 Tf 0.45 g 1 0 0 1 523.94 314.06 Tm ([kritisch]) Tj ET
+BT /F1 8.8 Tf 0.32 g 1 0 0 1 52.00 300.18 Tm (VORHER: Im Code stand bis zu 500 Märkte. Die Schnittstelle liefert aber nie mehr als 100 pro Anfrage.) Tj ET
+BT /F1 8.8 Tf 0.18 g 1 0 0 1 52.00 286.30 Tm (JETZT: Es wird geblättert, bis alles da ist. 2 100 Märkte, davon 1 251 beidseitig handelbar.) Tj ET
+BT /F2 11 Tf 0.12 g 1 0 0 1 42.00 266.30 Tm (Delayed App Key) Tj ET
+BT /F3 8.5 Tf 0.40 g 1 0 0 1 472.49 266.30 Tm (0 ? · sofort verfügbar) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 250.30 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 250.30 Tm (Kurse kommen verzögert, Betfair nennt keine feste Zahl.) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 237.30 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 237.30 Tm (Taugt für langsame Märkte: Politik, Langzeitwetten.) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 224.30 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 224.30 Tm (Bei laufenden Spielen praktisch unbrauchbar.) Tj ET
+BT /F2 9.5 Tf 0.45 g 1 0 0 1 42.00 205.30 Tm (1.) Tj ET
+BT /F2 9.5 Tf 0.12 g 1 0 0 1 59.00 205.30 Tm (Marktliste durchblättern) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 206.15 Tm (Die Schnittstelle gibt höchstens 100 Einträge pro Anfrage zurück, egal welche Anzahl man verlangt. Deshalb wird geblättert,) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 194.00 Tm (bis das Ende erreicht ist.) Tj ET
+BT /F3 8.2 Tf 0.45 g 1 0 0 1 59.00 181.93 Tm (21 Anfragen · 2,2 s · 2 100 Märkte) Tj ET
+0.955 g 42.00 148.53 511.28 33.40 re f
+0.450 g 42.00 148.53 2.20 33.40 re f
+BT /F1 9 Tf 0.20 g 1 0 0 1 52.00 161.73 Tm (Von Hand gegengerechnet: Lay-Quote 5,00, Gegenüber setzt 200, deine Haftung 800. Verliert der Teilnehmer, bekommst) Tj ET
+BT /F1 9 Tf 0.20 g 1 0 0 1 52.00 149.53 Tm (du 990 zurück.) Tj ET
+BT /F2 10 Tf 0.12 g 1 0 0 1 42.00 126.53 Tm (Der Scanner sah 100 von 2 100 Märkten) Tj ET
+BT /F3 8 Tf 0.45 g 1 0 0 1 523.94 126.53 Tm ([kritisch]) Tj ET
+BT /F1 8.8 Tf 0.32 g 1 0 0 1 52.00 112.65 Tm (VORHER: Im Code stand bis zu 500 Märkte. Die Schnittstelle liefert aber nie mehr als 100 pro Anfrage.) Tj ET
+BT /F1 8.8 Tf 0.18 g 1 0 0 1 52.00 98.77 Tm (JETZT: Es wird geblättert, bis alles da ist. 2 100 Märkte, davon 1 251 beidseitig handelbar.) Tj ET
+BT /F1 7.5 Tf 0.5 g 1 0 0 1 42 26 Tm (Orion Panel - Suchlogik - Stand 05.08.2026) Tj ET BT /F1 7.5 Tf 0.5 g 1 0 0 1 509.50 26 Tm (Seite 2 von 3) Tj ET
+endstream
+endobj
+10 0 obj
+<</Type/Page/Parent 2 0 R/MediaBox[0 0 595.28 841.89]/Resources<</Font<</F1 3 0 R/F2 4 0 R/F3 5 0 R>>>>/Contents 11 0 R>>
+endobj
+11 0 obj
+<</Length 2607>>
+stream
+BT /F2 11 Tf 0.12 g 1 0 0 1 42.00 786.89 Tm (Delayed App Key) Tj ET
+BT /F3 8.5 Tf 0.40 g 1 0 0 1 472.49 786.89 Tm (0 ? · sofort verfügbar) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 770.89 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 770.89 Tm (Kurse kommen verzögert, Betfair nennt keine feste Zahl.) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 757.89 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 757.89 Tm (Taugt für langsame Märkte: Politik, Langzeitwetten.) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 744.89 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 744.89 Tm (Bei laufenden Spielen praktisch unbrauchbar.) Tj ET
+BT /F2 9.5 Tf 0.45 g 1 0 0 1 42.00 725.89 Tm (1.) Tj ET
+BT /F2 9.5 Tf 0.12 g 1 0 0 1 59.00 725.89 Tm (Marktliste durchblättern) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 726.74 Tm (Die Schnittstelle gibt höchstens 100 Einträge pro Anfrage zurück, egal welche Anzahl man verlangt. Deshalb wird geblättert,) Tj ET
+BT /F1 9 Tf 0.28 g 1 0 0 1 59.00 714.59 Tm (bis das Ende erreicht ist.) Tj ET
+BT /F3 8.2 Tf 0.45 g 1 0 0 1 59.00 702.52 Tm (21 Anfragen · 2,2 s · 2 100 Märkte) Tj ET
+0.955 g 42.00 669.12 511.28 33.40 re f
+0.450 g 42.00 669.12 2.20 33.40 re f
+BT /F1 9 Tf 0.20 g 1 0 0 1 52.00 682.32 Tm (Von Hand gegengerechnet: Lay-Quote 5,00, Gegenüber setzt 200, deine Haftung 800. Verliert der Teilnehmer, bekommst) Tj ET
+BT /F1 9 Tf 0.20 g 1 0 0 1 52.00 670.12 Tm (du 990 zurück.) Tj ET
+BT /F2 10 Tf 0.12 g 1 0 0 1 42.00 647.12 Tm (Der Scanner sah 100 von 2 100 Märkten) Tj ET
+BT /F3 8 Tf 0.45 g 1 0 0 1 523.94 647.12 Tm ([kritisch]) Tj ET
+BT /F1 8.8 Tf 0.32 g 1 0 0 1 52.00 633.24 Tm (VORHER: Im Code stand bis zu 500 Märkte. Die Schnittstelle liefert aber nie mehr als 100 pro Anfrage.) Tj ET
+BT /F1 8.8 Tf 0.18 g 1 0 0 1 52.00 619.36 Tm (JETZT: Es wird geblättert, bis alles da ist. 2 100 Märkte, davon 1 251 beidseitig handelbar.) Tj ET
+BT /F2 11 Tf 0.12 g 1 0 0 1 42.00 599.36 Tm (Delayed App Key) Tj ET
+BT /F3 8.5 Tf 0.40 g 1 0 0 1 472.49 599.36 Tm (0 ? · sofort verfügbar) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 583.36 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 583.36 Tm (Kurse kommen verzögert, Betfair nennt keine feste Zahl.) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 570.36 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 570.36 Tm (Taugt für langsame Märkte: Politik, Langzeitwetten.) Tj ET
+BT /F1 9 Tf 0.45 g 1 0 0 1 46.00 557.36 Tm (-) Tj ET
+BT /F1 9 Tf 0.25 g 1 0 0 1 56.00 557.36 Tm (Bei laufenden Spielen praktisch unbrauchbar.) Tj ET
+BT /F1 7.5 Tf 0.5 g 1 0 0 1 42 26 Tm (Orion Panel - Suchlogik - Stand 05.08.2026) Tj ET BT /F1 7.5 Tf 0.5 g 1 0 0 1 509.50 26 Tm (Seite 3 von 3) Tj ET
+endstream
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000015 00000 n 
+0000000060 00000 n 
+0000000124 00000 n 
+0000000212 00000 n 
+0000000305 00000 n 
+0000000391 00000 n 
+0000000527 00000 n 
+0000007518 00000 n 
+0000007654 00000 n 
+0000014780 00000 n 
+0000014918 00000 n 
+trailer
+<</Size 12/Root 1 0 R>>
+startxref
+17576
+%%EOF

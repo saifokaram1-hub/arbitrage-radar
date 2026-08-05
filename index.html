@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=21"></script>
+<script src="config.js?v=22"></script>
 <style>
   :root{
     --void:#060704; --void2:#0a0b07;
@@ -274,9 +274,9 @@
   .radar .blip.show{animation:blip 1s ease}
   @keyframes blip{0%{opacity:1;transform:scale(.4)}100%{opacity:0;transform:scale(1.8)}}
   .scaninfo{flex:1 1 260px;min-width:0;overflow:hidden}
-  /* --- Was jede Quelle gerade tut --- */
-  #srcAnalyse{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:0 0 14px}
-  .srcCard{border:1px solid var(--line2);background:linear-gradient(180deg,#0b0c07,#080905);padding:12px 14px}
+  /* --- Was jede Quelle gerade tut (in der Seitenleiste unter den Konten) --- */
+  #srcAnalyse{display:flex;flex-direction:column;gap:8px;margin:2px 0 0}
+  .srcCard{border:1px solid var(--line2);background:#0a0b06;padding:10px 11px}
   .srcCard.ok{border-color:#3d4a1c}
   .srcCard.bad{border-color:#5c2a1e}
   .srcCard .sh{display:flex;align-items:center;gap:8px;padding-bottom:9px;border-bottom:1px solid var(--line)}
@@ -290,8 +290,29 @@
   .srcCard .sgrund{margin-top:8px;padding:7px 9px;border-left:2px solid var(--neg);background:rgba(176,64,46,.08);
     font-size:11.5px;color:#d98c7c;line-height:1.5}
   .srcCard .sk{display:flex;flex-direction:column;margin-top:8px}
-  .srcCard .skr{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:11.5px;color:var(--muted)}
-  .srcCard .skr b{font-family:var(--mono);color:var(--gold-b);font-variant-numeric:tabular-nums;text-align:right}
+  .srcCard .skr{display:flex;justify-content:space-between;gap:8px;padding:2.5px 0;font-size:11px;color:var(--muted)}
+  .srcCard .skr b{font-family:var(--mono);color:var(--gold-b);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+  /* --- Gegenprobe von Hand: dieselben Märkte auf beiden Büchern --- */
+  #schnittWrap{margin-top:10px}
+  .schnitt{border:1px solid var(--line2);background:#0a0b06}
+  .schnitt > .sh{display:flex;align-items:center;gap:8px;padding:10px 11px;cursor:pointer;user-select:none;border-bottom:1px solid var(--line)}
+  .schnitt > .sh b{font-size:11.5px;flex:1}
+  .schnitt > .sh .cnt{font-family:var(--mono);font-size:12px;color:var(--gold-b);font-variant-numeric:tabular-nums}
+  .schnitt > .sh .caret{font-size:9px;color:var(--dim)}
+  .schnitt .liste{max-height:340px;overflow-y:auto}
+  .schnitt.zu .liste{display:none}
+  .paar{padding:9px 11px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:5px}
+  .paar:last-child{border-bottom:0}
+  .paar .ev{font-size:11.5px;line-height:1.4;color:var(--txt)}
+  .paar .zeile{display:flex;align-items:center;gap:6px;font-size:10.5px;font-family:var(--mono)}
+  .paar .bk{width:26px;flex:none;font-size:8.5px;letter-spacing:.1em;color:var(--gold);text-transform:uppercase}
+  .paar .nm{flex:1;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .paar .qq{color:var(--gold-b);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .paar a{color:var(--gold);text-decoration:none;border:1px solid var(--line3);padding:2px 5px;font-size:8.5px;
+    letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+  .paar a:hover{color:var(--gold-b);border-color:var(--gold-d)}
+  .schnitt .leer{padding:14px 11px;font-size:11px;color:var(--dim);font-family:var(--mono);line-height:1.6}
 
   /* --- Fertig gerechnete Chancen aus der Bridge --- */
   #oppWrap{border:1px solid var(--line3);background:linear-gradient(180deg,#0d0f0a,#080905);margin:0 0 14px}
@@ -491,9 +512,6 @@
     </div>
   </div>
 
-  <!-- Was jede Quelle gerade tut: echte laufende Zahlen -->
-  <div id="srcAnalyse"></div>
-
   <!-- Fertig gerechnete Chancen der lokalen Bridge: beide Beine, beide Links -->
   <div id="oppWrap" style="display:none">
     <div class="oppHead">
@@ -509,16 +527,26 @@
         <div class="head"><h2>Konten</h2><span class="hint">Status &amp; Guthaben</span></div>
         <div class="body">
           <div id="acctList"></div>
+
+          <!-- Direkt unter den Konten: was jede Quelle GERADE tut, echte Zahlen -->
+          <div id="srcAnalyse"></div>
+          <!-- Und die Gegenprobe von Hand: welche Märkte liegen wirklich auf beiden Büchern -->
+          <div id="schnittWrap"></div>
+
           <div class="summary"><span>Platziert<b class="num" id="plCount">0</b></span><span>Gesichert<b class="sv num" id="plSecured">+0,00 €</b></span></div>
           <div class="field"><label>Guthaben Polymarket (€)</label><input class="inp num" id="balPm" type="number" step="50" min="0" value="0" placeholder="0"></div>
           <div class="field"><label>Polygon-Wallet (read-only · live USDC)</label><input class="inp" id="walletAddr" placeholder="0x… (deine Polymarket-Einzahl-Adresse)" autocomplete="off" spellcheck="false" style="font-family:var(--mono);font-size:11px"></div>
           <div id="walletBal" style="font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-top:-6px">Adresse eingeben → Live-Guthaben</div>
           <div class="field"><label>Guthaben SX Bet (€)</label><input class="inp num" id="balOb" type="number" step="50" min="0" value="0" placeholder="0"></div>
-          <div class="field"><label>Brokergebühr % — Polymarket / SX Bet</label>
-            <div style="display:flex;gap:10px">
-              <input class="inp num" id="feePm" type="number" step="0.5" min="0" value="0" title="Polymarket-Gebühr %">
-              <input class="inp num" id="feeOb" type="number" step="0.5" min="0" value="3" title="SX Bet Gebühr %">
-            </div></div>
+          <div class="field"><label>Gebühren</label>
+            <div id="feeInfo" style="font-size:10.5px;color:var(--dim);font-family:var(--mono);line-height:1.65;
+              border-left:2px solid var(--line3);padding:6px 9px;margin-bottom:8px">
+              Polymarket und Betfair melden ihren Satz je Markt selbst —<br>er wird von dort gelesen und mitgerechnet.
+            </div>
+            <label style="font-size:10px">SX Bet Gebühr % (fest)</label>
+            <input class="inp num" id="feeOb" type="number" step="0.5" min="0" value="3" title="SX Bet Gebühr %">
+            <input type="hidden" id="feePm" value="0">
+          </div>
           <div class="field"><label>Eigener Proxy (optional)</label><input class="inp" id="obProxy" value="https://noexklrgtqveiclijdwp.supabase.co/functions/v1/ob-proxy" autocomplete="off"></div>
           <div class="field"><label>Standard-Einsatz (empfohlen)</label><input class="inp num" id="stdStake" type="number" step="25" min="0" value="100"></div>
           <label class="toggle" id="tgAuto" tabindex="0" role="switch" aria-checked="false"><span>Auto-Pilot<small>nur im Demo-Modus — setzt bei Hit automatisch</small></span><span class="sw"></span></label>
@@ -686,7 +714,23 @@ function categorize(q){
 
 /* ---- Polymarket: breite Abdeckung, Echtzeit via WebSocket, REST als Auffrischung/Netz ---- */
 var pmPicks=[], lastGamma=0, lastFullPrices=0;
-function mkObj(p,a0,a1,s0,s1){ return {id:'pm_'+p.m.id, cat:categorize(p.m.question), ev:p.m.question, o1:p.outs[0], o2:p.outs[1], ask0:a0, ask1:a1, sz0:s0||0, sz1:s1||0, liq:parseFloat(p.m.liquidity||0), vol:parseFloat(p.m.volume||0), slug:p.m.slug||''}; }
+// Gebührenangaben des Marktes mitnehmen. Meldet Polymarket Gebühren, nennt aber
+// keinen Satz, wird der ungünstigste bekannte Satz angenommen — niemals null.
+function pmFee(m){
+  var fs=m.feeSchedule||{};
+  if(m.feesEnabled===false) return {satz:0, exp:1, typ:'keine'};
+  var s=parseFloat(fs.rate);
+  return { satz: (isFinite(s)&&s>=0)? s : 0.07,
+           exp: (isFinite(parseFloat(fs.exponent))&&parseFloat(fs.exponent)>0)? parseFloat(fs.exponent):1,
+           typ: String(m.feeType||'unbekannt') };
+}
+function mkObj(p,a0,a1,s0,s1){
+  var f=pmFee(p.m);
+  return {id:'pm_'+p.m.id, cat:categorize(p.m.question), ev:p.m.question, o1:p.outs[0], o2:p.outs[1],
+    ask0:a0, ask1:a1, sz0:s0||0, sz1:s1||0,
+    feeSatz:f.satz, feeExp:f.exp, feeTyp:f.typ,
+    liq:parseFloat(p.m.liquidity||0), vol:parseFloat(p.m.volume||0), slug:p.m.slug||''};
+}
 
 // Gamma liefert HÖCHSTENS 100 Einträge pro Aufruf — egal welches limit man setzt.
 // Vorher stand hier limit=500, dadurch wurden nie mehr als 100 Märkte gesehen.
@@ -830,7 +874,8 @@ function mergeMarkets(fresh, prune){
   var seen={};
   fresh.forEach(function(f){
     seen[f.id]=1; var ex=mkMap.get(f.id);
-    if(ex){ ex.ask0=f.ask0; ex.ask1=f.ask1; ex.liq=f.liq; ex.vol=f.vol; ex.cat=f.cat; ex.ev=f.ev; ex.o1=f.o1; ex.o2=f.o2; ex.slug=f.slug; }
+    if(ex){ ex.ask0=f.ask0; ex.ask1=f.ask1; ex.sz0=f.sz0; ex.sz1=f.sz1; ex.liq=f.liq; ex.vol=f.vol; ex.cat=f.cat; ex.ev=f.ev; ex.o1=f.o1; ex.o2=f.o2; ex.slug=f.slug;
+            ex.feeSatz=f.feeSatz; ex.feeExp=f.feeExp; ex.feeTyp=f.feeTyp; }
     else { f.since=0; f.wasHit=false; f.demo=false; mkMap.set(f.id,f); }
   });
   if(prune)Array.from(mkMap.keys()).forEach(function(id){ if(mkMap.get(id).demo)return; if(!seen[id])mkMap.delete(id); });
@@ -1052,20 +1097,45 @@ function applySX(){
 }
 
 /* ---- Bewertung: beste Quote je Ausgang, Arb-%, ROI — NETTO nach Brokergebühr ---- */
-function feeOf(src){ var f = src==='ob'? state.feeOb : (src==='bf'? (state.feeBf==null?5:state.feeBf) : state.feePm); return (+f||0)/100; }
-// Effektivquote nach Kommission auf den Gewinn: q_eff = 1 + (q-1)*(1-Gebühr)
+/* Gebühren: beide Bücher nehmen welche, aber auf ganz verschiedene Weise.
+   BETFAIR / SX BET — Kommission auf den GEWINN:      qE = 1 + (q-1)*(1-Satz)
+   POLYMARKET       — Gebühr je ANTEIL, preisabhängig: Gebühr = Satz*min(p,1-p)
+                                                       qE = (1-Gebühr)/p
+   Der Polymarket-Satz steht pro Markt in den Marktdaten (meist 4, 5 oder 7 %).
+   Er ist bei einem Preis um 0,50 am höchsten — also genau dort, wo die meisten
+   Chancen liegen. Ihn als null anzunehmen erzeugt Arbitrage, die es nicht gibt. */
+function feeOf(src){ var f = src==='ob'? state.feeOb : (src==='bf'? (state.feeBf==null?5:state.feeBf) : 0); return (+f||0)/100; }
 function effOdds(q,src){ return 1 + (q-1)*(1-feeOf(src)); }
+function pmGebuehr(p,satz,exp){ if(!(satz>0))return 0; return satz*Math.pow(Math.min(p,1-p), exp>0?exp:1); }
+function pmEff(p,satz,exp){ if(!(p>0&&p<1))return 0; var n=1-pmGebuehr(p,satz,exp); return n>0? n/p : 0; }
+
 function evalMarket(mk){
   var c1=[], c2=[];
-  if(state.srcOn.pm){ c1.push({src:'pm',q:1/mk.ask0}); c2.push({src:'pm',q:1/mk.ask1}); }
-  if(state.srcOn.ob && mk.ob && mk.ob.o1>1 && mk.ob.o2>1){ c1.push({src:'ob',q:mk.ob.o1}); c2.push({src:'ob',q:mk.ob.o2}); }
-  if(state.srcOn.bf && mk.bf && mk.bf.o1>1 && mk.bf.o2>1){ c1.push({src:'bf',q:mk.bf.o1}); c2.push({src:'bf',q:mk.bf.o2}); }
-  if(!c1.length||!c2.length){ c1=[{src:'pm',q:1/mk.ask0}]; c2=[{src:'pm',q:1/mk.ask1}]; }
-  function pick(cs){ var b=cs[0], be=effOdds(cs[0].q,cs[0].src);
-    for(var i=1;i<cs.length;i++){ var e=effOdds(cs[i].q,cs[i].src); if(e>be){b=cs[i];be=e;} }
-    return {src:b.src, odds:b.q, oddsEff:be}; }
+  // Polymarket: Effektivquote direkt aus Preis und Marktgebühr
+  var satz = mk.feeSatz!=null? mk.feeSatz : 0, exp = mk.feeExp||1;
+  if(state.srcOn.pm){
+    c1.push({src:'pm', q:1/mk.ask0, qE:pmEff(mk.ask0,satz,exp)});
+    c2.push({src:'pm', q:1/mk.ask1, qE:pmEff(mk.ask1,satz,exp)});
+  }
+  if(state.srcOn.ob && mk.ob && mk.ob.o1>1 && mk.ob.o2>1){
+    c1.push({src:'ob',q:mk.ob.o1,qE:effOdds(mk.ob.o1,'ob')});
+    c2.push({src:'ob',q:mk.ob.o2,qE:effOdds(mk.ob.o2,'ob')});
+  }
+  if(state.srcOn.bf && mk.bf && mk.bf.o1>1 && mk.bf.o2>1){
+    var sb = mk.bfSatz!=null? mk.bfSatz : feeOf('bf');
+    c1.push({src:'bf',q:mk.bf.o1,qE:1+(mk.bf.o1-1)*(1-sb)});
+    c2.push({src:'bf',q:mk.bf.o2,qE:1+(mk.bf.o2-1)*(1-sb)});
+  }
+  if(!c1.length||!c2.length){
+    c1=[{src:'pm',q:1/mk.ask0,qE:pmEff(mk.ask0,satz,exp)}];
+    c2=[{src:'pm',q:1/mk.ask1,qE:pmEff(mk.ask1,satz,exp)}];
+  }
+  function pick(cs){ var b=cs[0];
+    for(var i=1;i<cs.length;i++){ if(cs[i].qE>b.qE) b=cs[i]; }
+    return {src:b.src, odds:b.q, oddsEff:b.qE}; }
   var s1=pick(c1), s2=pick(c2);
-  var invE=1/s1.oddsEff + 1/s2.oddsEff;   // Netto-Summe (Gebühr eingerechnet)
+  if(!(s1.oddsEff>1)||!(s2.oddsEff>1)) return {m:mk,s1:s1,s2:s2,arbPct:999,roi:-100,ok:false,cross:false};
+  var invE=1/s1.oddsEff + 1/s2.oddsEff;   // Netto-Summe (Gebühren eingerechnet)
   return {m:mk,s1:s1,s2:s2,arbPct:invE*100,roi:(1/invE-1)*100,ok:invE<1,cross:s1.src!==s2.src};
 }
 
@@ -1128,6 +1198,65 @@ function statusText(k){
   return['','…'];
 }
 
+/* ---- Gegenprobe von Hand ----------------------------------------------
+   Zeigt jedes Paar, das der Scanner als denselben Markt erkannt hat: links
+   die Polymarket-Frage, darunter der zugeordnete Betfair-Markt, beide mit
+   Direktlink. Damit lässt sich mit eigenen Augen prüfen, ob wirklich
+   dasselbe Ereignis verglichen wird — und nicht irgendetwas Ähnliches. */
+function renderSchnitt(){
+  var el=document.getElementById('schnittWrap'); if(!el)return;
+  var paare=[];
+  mkMap.forEach(function(mk){
+    if(mk.demo)return;
+    if(!mk.bf && !mk.ob)return;
+    paare.push(mk);
+  });
+  // Erst das, was gerade am ehesten handelbar ist
+  paare.sort(function(a,b){ return (b.vol||0)-(a.vol||0); });
+
+  var esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var q=function(x){ return (Math.round(x*1000)/1000).toFixed(2); };
+  var zu=state.schnittZu?' zu':'';
+
+  var inhalt;
+  if(!paare.length){
+    inhalt='<div class="leer">Gerade kein Markt, den beide Bücher führen.<br>'+
+      'Polymarket: '+(state.pmHandelbar||0)+' handelbar · Betfair: '+(state.bfCount||0)+' geliefert.<br>'+
+      'Ohne Überschneidung gibt es nichts zu vergleichen.</div>';
+  } else {
+    inhalt='<div class="liste">'+paare.slice(0,60).map(function(mk){
+      var pmLink=mk.slug? 'https://polymarket.com/event/'+encodeURIComponent(mk.slug):'https://polymarket.com/markets';
+      var z='<div class="paar"><div class="ev">'+esc(mk.ev)+'</div>'+
+        '<div class="zeile"><span class="bk">PM</span>'+
+          '<span class="nm">'+esc(mk.o1)+' / '+esc(mk.o2)+'</span>'+
+          '<span class="qq">'+q(1/mk.ask0)+' · '+q(1/mk.ask1)+'</span>'+
+          '<a href="'+pmLink+'" target="_blank" rel="noopener">öffnen</a></div>';
+      if(mk.bf){
+        z+='<div class="zeile"><span class="bk">BF</span>'+
+          '<span class="nm">zugeordnet</span>'+
+          '<span class="qq">'+q(mk.bf.o1)+' · '+q(mk.bf.o2)+'</span>'+
+          '<a href="'+esc(mk.bfLink||'https://www.betfair.com/exchange/plus/')+'" target="_blank" rel="noopener">öffnen</a></div>';
+      }
+      if(mk.ob){
+        z+='<div class="zeile"><span class="bk">SX</span>'+
+          '<span class="nm">'+esc(mk.obEv||'zugeordnet')+'</span>'+
+          '<span class="qq">'+q(mk.ob.o1)+' · '+q(mk.ob.o2)+'</span>'+
+          '<a href="'+esc(mk.obLink||'#')+'" target="_blank" rel="noopener">öffnen</a></div>';
+      }
+      return z+'</div>';
+    }).join('')+'</div>';
+  }
+
+  el.innerHTML='<div class="schnitt'+zu+'" id="schnittBox">'+
+    '<div class="sh" id="schnittKopf"><span class="caret">'+(state.schnittZu?'▸':'▾')+'</span>'+
+      '<b>Auf beiden Büchern</b><span class="cnt">'+paare.length+'</span></div>'+
+    inhalt+'</div>';
+
+  var kopf=document.getElementById('schnittKopf');
+  if(kopf) kopf.onclick=function(){ state.schnittZu=!state.schnittZu; renderSchnitt(); };
+}
+
 /* ---- Was jede Quelle GERADE tut: echte Zahlen, keine Höchstwerte ---- */
 function renderQuellen(){
   var el=document.getElementById('srcAnalyse'); if(!el)return;
@@ -1175,6 +1304,7 @@ function renderQuellen(){
 }
 function updateAccountsUI(){
   try{ renderQuellen(); }catch(e){}
+  try{ renderSchnitt(); }catch(e){}
   $('#acctList').innerHTML=ACC.map(function(a){
     var k=a[0], st=statusText(k), on=state.srcOn[k]&&(st[0]==='live'||st[0]==='demo');
     var bal=k==='pm'?state.balPm:state.balOb;

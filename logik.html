@@ -160,7 +160,7 @@
     <div class="mark"></div>
     <h1>Such<span>logik</span></h1>
     <div class="sp"></div>
-    <button class="lnk" id="pdfBtn" style="cursor:pointer;font-family:inherit">⤓ Als PDF speichern</button>
+    <button class="lnk" id="pdfBtn" style="cursor:pointer;font-family:inherit">⤓ PDF herunterladen</button>
     <a class="lnk" href="bridge-setup.html">Einrichtung</a>
     <a class="lnk" href="index.html">← Zurück zur App</a>
   </div>
@@ -178,8 +178,8 @@
       <div class="g"><div class="v pos">1 251</div><div class="l">beidseitig handelbar</div><div class="s">838 mit echter Tiefe</div></div>
       <div class="g"><div class="v">6,5 s</div><div class="l">Vollscan Polymarket</div><div class="s">38 Anfragen</div></div>
       <div class="g"><div class="v">20 s</div><div class="l">schnellster Takt</div><div class="s">breit 150 s · voll 900 s</div></div>
-      <div class="g"><div class="v pos">55</div><div class="l">Prüfungen bestanden</div><div class="s">0 fehlgeschlagen</div></div>
-      <div class="g"><div class="v">16</div><div class="l">Denkfehler behoben</div><div class="s">1 offen</div></div>
+      <div class="g"><div class="v pos">62</div><div class="l">Prüfungen bestanden</div><div class="s">0 fehlgeschlagen</div></div>
+      <div class="g"><div class="v">17</div><div class="l">Denkfehler behoben</div><div class="s">1 offen</div></div>
     </div>
 
     <section>
@@ -239,6 +239,28 @@ S2  = S − S1                         <span class="c">Einsatz Seite 2</span>
 Auszahlung = S / inv                 <span class="c">bei BEIDEN Ausgängen derselbe Betrag</span>
 Rendite    = (1/inv − 1) × 100 %</pre>
       <p class="note">Ausdrücklich nicht halbe-halbe. Die Aufteilung folgt den Quoten, sonst gewinnt man bei einem Ausgang und verliert beim anderen. Beispiel bei 1 000 Einsatz, Polymarket 0,44 gegen Betfair 2,50 mit 5 % Kommission: 516,21 und 483,79, Auszahlung 1 173,20 in beiden Fällen, Gewinn 173,20.</p>
+
+      <h4>Gebühren: jeder Markt hat seinen eigenen Satz</h4>
+      <p>Beide Bücher nehmen Gebühren, aber auf völlig verschiedene Weise. Wer das in einen Topf wirft oder pauschal rechnet, findet Chancen, die es nicht gibt. Die Sätze werden deshalb <strong>pro Markt aus der jeweiligen Quelle gelesen</strong>, nicht geschätzt.</p>
+      <pre>BETFAIR  Kommission auf den GEWINN, Satz steht je Markt in marketBaseRate
+         qE = 1 + (q − 1) × (1 − Satz)          <span class="c">je nach Markt 2 bis 7 %</span>
+
+POLYMARKET  Gebühr auf die ANTEILE, abhängig vom Preis
+         Gebühr je Anteil = Satz × min(p, 1 − p)
+         qE = (1 − Gebühr je Anteil) / p        <span class="c">Satz 4, 5 oder 7 %</span></pre>
+      <p class="note">Die Polymarket-Gebühr ist bei einem Preis um 0,50 am höchsten und fällt zu den Rändern hin ab. Das ist unangenehm, denn genau um 0,50 herum liegen die meisten Zweikämpfe. Nur Taker zahlen sie, und wer zum Briefkurs kauft, ist immer Taker.</p>
+      <div class="scroll">
+        <table>
+          <tr><th>Preis</th><th>Satz</th><th>Gebühr je Anteil</th><th>Quote ohne</th><th>Quote mit</th><th>Verlust</th></tr>
+          <tr><td class="k">0,50</td><td class="k">4 %</td><td class="num">0,0200</td><td class="num">2,0000</td><td class="num">1,9600</td><td class="num">−2,00 %</td></tr>
+          <tr><td class="k">0,44</td><td class="k">4 %</td><td class="num">0,0176</td><td class="num">2,2727</td><td class="num">2,2327</td><td class="num">−1,76 %</td></tr>
+          <tr><td class="k">0,44</td><td class="k">7 %</td><td class="num">0,0308</td><td class="num">2,2727</td><td class="num">2,2027</td><td class="num">−3,08 %</td></tr>
+          <tr><td class="k">0,90</td><td class="k">4 %</td><td class="num">0,0040</td><td class="num">1,1111</td><td class="num">1,1067</td><td class="num">−0,40 %</td></tr>
+        </table>
+      </div>
+      <div class="call bad"><b>Warum das so wichtig ist:</b> Polymarket 0,49 gegen Betfair 2,03 sieht ohne Gebühr nach <b>+0,46 %</b> aus. Mit der Marktgebühr von 4 % sind es <b>−0,52 %</b>. Solche knappen Fälle machen den Großteil aller Treffer aus. Wer die Gebühr weglässt, jagt Gespenstern hinterher.</div>
+      <div class="call"><b>Gebühren gibt es nur, weil beide Bücher Marktplätze zwischen Nutzern sind.</b> Gegen einen Buchmacher zu wetten kostet keine Kommission, dafür ist die Quote von vornherein schlechter und wer gewinnt, fliegt raus. Solche Bücher werden hier bewusst nicht angefasst, also ist auch keine Buchmacher-Marge einzurechnen. Beide Beine laufen immer gegen andere Leute.</div>
+      <p class="note">Meldet eine Quelle Gebühren, nennt aber keinen Satz, wird der ungünstigste bekannte Satz angenommen. Eine unbekannte Gebühr darf niemals als null durchgehen.</p>
 
       <h4>Dagegenhalten statt zurückwetten</h4>
       <p>Bei Märkten mit vielen Teilnehmern gibt es keine sinnvolle Gegenseite zum Zurückwetten. Dort hält man dagegen, und die Haftung ist der Einsatz.</p>
@@ -342,6 +364,14 @@ Maximum = verfügbare Größe × (L − 1)</pre>
         </div></div>
 
         <div class="row krit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Polymarkets Gebühr galt als null</b><span class="tag krit">kritisch</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">vorher</span>Im Code stand Polymarket-Gebühr = 0 %. Tatsächlich erheben rund 1 090 von 1 200 Märkten eine Gebühr von 4, 5 oder 7 %, und sie ist genau um einen Preis von 0,50 herum am höchsten. Knappe Chancen wurden dadurch als echt gemeldet, obwohl sie nach Gebühr im Minus lagen.</div>
+            <div class="jetzt"><span class="lab">jetzt</span>Der Satz wird pro Markt aus den Marktdaten gelesen und mit der richtigen Formel abgezogen. Betfair genauso: statt pauschal 5 % gilt der Satz, den Betfair je Markt selbst angibt.</div>
+          </div>
+        </div></div>
+
+        <div class="row krit"><div class="stripe"></div><div class="body">
           <div class="ttl"><b>Dagegenhalten gab es nicht</b><span class="tag krit">kritisch</span></div>
           <div class="ba">
             <div class="vor"><span class="lab">vorher</span>Nur Zurückwetten. Damit waren alle Märkte mit vielen Teilnehmern unerreichbar, obwohl genau dort Polymarkets Bestand liegt.</div>
@@ -436,7 +466,7 @@ Maximum = verfügbare Größe × (L − 1)</pre>
       <h3>Selbst nachprüfen</h3>
       <p>Im Bridge-Ordner rechnet ein Prüfprogramm die komplette Logik mit Zahlen durch und rechnet beide Ausgänge gegen. Es meldet sich nirgends an und lädt nichts hoch.</p>
       <pre>node pruefung.js</pre>
-      <p class="note">55 Prüfungen, darunter die Lay-Rechnung von Hand gegengerechnet, der Nachweis, dass bei jeder gemeldeten Chance beide Ausgänge auf den Cent denselben Betrag zurückzahlen, und die Kontrolle, dass wirklich nur Märkte verglichen werden, die es auf beiden Büchern gibt.</p>
+      <p class="note">62 Prüfungen, darunter die Lay-Rechnung von Hand gegengerechnet, der Nachweis, dass bei jeder gemeldeten Chance beide Ausgänge auf den Cent denselben Betrag zurückzahlen, und die Kontrolle, dass wirklich nur Märkte verglichen werden, die es auf beiden Büchern gibt.</p>
       <div class="call"><b>Diese Seite gehört zum Programm.</b> Ändert sich die Suchlogik, wird zuerst die Datei geändert, die man herunterlädt, und danach diese Erklärung nachgezogen. Was hier steht, gilt für die Fassung, die gerade zum Download bereitliegt.</div>
     </section>
 
@@ -444,21 +474,26 @@ Maximum = verfügbare Größe × (L − 1)</pre>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=21"></script>
+<script src="config.js?v=22"></script>
+<script src="pdf.js?v=22"></script>
 <script>
-// PDF: über den Druckdialog des Browsers, dort "Als PDF speichern" wählen.
-// Kein Zusatzprogramm nötig, und das Ergebnis enthält immer den aktuellen Stand.
+// PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.
 document.getElementById('pdfBtn').addEventListener('click', function(){
-  var alt = document.title;
-  var d = new Date();
-  var p = function(n){ return (n<10?'0':'')+n; };
-  // Der Dateiname im Speichern-Dialog kommt vom Seitentitel
-  document.title = 'Orion-Panel-Suchlogik-' + d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate());
-  window.addEventListener('afterprint', function zurueck(){
-    document.title = alt;
-    window.removeEventListener('afterprint', zurueck);
-  });
-  window.print();
+  var b=this, alt=b.textContent;
+  b.disabled=true; b.textContent='erzeuge …';
+  setTimeout(function(){
+    try{
+      var seiten=window.orionPdf();
+      b.textContent='✓ '+seiten+' Seiten geladen';
+    }catch(e){
+      // Sollte die Erzeugung je scheitern, bleibt der Druckweg als Rückfall:
+      // dort "Als PDF speichern" wählen. Lieber ein Umweg als gar nichts.
+      console.error(e);
+      b.textContent='→ Druckdialog';
+      window.print();
+    }
+    setTimeout(function(){ b.textContent=alt; b.disabled=false; }, 2600);
+  }, 30);
 });
 
 (async function(){

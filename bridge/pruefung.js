@@ -402,7 +402,55 @@ console.log('\n══════════ 12. Werden wirklich dieselben Mär
   B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
 }
 
-console.log('\n══════════ 13. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
+console.log('\n══════════ 13. Gebühren: je Markt und je Buch verschieden ══════════\n');
+{
+  console.log('  Polymarket rechnet anders als Betfair. Gebühr je Anteil = Satz × min(p, 1−p).\n');
+  console.log('  Preis   Satz    Gebühr/Anteil   Quote ohne   Quote mit    Unterschied');
+  [[0.50,0.04],[0.44,0.04],[0.44,0.07],[0.90,0.04],[0.10,0.07]].forEach(function(x){
+    const p=x[0], s=x[1];
+    const g=B.pmGebuehr(p,s,1), ohne=1/p, mit=B.pmEffektiv(p,s,1);
+    console.log('  '+p.toFixed(2)+'    '+(s*100).toFixed(0)+' %    '+g.toFixed(4)+
+                '         '+ohne.toFixed(4)+'      '+mit.toFixed(4)+'      −'+((1-mit/ohne)*100).toFixed(2)+' %');
+  });
+  console.log('');
+  pruefe('Gebühr ist bei 0,50 am höchsten',
+         B.pmGebuehr(0.50,0.04,1) > B.pmGebuehr(0.30,0.04,1) &&
+         B.pmGebuehr(0.50,0.04,1) > B.pmGebuehr(0.70,0.04,1));
+  pruefe('Gebühr ist symmetrisch um 0,50',
+         Math.abs(B.pmGebuehr(0.30,0.04,1) - B.pmGebuehr(0.70,0.04,1)) < 1e-12);
+  pruefe('ohne Gebühr bleibt die Quote 1/p', Math.abs(B.pmEffektiv(0.40,0,1) - 2.5) < 1e-12);
+  pruefe('mit Gebühr wird die Quote kleiner', B.pmEffektiv(0.40,0.04,1) < 2.5);
+
+  // Handrechnung: 1000 Anteile zu 0,44 mit 4 % Satz
+  const p=0.44, satz=0.04, anteile=1000;
+  const kosten=anteile*p, gebuehr=anteile*satz*Math.min(p,1-p), auszahlung=anteile*1-gebuehr;
+  console.log('  Von Hand: '+anteile+' Anteile zu '+p+' kosten '+kosten.toFixed(2)+
+              ', Gebühr '+gebuehr.toFixed(2)+', Auszahlung '+auszahlung.toFixed(2));
+  pruefe('Handrechnung deckt sich mit pmEffektiv',
+         Math.abs(auszahlung/kosten - B.pmEffektiv(p,satz,1)) < 1e-12,
+         '('+(auszahlung/kosten).toFixed(6)+')');
+
+  // Der entscheidende Punkt: eine knappe Chance, die nur ohne Gebühr existiert.
+  // Genau solche Fälle hat der Scanner vorher als echte Arbitrage gemeldet.
+  const bfBein={ qEff:B.effektiv(2.03,0.05), maxEinsatz:1e6 };
+  const ohneG={ qEff:B.pmEffektiv(0.49,0,1),    maxEinsatz:1e6 };
+  const mitG ={ qEff:B.pmEffektiv(0.49,0.04,1), maxEinsatz:1e6 };
+  const a=B.rechne(ohneG,bfBein), b=B.rechne(mitG,bfBein);
+  console.log('  Polymarket 0,49 gegen Betfair 2,03 — ohne PM-Gebühr: '+a.roi.toFixed(2)+
+              ' %, mit 4 %: '+b.roi.toFixed(2)+' %');
+  pruefe('Scheinchance verschwindet, sobald die Polymarket-Gebühr zählt',
+         a.ok === true && b.ok === false);
+
+  // Betfair: unterschiedliche Sätze je Markt
+  console.log('');
+  [0.02,0.05,0.065].forEach(function(s){
+    console.log('  Betfair-Quote 3,00 bei '+(s*100).toFixed(1)+' % Kommission → '+B.effektiv(3.00,s).toFixed(4));
+  });
+  pruefe('niedrigere Kommission ergibt bessere Effektivquote',
+         B.effektiv(3.00,0.02) > B.effektiv(3.00,0.05) && B.effektiv(3.00,0.05) > B.effektiv(3.00,0.065));
+}
+
+console.log('\n══════════ 14. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
 {
   B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
   B.PM.set('test2', {

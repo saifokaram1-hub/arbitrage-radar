@@ -144,8 +144,13 @@ const O = {
   excludeEventTypeIds: CFG.excludeEventTypeIds || ['7', '4339'],   // Pferde, Windhunde
   reqPerSecond: zahl(CFG.maxRequestsPerSecond, 4),
   minSize:      zahl(CFG.minSize, 10),
+  // Rückfallwerte. Im Normalfall werden die ECHTEN Sätze je Markt verwendet:
+  // Betfair liefert marketBaseRate, Polymarket feeSchedule.rate.
   feeBf:        zahl(CFG.feeBetfairPercent, 5) / 100,
-  feePm:        zahl(CFG.feePolymarketPercent, 0) / 100,
+  // Wenn Polymarket Gebühren meldet, aber keinen Satz nennt, wird der
+  // ungünstigste beobachtete Satz angenommen. Eine unbekannte Gebühr darf
+  // NIE als null durchgehen, sonst entstehen Chancen, die es nicht gibt.
+  pmFallbackFee: zahl(CFG.pmFallbackFeePercent, 7) / 100,
   minRoi:       zahl(CFG.minRoiPercent, 0.5),
   // Schwelle für schnelle Märkte, solange der Schlüssel verzögerte Kurse liefert
   minRoiSchnell: zahl(CFG.minRoiSchnellPercent, 2.5),
@@ -339,10 +344,17 @@ async function katalogFenster(etId, vonMs, bisMs, tiefe) {
   }
   if (!res) return;
   for (const c of res) {
+    // Betfair nennt den Kommissionssatz je Markt selbst. Er ist NICHT überall 5 %.
+    const bd = c.description || {};
+    const satz = isFinite(+bd.marketBaseRate) && +bd.marketBaseRate >= 0
+      ? +bd.marketBaseRate / 100
+      : O.feeBf;
     KATALOG.set(c.marketId, {
       ev: (c.event && c.event.name) || '',
       mn: c.marketName || '',
-      mt: (c.description && c.description.marketType) || '',
+      mt: bd.marketType || '',
+      satz: satz,
+      rabattOk: bd.discountAllowed !== false,
       start: c.marketStartTime || (c.event && c.event.openDate) || null,
       etId: etId,
       runners: (c.runners || []).map(r => ({ id: r.selectionId, name: r.runnerName }))
@@ -454,10 +466,19 @@ async function pmListe() {
       let outs, toks;
       try { outs = JSON.parse(m.outcomes); toks = JSON.parse(m.clobTokenIds); } catch (e) { continue; }
       if (!outs || outs.length !== 2 || !toks || toks.length !== 2) continue;
+      // Gebührenangaben des Marktes übernehmen. Ist etwas unklar, wird der
+      // ungünstigste beobachtete Satz angenommen — eine unbekannte Gebühr
+      // darf niemals als null durchgehen, sonst entstehen Scheinchancen.
+      const fs = m.feeSchedule || {};
+      const anAus = m.feesEnabled !== false;
+      const satz = anAus ? (isFinite(+fs.rate) && +fs.rate >= 0 ? +fs.rate : O.pmFallbackFee) : 0;
       gefunden.set(String(m.id), {
         q: m.question || '', outs, toks, slug: m.slug || '',
         liq: parseFloat(m.liquidity || 0), vol: parseFloat(m.volume || 0),
-        cat: kategorie(m.question)
+        cat: kategorie(m.question),
+        feeSatz: satz,
+        feeExp: isFinite(+fs.exponent) && +fs.exponent > 0 ? +fs.exponent : 1,
+        feeTyp: String(m.feeType || (anAus ? 'unbekannt' : 'keine'))
       });
     }
     off += 100;
@@ -524,7 +545,44 @@ const istUnentschieden = n => /^(the )?(draw|tie|unentschieden)$/i.test(String(n
 
 /* ═══════════════ Arbitrage-Rechnung (der Kern) ═══════════════ */
 
+/* ── Gebühren ─────────────────────────────────────────────────────────────
+   Beide Bücher nehmen Gebühren, aber auf völlig verschiedene Weise. Wer das
+   in einen Topf wirft, rechnet sich Chancen herbei, die es nicht gibt.
+
+   BETFAIR (Börse, du wettest gegen andere Nutzer):
+     Kommission auf den NETTOGEWINN eines Marktes. Der Satz steht pro Markt
+     in marketBaseRate und ist NICHT überall 5 % — je nach Markt 2 bis 7 %.
+         qE = 1 + (q - 1) * (1 - Satz)
+
+   POLYMARKET (Orderbuch, du handelst gegen andere Nutzer):
+     Gebühr auf die ANTEILE, nicht auf den Gewinn, und abhängig vom Preis:
+         Gebühr je Anteil = Satz * min(p, 1-p)^Exponent
+     Sie ist bei p = 0,50 am höchsten und fällt zu den Rändern hin ab.
+     Nur Taker zahlen — und wer zum Briefkurs kauft, ist immer Taker.
+         qE = (1 - Gebühr je Anteil) / p
+
+   WICHTIG: Beide Bücher sind Marktplätze zwischen Nutzern. Genau deshalb
+   fallen diese Gebühren überhaupt an. Gegen einen Buchmacher zu wetten
+   kostet keine Kommission, dafür ist die Quote schlechter und man fliegt
+   als Gewinner raus. Solche Bücher werden hier bewusst nicht angefasst,
+   also gibt es hier auch keine Buchmacher-Marge einzurechnen.
+   ───────────────────────────────────────────────────────────────────────── */
+
 const effektiv = (q, gebuehr) => 1 + (q - 1) * (1 - gebuehr);
+
+// Gebühr je Anteil bei Polymarket
+function pmGebuehr(preis, satz, exponent) {
+  if (!(satz > 0)) return 0;
+  const seite = Math.min(preis, 1 - preis);
+  return satz * Math.pow(seite, exponent > 0 ? exponent : 1);
+}
+// Effektivquote beim Kauf zum Briefkurs, Gebühr eingerechnet
+function pmEffektiv(preis, satz, exponent) {
+  if (!(preis > 0 && preis < 1)) return 0;
+  const netto = 1 - pmGebuehr(preis, satz, exponent);
+  if (!(netto > 0)) return 0;
+  return netto / preis;
+}
 
 /**
  * Zwei Beine, die zusammen ALLE Ausgänge abdecken.
@@ -573,6 +631,7 @@ function bfIndex() {
     }
     if (rs.length < 2) return;
     const eintrag = { mid, ev: k.ev, mn: k.mn, mt: k.mt, start: k.start, inplay: buch.inplay,
+                      satz: k.satz != null ? k.satz : O.feeBf,   // Kommission dieses Marktes
                       ts: buch.ts || 0, runners: rs, anzahl: n };
     for (const r of rs) {
       const w = schluessel(r.name);
@@ -752,17 +811,20 @@ function crossBookChancen() {
     const andere = m.runners.filter(r => r !== subjekt);
 
     // Betfair-Bein für "Subjekt gewinnt": schlicht zurückwetten
+    // Kommissionssatz dieses konkreten Betfair-Marktes, nicht irgendein Mittelwert
+    const satzBf = m.satz != null ? m.satz : O.feeBf;
+
     const bfJa = subjekt.q > 1
-      ? { qEff: effektiv(subjekt.q, O.feeBf), maxEinsatz: subjekt.size, art: 'back', runners: [subjekt] }
+      ? { qEff: effektiv(subjekt.q, satzBf), maxEinsatz: subjekt.size, art: 'back', runners: [subjekt] }
       : null;
 
     // Betfair-Bein für "Subjekt gewinnt NICHT": entweder dagegenhalten (lay),
     // oder bei kleinem Feld alle übrigen zurückwetten. Das Bessere gewinnt.
     const kandidatenNein = [];
-    const lay = layBein(subjekt, O.feeBf);
+    const lay = layBein(subjekt, satzBf);
     if (lay) kandidatenNein.push(lay);
     if (m.anzahl <= 3 && andere.length && andere.every(r => r.q > 1)) {
-      const b = buendeln(andere, O.feeBf);
+      const b = buendeln(andere, satzBf);
       if (b) { b.art = 'back'; kandidatenNein.push(b); }
     }
     const bfNein = kandidatenNein.sort((a, b) => b.qEff - a.qEff)[0] || null;
@@ -782,8 +844,11 @@ function crossBookChancen() {
       const groesse = pm.size[v.pmIdx];
       if (!(preis > 0 && preis < 1)) continue;
 
+      // Polymarket-Gebühr hängt am Preis und am Markt — nicht pauschal null
+      const qEffPm = pmEffektiv(preis, pm.feeSatz, pm.feeExp);
+      if (!(qEffPm > 1)) continue;
       const pmBein = {
-        qEff: effektiv(1 / preis, O.feePm),
+        qEff: qEffPm,
         maxEinsatz: groesse * preis      // Anteile * Preis = einsetzbarer Betrag
       };
       const r = rechne(pmBein, v.bf);
@@ -827,7 +892,10 @@ function crossBookChancen() {
           // Genug Stellen, damit sich die Einsätze daraus exakt nachrechnen lassen.
           // Wer nachrechnet, sollte immer von qEff ausgehen, nicht vom gerundeten Anteil.
           qEff: +best.pmBein.qEff.toFixed(6),
-          fee: O.feePm * 100,
+          // Was hier wirklich abgezogen wurde, in Prozent des Einsatzes
+          fee: +(pmGebuehr(preis, pm.feeSatz, pm.feeExp) / preis * 100).toFixed(3),
+          feeTyp: pm.feeTyp,
+          feeSatz: +(pm.feeSatz * 100).toFixed(2),
           anteil: +r.anteil1.toFixed(4),
           size: Math.floor(best.pmBein.maxEinsatz),
           link: pmLink
@@ -843,7 +911,8 @@ function crossBookChancen() {
             ? +(1 + 1 / (bfBein.L - 1)).toFixed(6)
             : +(1 / bfBein.runners.reduce((s, x) => s + 1 / x.q, 0)).toFixed(6),
           qEff: +bfBein.qEff.toFixed(6),
-          fee: O.feeBf * 100,
+          fee: +(satzBf * 100).toFixed(2),
+          feeTyp: 'Kommission auf den Gewinn',
           anteil: +r.anteil2.toFixed(4),
           size: Math.floor(bfBein.maxEinsatz),
           link: bfLink
@@ -866,11 +935,12 @@ function betfairIntern() {
     if (buch.status !== 'OPEN') return;
     const k = KATALOG.get(mid);
     if (!k || !buch.runners || buch.runners.length < 2) return;
+    const satzBf = k.satz != null ? k.satz : O.feeBf;
     let inv = 0, tiefe = Infinity, ok = true;
     for (const r of buch.runners) {
       if (r.st && r.st !== 'ACTIVE') { ok = false; break; }
       if (!(r.b > 1) || !(r.bs >= O.minSize)) { ok = false; break; }
-      const e = effektiv(r.b, O.feeBf);
+      const e = effektiv(r.b, satzBf);
       inv += 1 / e;
       tiefe = Math.min(tiefe, r.bs * e);
     }
@@ -881,9 +951,10 @@ function betfairIntern() {
     treffer.push({
       typ: 'betfair-intern', mid, ev: k.ev, mn: k.mn, mt: k.mt,
       roi: +roi.toFixed(3), inv: +inv.toFixed(5), max: Math.floor(tiefe), inplay: buch.inplay,
+      fee: +(satzBf * 100).toFixed(2),
       link: 'https://www.betfair.com/exchange/plus/market/' + mid,
       legs: buch.runners.map(r => {
-        const e = effektiv(r.b, O.feeBf);
+        const e = effektiv(r.b, satzBf);
         return { n: namen[r.id] || String(r.id), q: r.b, size: r.bs, anteil: +((1 / e) / inv * 100).toFixed(2) };
       })
     });
@@ -896,8 +967,14 @@ function polymarketIntern() {
   const treffer = [];
   PM.forEach((m, id) => {
     const summe = m.ask[0] + m.ask[1];
-    if (!(summe > 0) || summe >= 1) return;
-    const roi = (1 / summe - 1) * 100;
+    if (!(summe > 0)) return;
+    // Beide Seiten kaufen: eine gewinnt und zahlt 1 aus, abzüglich ihrer Gebühr.
+    // Welche gewinnt, weiß man vorher nicht, also mit der teureren rechnen.
+    const g = Math.max(pmGebuehr(m.ask[0], m.feeSatz, m.feeExp),
+                       pmGebuehr(m.ask[1], m.feeSatz, m.feeExp));
+    const auszahlung = 1 - g;
+    if (!(auszahlung > summe)) return;          // nach Gebühr kein Gewinn
+    const roi = (auszahlung / summe - 1) * 100;
     if (roi < O.minInternalRoi) return;
     const anteile = Math.min(m.size[0], m.size[1]);
     const max = Math.floor(anteile * summe);
@@ -905,6 +982,7 @@ function polymarketIntern() {
     treffer.push({
       typ: 'polymarket-intern', mid: id, ev: m.q.slice(0, 120), mn: 'beide Seiten kaufen', mt: m.cat,
       roi: +roi.toFixed(3), inv: +summe.toFixed(5), max, inplay: false,
+      fee: +(m.feeSatz * 100).toFixed(2), feeTyp: m.feeTyp,
       link: m.slug ? 'https://polymarket.com/event/' + m.slug : 'https://polymarket.com/markets',
       legs: [
         { n: m.outs[0], q: +(1 / m.ask[0]).toFixed(4), size: Math.floor(m.size[0]), anteil: +(m.ask[0] / summe * 100).toFixed(2) },
@@ -1131,7 +1209,7 @@ async function durchlauf() {
 /* ═══════════════ Nach aussen sichtbar: die Rechenlogik zum Nachprüfen ═══════════════ */
 
 module.exports = {
-  effektiv, rechne, buendeln, layBein, bfIndex, zuordnen, maxAlterMs, minRoiFuer,
+  effektiv, pmGebuehr, pmEffektiv, rechne, buendeln, layBein, bfIndex, zuordnen, maxAlterMs, minRoiFuer,
   schluessel, nrm, istUnentschieden,
   setKeyArt: (a) => { KEY_ART = a; }, getKeyArt: () => KEY_ART, istVerzoegert,
   crossBookChancen, schnittmengeIds, betfairIntern, polymarketIntern,
@@ -1148,7 +1226,12 @@ if (!ALS_PROGRAMM) return;
   console.log('Quellen: Betfair/96ex Exchange (nur Boerse, gegen andere Nutzer) + Polymarket');
   console.log('Zugangsdaten bleiben lokal. Hochgeladen werden nur Quoten und Ergebnisse.');
   console.log('Takt: heiss ' + O.hotSeconds + 's | breit ' + O.warmSeconds + 's | Neuerfassung ' + O.coldSeconds + 's');
-  console.log('Gebuehren: Betfair ' + (O.feeBf * 100) + '% · Polymarket ' + (O.feePm * 100) + '%');
+  console.log('Gebuehren: je Markt aus der Quelle gelesen.');
+  console.log('  Betfair    = Kommission auf den Gewinn (marketBaseRate, meist 2-7 %)');
+  console.log('  Polymarket = Gebuehr je Anteil, preisabhaengig: Satz * min(p, 1-p)');
+  console.log('               (nur Taker zahlen, und wer zum Briefkurs kauft ist Taker)');
+  console.log('  Rueckfall wenn eine Quelle schweigt: Betfair ' + (O.feeBf*100).toFixed(1) +
+              ' % · Polymarket ' + (O.pmFallbackFee*100).toFixed(1) + ' %');
   console.log('Meldeschwelle: ab ' + O.minRoi + '% Rendite und ' + O.minStake + ' moeglichem Einsatz');
   console.log('  (bei verzoegertem App-Key gilt fuer laufende und bald startende');
   console.log('   Spiele stattdessen ' + O.minRoiSchnell + '% — die Art des Keys erkennt das Programm selbst)');
