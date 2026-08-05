@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=22"></script>
+<script src="config.js?v=23"></script>
 <style>
   :root{
     --void:#060704; --void2:#0a0b07;
@@ -121,7 +121,14 @@
   .acct .an{font-size:12px;font-weight:600}
   .acct .as{display:flex;align-items:center;gap:6px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-top:2px}
   .acct .as .d{width:6px;height:6px;background:var(--dim)}
-  .acct .as .d.live{background:var(--pos);box-shadow:0 0 6px var(--pos)}
+  .acct .as .d.live{background:var(--pos);box-shadow:0 0 6px var(--pos);animation:pulse 1.6s infinite}
+  .acct .as .d.err{background:var(--neg)}
+  /* Die kleine Zeile darunter: was gerade wirklich gescannt wird */
+  .acct .alive{display:block;font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-top:3px;
+    line-height:1.45;white-space:normal;word-break:break-word}
+  .acct.kaputt{border-color:#5c2a1e;background:#0d0806}
+  .acct.kaputt .as{color:var(--neg)}
+  .acct.kaputt .alive{color:#b9836f}
   .acct .as .d.err{background:var(--neg)}
   .acct .as .d.demo{background:var(--gold)}
   .acct.on .as{color:var(--pos)}
@@ -851,8 +858,9 @@ function pollPM(){
     .then(function(){
       var n=0; mkMap.forEach(function(m){ if(!m.demo)n++; });
       state.pmHandelbar=n;
+      markiereVersuch('pm');
       if(!n){ state.accounts.pm.status='error'; state.pmErr='Polymarket antwortet, liefert aber keine handelbaren Kurse'; }
-      else { state.accounts.pm.status='live'; state.pmErr=''; }
+      else { state.accounts.pm.status='live'; state.pmErr=''; markiereOk('pm'); }
       if(!state._pmLogged){ state._pmLogged=true; if(window.__ar)window.__ar.logConn('pm','polymarket'); }
     })
     .catch(function(e){ state.accounts.pm.status='error'; state.pmErr=grundText(e); })
@@ -948,7 +956,8 @@ function pollSX(){
       return {teamA:t[0]||'', teamB:t[1]||'', q1:+d.q1, q2:+d.q2, link:d.link, ev:d.ev, arb:d.arb, league:d.league};
     }).filter(function(x){return x.q1>1&&x.q2>1;});
     sxLast=Date.now();
-    if(sxRaw.length){ state.accounts.ob.status='live'; state.sxGrund=''; }
+    markiereVersuch('ob');
+    if(sxRaw.length){ state.accounts.ob.status='live'; state.sxGrund=''; markiereOk('ob'); }
     else { state.accounts.ob.status='error'; state.sxGrund='Proxy antwortet, liefert aber keine Quoten'; }
     applySX();
     if(!state._sxLogged){ state._sxLogged=true; if(window.__ar)window.__ar.logConn('ob','sxbet'); }
@@ -969,7 +978,10 @@ function pollBF(){
 
     // Ehrlicher Zustand statt bloss "live". Eine laufende Bridge, bei der Betfair
     // klemmt, ist NICHT live — sie meldet nur, dass sie noch da ist.
+    markiereVersuch('bf');
     var laeuft = !!(res && res.live);
+    // Nur als "gut" zählen, wenn die Bridge frisch ist UND Betfair wirklich liefert
+    if(laeuft && bfRaw.length && st.bf_ok!==false) markiereOk('bf');
     if(!laeuft && !bfRaw.length){
       state.accounts.bf.status='nobridge';
       state.bfGrund = st.zeit
@@ -1178,23 +1190,84 @@ function processSignals(){
 
 /* ---- Konten-UI ---- */
 var ACC=[['pm','Polymarket','PM'],['ob','SX Bet','SX'],['bf','Betfair / Orbit','BF']];
+
+/* ── Überwachung ───────────────────────────────────────────────────────────
+   Der Status darf sich nicht nur ändern, wenn zufällig eine Antwort eintrifft.
+   Bleibt der Zyklus stehen, drosselt der Browser den Tab oder geht das Terminal
+   aus, muss die Anzeige das VON SELBST bemerken. Deshalb läuft hier eine Uhr,
+   die im Sekundentakt prüft, wie alt die letzte gute Antwort je Quelle ist,
+   und den Status notfalls gegen die letzte Meldung herabstuft.
+   Lieber "getrennt" anzeigen als fälschlich "Live". */
+var OK={pm:0, ob:0, bf:0};        // Zeitpunkt der letzten brauchbaren Antwort
+var VERSUCH={pm:0, ob:0, bf:0};   // Zeitpunkt des letzten Versuchs
+var SEIT_START=Date.now();        // seit wann überhaupt versucht wird
+var GEDULD=30000;                 // so lange darf "verbindet …" stehen bleiben
+
+// Ab wann gilt eine Quelle als abgerissen? Grosszuegig genug fuer einen
+// Aussetzer, streng genug um ein totes Terminal zu bemerken.
+var TOT={pm:75000, ob:120000, bf:260000};
+
+function markiereOk(k){ OK[k]=Date.now(); VERSUCH[k]=Date.now(); }
+function markiereVersuch(k){ VERSUCH[k]=Date.now(); }
+
+function alterVon(k){ return OK[k]? Date.now()-OK[k] : null; }
+function alterText(ms){
+  if(ms==null) return 'noch nie';
+  var s=Math.round(ms/1000);
+  if(s<60) return 'vor '+s+' s';
+  if(s<3600) return 'vor '+Math.round(s/60)+' Min';
+  return 'vor '+Math.round(s/3600)+' Std';
+}
+
+// Was tun, wenn es klemmt — konkret, nicht "Fehler"
+var HILFE={
+  pm:'Polymarket ist offen zugänglich. Internet, VPN oder Werbeblocker prüfen.',
+  ob:'Der Proxy antwortet nicht. Ohne SX Bet läuft der Rest weiter.',
+  bf:'Auf dem PC muss betfair-bridge.exe laufen und das Fenster offen bleiben. Läuft sie, aber Betfair klemmt, steht der Grund im Bridge-Fenster.'
+};
+
 // Grund der Störung je Quelle — damit nie nur "Fehler" dasteht
 function grundVon(k){
-  if(k==='pm')return state.pmErr||'';
-  if(k==='ob')return state.sxGrund||'';
-  if(k==='bf')return state.bfGrund||'';
+  var g = k==='pm'? (state.pmErr||'') : k==='ob'? (state.sxGrund||'') : (state.bfGrund||'');
+  if(g) return g;
+  // Kein gemeldeter Fehler, aber die Daten sind alt: dann ist DAS der Grund
+  if(!state.srcOn[k]) return '';
+  if(state.accounts[k].status==='nobridge') return 'Es läuft keine Bridge';
+  var a=alterVon(k);
+  if(a===null && Date.now()-SEIT_START >= GEDULD) return 'Seit dem Laden der Seite kam nichts an';
+  if(a!==null && a>TOT[k]) return 'Keine frischen Daten mehr ('+alterText(a)+')';
   return '';
 }
+
+/* Der tatsächliche Zustand — die Uhr hat immer das letzte Wort.
+   Was der letzte Abruf gemeldet hat, zählt nur solange es frisch ist. */
+function zustand(k){
+  if(!state.srcOn[k]) return 'off';
+  var s=state.accounts[k].status;
+  if(s==='demo') return 'demo';
+  // Eine ausdrückliche Absage der Abfrage gilt sofort, ohne Wartezeit
+  if(s==='nobridge') return 'tot';
+  var a=alterVon(k);
+  if(a===null){
+    // Noch nie etwas erhalten. Kurz Geduld, danach ist es schlicht keine Verbindung
+    // und darf nicht ewig als "verbindet" stehenbleiben.
+    return (Date.now()-SEIT_START < GEDULD) ? 'verbindet' : 'tot';
+  }
+  if(a>TOT[k]) return 'tot';
+  if(s==='live') return 'live';
+  if(s==='err'||s==='error') return 'fehler';
+  if(s==='stale') return 'alt';
+  return 'verbindet';
+}
 function statusText(k){
-  if(!state.srcOn[k])return['off','Getrennt — klick zum Verbinden'];
-  var s=state.accounts[k].status, g=grundVon(k);
-  if(s==='live')return['live','Live verbunden — klick zum Trennen'];
-  if(s==='error'||s==='err')return['err',g||'Getrennt / Fehler'];
-  if(s==='demo')return['demo','Demo (simuliert)'];
-  if(s==='needkey')return['demo','Proxy erreichbar · Betfair-Zugang fehlt'];
-  if(s==='nobridge')return['',g||'Bridge nicht gestartet — klicken für Anleitung'];
-  if(s==='stale')return['demo',g||'Bridge veraltet (PC aus?)'];
-  if(s==='offline')return['','Getrennt · Proxy nötig'];
+  var z=zustand(k), g=grundVon(k);
+  if(z==='off')       return['off','Getrennt — klick zum Verbinden'];
+  if(z==='live')      return['live','Verbunden'];
+  if(z==='demo')      return['demo','Demo (simuliert)'];
+  if(z==='verbindet') return['','verbindet …'];
+  if(z==='alt')       return['demo', g||'Daten veralten'];
+  if(z==='fehler')    return['err', g||'Störung'];
+  if(z==='tot')       return['err', g||'Nicht verbunden'];
   return['','…'];
 }
 
@@ -1257,6 +1330,24 @@ function renderSchnitt(){
   if(kopf) kopf.onclick=function(){ state.schnittZu=!state.schnittZu; renderSchnitt(); };
 }
 
+/* ---- Kurzfassung direkt unter dem Anbieternamen: was läuft gerade ---- */
+function kurzInfo(k){
+  var st=state.bfStats||{}, a=alterVon(k), z=zustand(k);
+  if(!state.srcOn[k]) return 'abgeschaltet';
+  if(z==='verbindet') return 'baue Verbindung auf …';
+  if(z==='tot') return HILFE[k];
+  if(k==='pm'){
+    return (state.pmHandelbar||0)+' von '+(pmPicks.length||0)+' Märkten handelbar · '+alterText(a)+
+           (state._wsOn? ' · Echtzeit an':'');
+  }
+  if(k==='bf'){
+    if(st.bf_katalog) return (st.bf_gelesen||0)+' von '+st.bf_katalog+' Märkten gelesen'+
+      (st.gemeinsam!=null? ' · '+st.gemeinsam+' auf beiden Büchern':'')+' · '+alterText(a);
+    return (state.bfCount||0)+' Quoten von der Bridge · '+alterText(a);
+  }
+  return (state.sxCount||0)+' Quoten · '+(state.sxMatches||0)+' zugeordnet · '+alterText(a);
+}
+
 /* ---- Was jede Quelle GERADE tut: echte Zahlen, keine Höchstwerte ---- */
 function renderQuellen(){
   var el=document.getElementById('srcAnalyse'); if(!el)return;
@@ -1305,11 +1396,17 @@ function renderQuellen(){
 function updateAccountsUI(){
   try{ renderQuellen(); }catch(e){}
   try{ renderSchnitt(); }catch(e){}
+  var schutz=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
   $('#acctList').innerHTML=ACC.map(function(a){
-    var k=a[0], st=statusText(k), on=state.srcOn[k]&&(st[0]==='live'||st[0]==='demo');
+    var k=a[0], st=statusText(k), z=zustand(k), on=state.srcOn[k]&&(st[0]==='live'||st[0]==='demo');
     var bal=k==='pm'?state.balPm:state.balOb;
-    return '<div class="acct '+k+(on?' on':'')+'" data-acct="'+k+'" style="cursor:pointer;user-select:none" title="Klicken für Konto verbinden &amp; Einstellungen"><div class="ai"><span class="aico">'+a[2]+'</span>'+
-      '<span><span class="an">'+a[1]+'</span><span class="as"><span class="d '+st[0]+'"></span>'+st[1]+'</span></span></div>'+
+    var schlecht=(z==='tot'||z==='fehler');
+    return '<div class="acct '+k+(on?' on':'')+(schlecht?' kaputt':'')+'" data-acct="'+k+'" style="cursor:pointer;user-select:none" title="Klicken für Konto verbinden &amp; Einstellungen">'+
+      '<div class="ai" style="flex:1;min-width:0"><span class="aico">'+a[2]+'</span>'+
+      '<span style="min-width:0"><span class="an">'+a[1]+'</span>'+
+        '<span class="as"><span class="d '+st[0]+'"></span>'+schutz(st[1])+'</span>'+
+        '<span class="alive">'+schutz(kurzInfo(k))+'</span></span></div>'+
       '<span class="num" style="font-size:12px;color:'+(bal>0?'var(--txt)':'var(--dim)')+'">'+eur(bal)+'</span></div>';
   }).join('');
   $('#plCount').textContent=state.placed;
@@ -1775,6 +1872,22 @@ drawGlyph(); setRunning(true); updateCalc(); updateAccountsUI();
 cycle();
 setInterval(cycle, CONFIG.POLL_MS);
 setInterval(function(){ render(); }, 1000);  // Frische/Alter aktualisieren
+
+/* Überwachung: läuft unabhängig vom Abrufzyklus. Selbst wenn gar nichts mehr
+   antwortet oder der Browser den Tab einfriert, altert die Anzeige weiter und
+   schlägt um, statt auf einem alten "Live" stehenzubleiben. */
+setInterval(function(){
+  try{
+    // Hängt ein Abruf fest? Dann läuft die Zeit trotzdem weiter und
+    // zustand() stuft die Quelle von selbst herab.
+    updateAccountsUI();
+  }catch(e){}
+}, 1000);
+
+// Kommt der Tab aus dem Hintergrund zurück, sofort neu prüfen statt zu warten
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden){ try{ updateAccountsUI(); }catch(e){} cycle(); }
+});
 
 function flashBlip(){ var b=$('#radarBlip'); if(!b)return; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); }
 function agoTxt(ts){ if(!ts)return '—'; var s=(Date.now()-new Date(ts).getTime())/1000; if(s<60)return 'gerade'; if(s<3600)return Math.floor(s/60)+' min'; if(s<86400)return Math.floor(s/3600)+' h '+Math.floor((s%3600)/60)+' min'; return Math.floor(s/86400)+' Tagen'; }

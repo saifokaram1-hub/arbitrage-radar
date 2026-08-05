@@ -179,7 +179,7 @@
       <div class="g"><div class="v">6,5 s</div><div class="l">Vollscan Polymarket</div><div class="s">38 Anfragen</div></div>
       <div class="g"><div class="v">20 s</div><div class="l">schnellster Takt</div><div class="s">breit 150 s · voll 900 s</div></div>
       <div class="g"><div class="v pos">62</div><div class="l">Prüfungen bestanden</div><div class="s">0 fehlgeschlagen</div></div>
-      <div class="g"><div class="v">17</div><div class="l">Denkfehler behoben</div><div class="s">1 offen</div></div>
+      <div class="g"><div class="v">18</div><div class="l">Denkfehler behoben</div><div class="s">1 offen</div></div>
     </div>
 
     <section>
@@ -388,6 +388,14 @@ Maximum = verfügbare Größe × (L − 1)</pre>
         </div></div>
 
         <div class="row mit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Die Verbindungsanzeige konnte einfrieren</b><span class="tag mit">mittel</span></div>
+          <div class="ba">
+            <div class="vor"><span class="lab">vorher</span>Der Status änderte sich nur, wenn eine Antwort eintraf. Blieb der Abrufzyklus stehen, ging das Terminal aus oder drosselte der Browser den Tab im Hintergrund, blieb „Live" einfach stehen — obwohl längst nichts mehr ankam.</div>
+            <div class="jetzt"><span class="lab">jetzt</span>Eine Uhr läuft im Sekundentakt unabhängig vom Abruf und stuft jede Quelle nach ihrem eigenen Alter herab. Unter jedem Anbieter steht mitlaufend, was gerade gescannt wird und wie alt die Daten sind. Klemmt etwas, steht dort auch, was zu tun ist.</div>
+          </div>
+        </div></div>
+
+        <div class="row mit"><div class="stripe"></div><div class="body">
           <div class="ttl"><b>Die beiden Seiten wurden zu unterschiedlichen Zeitpunkten gelesen</b><span class="tag mit">mittel</span></div>
           <div class="ba">
             <div class="vor"><span class="lab">vorher</span>Erst lief der Betfair-Durchlauf, danach der Polymarket-Scan, dann wurde gerechnet. Je nach Stufe lagen zwischen den beiden Kursen bis zu zwei Minuten. Die Altersprüfung hat solche Paare verworfen, aber damit fielen auch brauchbare Chancen weg.</div>
@@ -474,8 +482,8 @@ Maximum = verfügbare Größe × (L − 1)</pre>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=22"></script>
-<script src="pdf.js?v=22"></script>
+<script src="config.js?v=23"></script>
+<script src="pdf.js?v=23"></script>
 <script>
 // PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.
 document.getElementById('pdfBtn').addEventListener('click', function(){
