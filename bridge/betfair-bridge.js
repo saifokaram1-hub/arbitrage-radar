@@ -149,6 +149,7 @@ const O = {
   minRoi:       zahl(CFG.minRoiPercent, 0.5),
   minStake:     zahl(CFG.minStake, 20),
   minInternalRoi: zahl(CFG.minInternalRoiPercent, 0.3),
+  maxDataAge:   zahl(CFG.maxDataAgeSeconds, 0),   // 0 = automatisch nach Marktgeschwindigkeit
   scanPolymarket: CFG.scanPolymarket !== false,
   internalArb:  CFG.internalArb !== false,
   uploadLimit:  zahl(CFG.uploadLimit, 4000),
@@ -327,6 +328,10 @@ async function buecherHolen(ids) {
     for (const b of books || []) {
       BUCH.set(b.marketId, {
         status: b.status, inplay: !!b.inplay,
+        // Lesezeitpunkt festhalten. Ohne den könnte ein Kurs aus dem
+        // 15-Minuten-Volldurchlauf gegen einen sekundenfrischen Polymarket-Preis
+        // gerechnet und als aktuelle Chance gemeldet werden.
+        ts: Date.now(),
         runners: (b.runners || []).map(r => {
           const back = (r.ex && r.ex.availableToBack && r.ex.availableToBack[0]) || null;
           const lay  = (r.ex && r.ex.availableToLay  && r.ex.availableToLay[0])  || null;
@@ -427,6 +432,7 @@ async function polymarketScan() {
     if (a.p < 0.02 || a.p > 0.98 || b.p < 0.02 || b.p > 0.98) return;
     m.ask = [a.p, b.p];
     m.size = [a.s, b.s];
+    m.ts = Date.now();
     PM.set(id, m);
     handelbar++;
   });
@@ -493,7 +499,8 @@ function bfIndex() {
       rs.push({ name, q: r.b, size: r.bs, lq: r.l, lsize: r.ls });
     }
     if (rs.length < 2) return;
-    const eintrag = { mid, ev: k.ev, mn: k.mn, mt: k.mt, start: k.start, inplay: buch.inplay, runners: rs, anzahl: n };
+    const eintrag = { mid, ev: k.ev, mn: k.mn, mt: k.mt, start: k.start, inplay: buch.inplay,
+                      ts: buch.ts || 0, runners: rs, anzahl: n };
     for (const r of rs) {
       const w = schluessel(r.name);
       if (!w) continue;
@@ -614,16 +621,42 @@ function buendeln(runners, gebuehr) {
   return { qEff, maxEinsatz: isFinite(maxEinsatz) ? maxEinsatz : 0, runners };
 }
 
+/**
+ * Wie alt darf ein Kurs höchstens sein, damit die Chance noch etwas wert ist?
+ * Ein laufendes Spiel bewegt sich im Sekundentakt, eine Wette auf den Ballon d'Or
+ * im Dezember bewegt sich in Tagen. Beim Delayed Key kommt Betfairs eigene
+ * Verzögerung noch obendrauf, deshalb ist die Grenze hier bewusst eng.
+ */
+function maxAlterMs(markt) {
+  if (O.maxDataAge) return O.maxDataAge * 1000;
+  if (markt.inplay) return 60e3;
+  const bis = markt.start ? Date.parse(markt.start) - Date.now() : Infinity;
+  if (bis < 2 * 3600e3)  return 180e3;
+  if (bis < 7 * 86400e3) return 600e3;
+  return 1800e3;
+}
+
 function crossBookChancen() {
   if (!PM.size || !KATALOG.size) return [];
   const idx = bfIndex();
   if (!idx.size) return [];
   const treffer = [];
+  let verworfenAlt = 0;
 
   PM.forEach((pm, pmId) => {
     const zu = zuordnen(pm, idx);
     if (!zu) return;
     const m = zu.markt;
+
+    // Beide Beine müssen frisch genug sein. Ein Betfair-Kurs aus dem
+    // Volldurchlauf kann Minuten alt sein — den gegen einen sekundenfrischen
+    // Polymarket-Preis zu rechnen ergibt eine Chance, die es nicht mehr gibt.
+    const jetzt = Date.now();
+    const alterBf = m.ts ? Math.round((jetzt - m.ts) / 1000) : null;
+    const alterPm = pm.ts ? Math.round((jetzt - pm.ts) / 1000) : null;
+    const grenze = maxAlterMs(m);
+    if ((m.ts && jetzt - m.ts > grenze) || (pm.ts && jetzt - pm.ts > grenze)) { verworfenAlt++; return; }
+
     const subjekt = zu.subjekt;
     const andere = m.runners.filter(r => r !== subjekt);
 
@@ -691,6 +724,8 @@ function crossBookChancen() {
       maxStake: Math.floor(r.maxStake),
       risk: risk,
       tage: tage,
+      alterBf: alterBf,        // Sekunden seit dem Betfair-Kurs
+      alterPm: alterPm,        // Sekunden seit dem Polymarket-Kurs
       ts: new Date().toISOString(),
       legs: [
         {
@@ -707,10 +742,10 @@ function crossBookChancen() {
         },
         {
           book: 'betfair',
+          // Kurz halten: die Serverseite kürzt lange Texte, sonst bricht der Satz mitten ab.
           pick: bfBein.art === 'lay'
-            ? 'LAY (dagegenhalten): ' + subjekt.name + ' @ ' + bfBein.L +
-              '   — du hältst dagegen, dass er gewinnt'
-            : 'BACK: ' + bfBein.runners.map(x => x.name + ' @ ' + x.q).join('  +  '),
+            ? 'LAY (dagegenhalten): ' + subjekt.name + ' @ ' + bfBein.L
+            : 'BACK: ' + bfBein.runners.map(x => x.name + ' @ ' + x.q).join(' + '),
           art: bfBein.art,
           q: bfBein.art === 'lay'
             ? +(1 + 1 / (bfBein.L - 1)).toFixed(6)
@@ -726,6 +761,7 @@ function crossBookChancen() {
   });
 
   treffer.sort((a, b) => b.roi - a.roi);
+  treffer.verworfenAlt = verworfenAlt;
   return treffer;
 }
 
@@ -898,7 +934,8 @@ async function durchlauf() {
     const stats = {
       bf_katalog: KATALOG.size, bf_gelesen: gelesen, pm_handelbar: pmAnzahl,
       stufe, sweep_s: dauer, hochgeladen: markets.length,
-      opps: opps.length, arbs: arbs.length, takt_ms: minGap, zeit: new Date().toISOString()
+      opps: opps.length, arbs: arbs.length, veraltet: opps.verworfenAlt || 0,
+      takt_ms: minGap, zeit: new Date().toISOString()
     };
 
     const res = await push(markets, arbs.slice(0, 200), opps.slice(0, 200), stats);
@@ -941,7 +978,7 @@ async function durchlauf() {
 /* ═══════════════ Nach aussen sichtbar: die Rechenlogik zum Nachprüfen ═══════════════ */
 
 module.exports = {
-  effektiv, rechne, buendeln, layBein, bfIndex, zuordnen, schluessel, nrm, istUnentschieden,
+  effektiv, rechne, buendeln, layBein, bfIndex, zuordnen, maxAlterMs, schluessel, nrm, istUnentschieden,
   crossBookChancen, betfairIntern, polymarketIntern,
   pmListe, pmKurse, polymarketScan, kategorie,
   PM, KATALOG, BUCH, O

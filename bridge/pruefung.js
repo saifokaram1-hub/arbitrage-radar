@@ -286,7 +286,51 @@ console.log('\n══════════ 9. Cross-Book im Zweikampf ══�
   }
 }
 
-console.log('\n══════════ 8. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
+console.log('\n══════════ 10. Veraltete Kurse dürfen nicht als Chance gelten ══════════\n');
+{
+  // Dieselbe echte Chance wie oben, aber das Betfair-Bein ist alt.
+  function bauen(alterBfSekunden, startInStunden){
+    B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
+    B.PM.set('t', {
+      q: 'Will the Lakers beat the Celtics?', outs: ['Yes','No'],
+      toks:['a','b'], slug:'x', liq:5000, vol:20000, cat:'Basketball',
+      ask:[0.44,0.60], size:[3000,3000], ts: Date.now()
+    });
+    B.KATALOG.set('1.777', {
+      ev:'Lakers v Celtics', mn:'Money Line', mt:'MONEY_LINE',
+      start: new Date(Date.now() + startInStunden*3600e3).toISOString(), etId:'7522',
+      runners:[{id:11,name:'Los Angeles Lakers'},{id:22,name:'Boston Celtics'}]
+    });
+    B.BUCH.set('1.777', {
+      status:'OPEN', inplay:false, ts: Date.now() - alterBfSekunden*1000,
+      runners:[{id:11,st:'ACTIVE',b:1.90,bs:900,l:1.92,ls:500},
+               {id:22,st:'ACTIVE',b:2.50,bs:900,l:2.54,ls:500}]
+    });
+  }
+
+  bauen(5, 1);
+  const frisch = B.crossBookChancen();
+  pruefe('frischer Kurs wird gemeldet', frisch.length === 1,
+         frisch.length ? '(Betfair-Kurs ' + frisch[0].alterBf + ' s alt)' : '');
+  pruefe('Alter beider Beine wird mitgeliefert',
+         frisch.length === 1 && frisch[0].alterBf != null && frisch[0].alterPm != null);
+
+  bauen(400, 1);   // Spiel startet in 1 h -> Grenze 180 s
+  const alt = B.crossBookChancen();
+  pruefe('400 s alter Kurs vor Spielbeginn wird verworfen', alt.length === 0,
+         '(verworfen: ' + (alt.verworfenAlt||0) + ')');
+
+  bauen(400, 24*200);   // Langzeitwette -> Grenze 1800 s, 400 s sind ok
+  const lang = B.crossBookChancen();
+  pruefe('bei einer Langzeitwette sind 400 s unkritisch', lang.length === 1);
+
+  console.log('  Grenzen: laufend ' + B.maxAlterMs({inplay:true})/1000 + ' s' +
+    ' · Start in 1 h ' + B.maxAlterMs({start:new Date(Date.now()+3600e3).toISOString()})/1000 + ' s' +
+    ' · Start in 3 Tagen ' + B.maxAlterMs({start:new Date(Date.now()+3*86400e3).toISOString()})/1000 + ' s' +
+    ' · Langzeit ' + B.maxAlterMs({start:new Date(Date.now()+200*86400e3).toISOString()})/1000 + ' s');
+}
+
+console.log('\n══════════ 11. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
 {
   B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
   B.PM.set('test2', {
