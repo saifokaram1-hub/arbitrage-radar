@@ -10,7 +10,7 @@ window.arClient = function(){
   return window.__arc;
 };
 
-window.AR_VERSION = 28;   // zum Prüfen, welche Fassung geladen ist
+window.AR_VERSION = 29;   // zum Prüfen, welche Fassung geladen ist
 
 // Speicher sicher benutzen — in privaten Fenstern kann sessionStorage gesperrt sein
 window.arStore = {
@@ -44,18 +44,18 @@ window.arGate = function(){
   var ov=document.createElement('div');
   ov.id='arGateOverlay';
   ov.innerHTML =
-    '<div id="gateWrap" style="position:fixed;inset:0;z-index:2147483647;background:#0d0f0a;display:grid;place-items:center;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial,sans-serif">'+
-      '<div style="width:340px;max-width:calc(100vw - 32px);border:1px solid #3a3626;background:linear-gradient(180deg,#14160e,#101208);padding:30px 28px;text-align:center">'+
-        '<div style="width:40px;height:40px;margin:0 auto 16px;position:relative;border:1px solid #7f7130;background:#13150e">'+
+    '<div id="gateWrap" style="position:fixed;inset:0;z-index:2147483647;background:#12150e;display:grid;place-items:center;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial,sans-serif">'+
+      '<div style="width:340px;max-width:calc(100vw - 32px);border:1px solid #45412e;background:linear-gradient(180deg,#1a1d13,#15180f);padding:30px 28px;text-align:center">'+
+        '<div style="width:40px;height:40px;margin:0 auto 16px;position:relative;border:1px solid #7f7130;background:#181b12">'+
           '<span style="position:absolute;left:13px;top:19px;width:14px;height:1px;background:#c7b24c;box-shadow:0 -5px 0 #7f7130,0 5px 0 #7f7130"></span>'+
           '<span style="position:absolute;left:19px;top:13px;width:1px;height:14px;background:#c7b24c;box-shadow:-5px 0 0 #7f7130,5px 0 0 #7f7130"></span></div>'+
         '<div style="font-size:13px;letter-spacing:.3em;text-transform:uppercase;color:#f2f1e7;font-weight:700">Orion Panel</div>'+
         '<div style="font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:#a3a494;margin-top:6px">Interner Zugang</div>'+
         '<input id="gatePw" type="password" placeholder="Zugangspasswort" autocomplete="off" '+
-          'style="width:100%;height:42px;margin-top:22px;padding:0 12px;background:#14160e;border:1px solid #3a3626;color:#f2f1e7;font-size:14px;text-align:center;font-family:ui-monospace,Consolas,monospace">'+
+          'style="width:100%;height:42px;margin-top:22px;padding:0 12px;background:#1a1d13;border:1px solid #45412e;color:#f2f1e7;font-size:14px;text-align:center;font-family:ui-monospace,Consolas,monospace">'+
         '<button id="gateBtn" style="width:100%;height:42px;margin-top:12px;border:1px solid #7f7130;background:#1a1608;color:#e7d882;font:inherit;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;cursor:pointer">Entsperren</button>'+
         '<div id="gateErr" style="min-height:18px;margin-top:10px;font-size:11px;color:#d05a44;font-family:ui-monospace,monospace"></div>'+
-        '<div style="margin-top:14px;padding-top:14px;border-top:1px solid #2b2a1c;font-size:10.5px;color:#7a7c6c;line-height:1.6">'+
+        '<div style="margin-top:14px;padding-top:14px;border-top:1px solid #353425;font-size:10.5px;color:#8f9180;line-height:1.6">'+
           'Danach kannst du dich <b style="color:#a3a494">anmelden oder registrieren</b>.<br>Kein Zugangspasswort? Frag den Betreiber.</div>'+
       '</div></div>';
   var pw, btn, err;
@@ -118,7 +118,7 @@ window.arRequireAuth = async function(opts){
   const { data: profile } = await sb.rpc('my_profile');
   if(profile && profile.banned){
     await sb.auth.signOut();
-    document.body.innerHTML = '<div style="min-height:100vh;display:grid;place-items:center;background:#0d0f0a;color:#f2f1e7;font-family:ui-sans-serif,system-ui">'+
+    document.body.innerHTML = '<div style="min-height:100vh;display:grid;place-items:center;background:#12150e;color:#f2f1e7;font-family:ui-sans-serif,system-ui">'+
       '<div style="border:1px solid #6e2c22;background:#140a08;padding:34px 40px;max-width:420px;text-align:center">'+
       '<div style="font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:#d05a44;font-weight:800">Zugang gesperrt</div>'+
       '<p style="color:#a3a494;margin:14px 0 18px;font-size:13px">Dieser Account wurde vom Administrator gebannt.'+

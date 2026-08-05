@@ -169,8 +169,8 @@ const O = {
    erkennt, ob auf einem PC noch eine veraltete Bridge läuft, und den Nutzer
    auffordern kann, die neue Datei zu holen. BEI JEDER inhaltlichen Änderung
    an der Suchlogik hochzählen — sonst merkt niemand, dass er alt ist. */
-const BRIDGE_BUILD = 7;
-const BRIDGE_VERSION = "2.7";
+const BRIDGE_BUILD = 8;
+const BRIDGE_VERSION = "2.8";
 
 const BF_LOGIN = 'https://identitysso.betfair.com/api/login';
 const BF_KEEP  = 'https://identitysso.betfair.com/api/keepAlive';
@@ -794,7 +794,7 @@ function bestaetigtRueckwaerts(pmId, e, punkte) {
   let besser = false;
   PM.forEach((p, id) => {
     if (besser || id === pmId) return;
-    if (!p.fw || !p.kf) return;
+    wortMengen(p);
     const s = bewerte(p.fw, p.kf, e);
     if (s != null && s > punkte) besser = true;
   });
@@ -920,6 +920,43 @@ function schnittmengeIds() {
   return Array.from(ids);
 }
 
+/**
+ * Suchrichtung: BETFAIR ZUERST.
+ *
+ * Betfair ist das kleinere Buch und liefert saubere Angaben — Ereignisname,
+ * Markttyp, klare Teilnehmer, eigener Link. Polymarket hat ein Vielfaches an
+ * Märkten, aber nur eine Freitextfrage. Deshalb wird über die Betfair-Märkte
+ * gelaufen und zu JEDEM die beste Polymarket-Frage gesucht, nicht umgekehrt.
+ *
+ * Das hat zwei Folgen, die genau die bisherigen Fehler ausschliessen:
+ *  - Es gibt viel weniger Ausgangspunkte, also weniger Gelegenheiten für eine
+ *    zufällige Namensähnlichkeit.
+ *  - Der Betfair-Link steht von Anfang an fest und kann nicht mehr zu einem
+ *    anderen Markt gehören als die Quote, mit der gerechnet wurde.
+ */
+/* Wortmengen einer Frage. Normalerweise beim Einlesen vorbereitet — fehlen sie,
+   werden sie hier nachgezogen. Ein Markt darf niemals stillschweigend aus der
+   Suche fallen, nur weil ein Feld fehlt. */
+function wortMengen(pm) {
+  if (!pm.fw || !pm.kf) {
+    const w = nrm(pm.q || '').split(' ');
+    pm.fw = new Set(w.filter(x => x.length > 2));
+    pm.kf = new Set(w.filter(x => x.length > 1 && !STOPP.has(x)));
+  }
+  return pm;
+}
+
+function pmIndex() {
+  const idx = new Map();
+  PM.forEach((pm, id) => {
+    wortMengen(pm).fw.forEach(w => {
+      if (!idx.has(w)) idx.set(w, []);
+      idx.get(w).push({ id, pm });
+    });
+  });
+  return idx;
+}
+
 function crossBookChancen() {
   if (!PM.size || !KATALOG.size) return [];
   const idx = bfIndex();
@@ -927,10 +964,31 @@ function crossBookChancen() {
   const treffer = [];
   let verworfenAlt = 0, unplausibel = 0;
 
-  PM.forEach((pm, pmId) => {
+  // Alle Betfair-Märkte einmal sammeln (der Index führt sie je Stichwort mehrfach)
+  const bfMaerkte = new Map();
+  idx.forEach(liste => liste.forEach(e => bfMaerkte.set(e.mid, e)));
+  const pmIdx = pmIndex();
+
+  bfMaerkte.forEach(m => {
+    // Zu DIESEM Betfair-Markt die passendste Polymarket-Frage suchen
+    const kandidaten = new Map();
+    m.runners.forEach(r => merkmale(r.name).forEach(w => {
+      (pmIdx.get(w) || []).forEach(x => kandidaten.set(x.id, x.pm));
+    }));
+    if (!kandidaten.size) return;
+
+    let pm = null, pmId = null, besteWertung = -1;
+    kandidaten.forEach((kandidat, id) => {
+      wortMengen(kandidat);
+      const s = bewerte(kandidat.fw, kandidat.kf, m);
+      if (s != null && s > besteWertung) { besteWertung = s; pm = kandidat; pmId = id; }
+    });
+    if (!pm) return;
+
+    // Ausrichtung bestimmen: welcher Teilnehmer ist gemeint, welcher
+    // Polymarket-Ausgang heisst "dieser gewinnt"
     const zu = zuordnen(pm, idx, pmId);
-    if (!zu) return;
-    const m = zu.markt;
+    if (!zu || zu.markt.mid !== m.mid) return;   // beide Richtungen müssen auf denselben Markt zeigen
 
     // Beide Beine müssen frisch genug sein. Ein Betfair-Kurs aus dem
     // Volldurchlauf kann Minuten alt sein — den gegen einen sekundenfrischen

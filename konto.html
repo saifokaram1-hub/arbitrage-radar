@@ -6,32 +6,32 @@
 <title>Orion Panel — Mein Bereich</title>
 <meta name="robots" content="noindex, nofollow">
 <style>
-  :root{--void:#0d0f0a;--void2:#12140d;--line:#2b2a1c;--line2:#3a3626;--line3:#4e4630;--txt:#f2f1e7;--muted:#a3a494;--dim:#7a7c6c;--faint:#585a4c;--gold:#c7b24c;--gold-b:#e7d882;--gold-d:#7f7130;--pos:#b0d150;--neg:#d05a44;--mono:ui-monospace,"Cascadia Code",Consolas,monospace;--sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Arial,sans-serif}
+  :root{--void:#12150e;--void2:#171a11;--line:#353425;--line2:#45412e;--line3:#4e4630;--txt:#f2f1e7;--muted:#a3a494;--dim:#8f9180;--faint:#585a4c;--gold:#c7b24c;--gold-b:#e7d882;--gold-d:#7f7130;--pos:#b0d150;--neg:#d05a44;--mono:ui-monospace,"Cascadia Code",Consolas,monospace;--sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Arial,sans-serif}
   *{box-sizing:border-box}html,body{margin:0;padding:0}
   body{background:var(--void);color:var(--txt);font-family:var(--sans);font-size:14px;background-image:radial-gradient(120% 60% at 100% 0%,rgba(199,178,76,.05),transparent 55%)}
   .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
-  .cmd{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;padding:12px 20px;background:linear-gradient(180deg,#14160e,#101208);border-bottom:1px solid var(--line2)}
-  .mark{width:32px;height:32px;position:relative;border:1px solid var(--gold-d);background:#13150e;flex:none}
+  .cmd{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;padding:12px 20px;background:linear-gradient(180deg,#1a1d13,#15180f);border-bottom:1px solid var(--line2)}
+  .mark{width:32px;height:32px;position:relative;border:1px solid var(--gold-d);background:#181b12;flex:none}
   .mark::before,.mark::after{content:"";position:absolute;background:var(--gold)}
   .mark::before{left:9px;top:15px;width:14px;height:1px;box-shadow:0 -5px 0 var(--gold-d),0 5px 0 var(--gold-d)}
   .mark::after{left:15px;top:9px;width:1px;height:14px;box-shadow:-5px 0 0 var(--gold-d),5px 0 0 var(--gold-d)}
   h1{margin:0;font-size:13px;letter-spacing:.26em;text-transform:uppercase;font-weight:700}h1 span{color:var(--gold-b)}
   .cmd .sp{flex:1}.who{font-size:11px;color:var(--muted);font-family:var(--mono)}
-  .lnk{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);border:1px solid var(--line3);padding:8px 12px;text-decoration:none;background:#13150e}
+  .lnk{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);border:1px solid var(--line3);padding:8px 12px;text-decoration:none;background:#181b12}
   .lnk:hover{color:var(--gold-b);border-color:var(--gold-d)}
   .wrap{padding:20px;max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
-  .period{display:flex;gap:0;border:1px solid var(--line2);background:#13150e;align-self:flex-start}
+  .period{display:flex;gap:0;border:1px solid var(--line2);background:#181b12;align-self:flex-start}
   .period button{padding:9px 15px;font:inherit;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border:0;border-right:1px solid var(--line);background:none;cursor:pointer}
   .period button:last-child{border-right:0}
   .period button.active{background:var(--gold);color:var(--void);font-weight:700}
   .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-  .kpi{border:1px solid var(--line2);background:linear-gradient(180deg,#14160e,#101208);padding:16px 18px}
+  .kpi{border:1px solid var(--line2);background:linear-gradient(180deg,#1a1d13,#15180f);padding:16px 18px}
   .kpi .l{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
   .kpi .v{font-family:var(--mono);font-size:30px;font-weight:600;margin-top:6px;line-height:1}
-  .kpi.hero{border-color:var(--gold-d);background:linear-gradient(180deg,#141206,#14160e)}
+  .kpi.hero{border-color:var(--gold-d);background:linear-gradient(180deg,#141206,#1a1d13)}
   .kpi.hero .v{color:var(--gold-b)}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-  .card{border:1px solid var(--line2);background:linear-gradient(180deg,#14160e,#101208)}
+  .card{border:1px solid var(--line2);background:linear-gradient(180deg,#1a1d13,#15180f)}
   .card h2{margin:0;padding:13px 16px;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);border-bottom:1px solid var(--line);font-weight:700}
   .card .b{padding:16px}
   /* P&L flow */
@@ -116,8 +116,8 @@
       <div class="card">
         <h2>🔑 Mein Passwort ändern</h2>
         <div class="b" style="display:flex;flex-direction:column;gap:10px">
-          <input id="pw1" type="password" placeholder="Neues Passwort (min. 6 Zeichen)" style="height:38px;padding:0 12px;background:#14160e;border:1px solid var(--line2);color:var(--txt);font-size:13px">
-          <input id="pw2" type="password" placeholder="Neues Passwort wiederholen" style="height:38px;padding:0 12px;background:#14160e;border:1px solid var(--line2);color:var(--txt);font-size:13px">
+          <input id="pw1" type="password" placeholder="Neues Passwort (min. 6 Zeichen)" style="height:38px;padding:0 12px;background:#1a1d13;border:1px solid var(--line2);color:var(--txt);font-size:13px">
+          <input id="pw2" type="password" placeholder="Neues Passwort wiederholen" style="height:38px;padding:0 12px;background:#1a1d13;border:1px solid var(--line2);color:var(--txt);font-size:13px">
           <button id="pwSave" style="height:40px;border:1px solid var(--gold-d);background:#1a1608;color:var(--gold-b);font:inherit;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer">Passwort ändern</button>
           <div id="pwMsg" style="font-size:11.5px;font-family:var(--mono);min-height:16px"></div>
         </div>
@@ -127,12 +127,12 @@
         <div class="b" style="display:flex;flex-direction:column;gap:9px">
           <div style="font-size:11px;color:var(--muted);line-height:1.6">Läuft auf <b>deinem PC</b> und versorgt alle mit Orbit/96ex-Quoten — solange dein Rechner an ist. Zugangsdaten bleiben bei dir.</div>
           <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Dein persönliches Bridge-Token</div>
-          <div id="brgTok" style="font-family:var(--mono);font-size:11px;background:#14160e;border:1px solid var(--line2);padding:9px;word-break:break-all;color:var(--gold-b)">…</div>
+          <div id="brgTok" style="font-family:var(--mono);font-size:11px;background:#1a1d13;border:1px solid var(--line2);padding:9px;word-break:break-all;color:var(--gold-b)">…</div>
           <div style="display:flex;gap:7px">
-            <button id="brgCopy" style="flex:1;height:34px;border:1px solid var(--line3);background:#13150e;color:var(--txt);font:inherit;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">Kopieren</button>
-            <button id="brgNew" style="flex:1;height:34px;border:1px solid var(--line3);background:#13150e;color:var(--muted);font:inherit;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">Neu erzeugen</button>
+            <button id="brgCopy" style="flex:1;height:34px;border:1px solid var(--line3);background:#181b12;color:var(--txt);font:inherit;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">Kopieren</button>
+            <button id="brgNew" style="flex:1;height:34px;border:1px solid var(--line3);background:#181b12;color:var(--muted);font:inherit;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">Neu erzeugen</button>
           </div>
-          <div style="border:1px solid var(--line2);background:#13150e;padding:9px 10px;font-size:10px;color:var(--muted);line-height:1.75">
+          <div style="border:1px solid var(--line2);background:#181b12;padding:9px 10px;font-size:10px;color:var(--muted);line-height:1.75">
             <b style="color:var(--gold-b)">Einrichten (einmalig):</b><br>
             1. <b>Node.js</b> installieren (nodejs.org)<br>
             2. Ordner <b>bridge/</b> herunterladen (Link unten)<br>
@@ -141,7 +141,7 @@
             5. Terminal: <b>node betfair-bridge.js</b> → Fenster offen lassen
           </div>
           <a href="bridge-setup.html" style="text-align:center;padding:10px;border:1px solid var(--gold-d);background:#1a1608;color:var(--gold-b);text-decoration:none;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">📖 Schritt-für-Schritt-Anleitung</a>
-          <a href="logik.html" style="text-align:center;padding:10px;border:1px solid var(--line3);background:#13150e;color:var(--txt);text-decoration:none;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:8px">Suchlogik &amp; Delayed vs Live Key</a>
+          <a href="logik.html" style="text-align:center;padding:10px;border:1px solid var(--line3);background:#181b12;color:var(--txt);text-decoration:none;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:8px">Suchlogik &amp; Delayed vs Live Key</a>
         </div>
       </div>
     </div>
@@ -169,7 +169,7 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=28"></script>
+<script src="config.js?v=29"></script>
 <script>
 (async function(){
   var auth = await window.arRequireAuth();
@@ -249,7 +249,7 @@
     var area=d+' L'+X(pts[pts.length-1].t).toFixed(1)+' '+base.toFixed(1)+' L'+X(pts[0].t).toFixed(1)+' '+base.toFixed(1)+' Z';
     var zeroY=Y(0);
     el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+
-      '<line x1="'+pad+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-pad)+'" y2="'+zeroY.toFixed(1)+'" stroke="#3a3626" stroke-dasharray="3 3"/>'+
+      '<line x1="'+pad+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-pad)+'" y2="'+zeroY.toFixed(1)+'" stroke="#45412e" stroke-dasharray="3 3"/>'+
       '<path d="'+area+'" fill="rgba(199,178,76,.12)"/>'+
       '<path d="'+d+'" fill="none" stroke="#c7b24c" stroke-width="2"/>'+
       '<circle cx="'+X(pts[pts.length-1].t).toFixed(1)+'" cy="'+Y(pts[pts.length-1].y).toFixed(1)+'" r="3.5" fill="#e7d882"/></svg>';
@@ -297,9 +297,9 @@
     var bestTag=d.reduce(function(a,b){return (b.edge_max||0)>(a.edge_max||0)?b:a;}, d[0]);
     el.innerHTML=
       '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'+
-        '<div style="border:1px solid var(--line2);background:#13150e;padding:9px 11px"><div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Chancen gesamt</div><div class="num" style="font-size:18px;color:var(--gold-b);margin-top:3px">'+ges+'</div></div>'+
-        '<div style="border:1px solid var(--line2);background:#13150e;padding:9px 11px"><div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Ø pro Tag</div><div class="num" style="font-size:18px;margin-top:3px">'+(ges/d.length).toFixed(1)+'</div></div>'+
-        '<div style="border:1px solid var(--line2);background:#13150e;padding:9px 11px"><div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Beste Rendite</div><div class="num" style="font-size:18px;color:var(--pos);margin-top:3px">+'+(+bestTag.edge_max||0).toFixed(2)+' %</div></div>'+
+        '<div style="border:1px solid var(--line2);background:#181b12;padding:9px 11px"><div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Chancen gesamt</div><div class="num" style="font-size:18px;color:var(--gold-b);margin-top:3px">'+ges+'</div></div>'+
+        '<div style="border:1px solid var(--line2);background:#181b12;padding:9px 11px"><div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Ø pro Tag</div><div class="num" style="font-size:18px;margin-top:3px">'+(ges/d.length).toFixed(1)+'</div></div>'+
+        '<div style="border:1px solid var(--line2);background:#181b12;padding:9px 11px"><div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Beste Rendite</div><div class="num" style="font-size:18px;color:var(--pos);margin-top:3px">+'+(+bestTag.edge_max||0).toFixed(2)+' %</div></div>'+
       '</div>'+
       '<div style="display:flex;align-items:flex-end;gap:3px;height:90px">'+
         d.slice().reverse().map(function(x){

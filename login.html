@@ -7,13 +7,13 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <style>
-  :root{--void:#0d0f0a;--panel:#0d0f0a;--line:#2b2a1c;--line2:#3a3626;--line3:#4e4630;--txt:#f2f1e7;--muted:#a3a494;--dim:#7a7c6c;--gold:#c7b24c;--gold-b:#e7d882;--gold-d:#7f7130;--pos:#b0d150;--neg:#d05a44;--mono:ui-monospace,"Cascadia Code",Consolas,monospace;--sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Arial,sans-serif}
+  :root{--void:#12150e;--panel:#12150e;--line:#353425;--line2:#45412e;--line3:#4e4630;--txt:#f2f1e7;--muted:#a3a494;--dim:#8f9180;--gold:#c7b24c;--gold-b:#e7d882;--gold-d:#7f7130;--pos:#b0d150;--neg:#d05a44;--mono:ui-monospace,"Cascadia Code",Consolas,monospace;--sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Arial,sans-serif}
   *{box-sizing:border-box}html,body{margin:0;padding:0}
   body{background:var(--void);color:var(--txt);font-family:var(--sans);min-height:100vh;display:grid;place-items:center;
     background-image:radial-gradient(120% 80% at 100% 0%, rgba(199,178,76,.06), transparent 55%)}
-  .card{width:380px;max-width:calc(100vw - 32px);border:1px solid var(--line2);background:linear-gradient(180deg,#14160e,#101208)}
+  .card{width:380px;max-width:calc(100vw - 32px);border:1px solid var(--line2);background:linear-gradient(180deg,#1a1d13,#15180f)}
   .top{padding:24px 26px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
-  .mark{width:36px;height:36px;position:relative;border:1px solid var(--gold-d);background:#13150e;flex:none}
+  .mark{width:36px;height:36px;position:relative;border:1px solid var(--gold-d);background:#181b12;flex:none}
   .mark::before,.mark::after{content:"";position:absolute;background:var(--gold)}
   .mark::before{left:11px;top:17px;width:14px;height:1px;box-shadow:0 -5px 0 var(--gold-d),0 5px 0 var(--gold-d)}
   .mark::after{left:17px;top:11px;width:1px;height:14px;box-shadow:-5px 0 0 var(--gold-d),5px 0 0 var(--gold-d)}
@@ -25,7 +25,7 @@
   .tabs button.active{color:var(--gold-b);border-bottom-color:var(--gold)}
   form{padding:22px 26px 26px;display:flex;flex-direction:column;gap:14px}
   label{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block}
-  input{width:100%;height:40px;padding:0 12px;background:#14160e;border:1px solid var(--line2);color:var(--txt);font-size:14px;font-family:var(--mono)}
+  input{width:100%;height:40px;padding:0 12px;background:#1a1d13;border:1px solid var(--line2);color:var(--txt);font-size:14px;font-family:var(--mono)}
   input:focus{outline:2px solid var(--gold);outline-offset:1px}
   .btn{height:44px;border:1px solid var(--gold-d);background:linear-gradient(180deg,#1a1808,#100e05);color:var(--gold-b);font:inherit;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:.12s}
   .btn:hover{background:#24200a;box-shadow:0 0 20px rgba(199,178,76,.2)}
@@ -52,7 +52,7 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=28"></script>
+<script src="config.js?v=29"></script>
 <script>
 (function(){
   if(!window.arGate()) return;              // Sperrbildschirm vor dem Login

@@ -618,7 +618,52 @@ console.log('\n══════════ 17. Gegenprobe in beide Richtungen
   B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
 }
 
-console.log('\n══════════ 18. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
+console.log('\n══════════ 18. Suchrichtung: Betfair zuerst ══════════\n');
+{
+  B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
+
+  // EIN Betfair-Markt, aber VIELE Polymarket-Fragen. Wird von Betfair aus
+  // gesucht, gibt es genau einen Ausgangspunkt statt vieler.
+  B.KATALOG.set('1.B', { ev:'Lakers v Celtics', mn:'Money Line', mt:'MONEY_LINE', satz:0.05,
+    start:new Date(Date.now()+3*3600e3).toISOString(), etId:'7522',
+    runners:[{id:1,name:'Los Angeles Lakers'},{id:2,name:'Boston Celtics'}] });
+  B.BUCH.set('1.B', { status:'OPEN', inplay:false, ts:Date.now(),
+    runners:[{id:1,st:'ACTIVE',b:1.90,bs:900,l:1.92,ls:500},
+             {id:2,st:'ACTIVE',b:2.50,bs:900,l:2.54,ls:500}] });
+
+  function pmRein(id,q,a0,a1){
+    const w=B.nrm(q).split(' ');
+    B.PM.set(id,{ q:q, outs:['Yes','No'], toks:['a','b'], slug:'ev-'+id, liq:9e3, vol:9e3,
+      cat:'Basketball', ask:[a0,a1], size:[3000,3000], ts:Date.now(),
+      feeSatz:0, feeExp:1, feeTyp:'keine',
+      fw:new Set(w.filter(x=>x.length>2)), kf:new Set(w.filter(x=>x.length>1)) });
+  }
+  // Die passende Frage, plus zwei Ablenkungen mit aehnlichen Namen
+  pmRein('echt','Will the Lakers beat the Celtics?',0.44,0.60);
+  pmRein('ablenk1','Will the Lakers make the playoffs?',0.30,0.72);
+  pmRein('ablenk2','Will the Celtics trade a first round pick?',0.20,0.82);
+
+  const c=B.crossBookChancen();
+  pruefe('genau eine Chance, nicht eine je Ablenkung', c.length===1,
+         '('+c.length+' gefunden)');
+  if(c.length){
+    pruefe('es ist die passende Frage', /beat the Celtics/.test(c[0].ev), '("'+c[0].ev+'")');
+    const bf=c[0].legs.filter(function(l){return l.book==='betfair';})[0];
+    const pm=c[0].legs.filter(function(l){return l.book==='polymarket';})[0];
+    pruefe('der Betfair-Link zeigt auf genau diesen Markt',
+           bf && bf.link.indexOf('1.B')>0, bf? bf.link : '');
+    pruefe('der Polymarket-Link zeigt auf die zugeordnete Frage',
+           pm && pm.link.indexOf('ev-echt')>0, pm? pm.link : '');
+  }
+
+  // Ohne Betfair-Markt kann es gar keinen Ausgangspunkt geben
+  B.BUCH.clear();
+  pruefe('ohne Betfair-Markt wird nichts gesucht', B.crossBookChancen().length===0);
+
+  B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
+}
+
+console.log('\n══════════ 19. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
 {
   B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
   B.PM.set('test2', {
