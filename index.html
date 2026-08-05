@@ -7,16 +7,16 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=27"></script>
+<script src="config.js?v=28"></script>
 <style>
   :root{
-    --void:#060704; --void2:#0a0b07;
+    --void:#0d0f0a; --void2:#12140d;
     --panel:#0d0f0a; --panel2:#111309; --panelhi:#15170d;
-    --line:#211f12; --line2:#2f2b18; --line3:#41391f;
-    --txt:#f2f1e7; --muted:#8b8c7c; --dim:#5c5d50; --faint:#3a3b31;
+    --line:#2b2a1c; --line2:#3a3626; --line3:#4e4630;
+    --txt:#f2f1e7; --muted:#a3a494; --dim:#7a7c6c; --faint:#585a4c;
     --gold:#c7b24c; --gold-b:#e7d882; --gold-d:#7f7130;
-    --pos:#9fbf3b; --pos-d:#5e7420;
-    --neg:#b0402e; --neg-d:#6e2c22;
+    --pos:#b0d150; --pos-d:#5e7420;
+    --neg:#d05a44; --neg-d:#6e2c22;
     --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,"Liberation Mono",monospace;
     --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
@@ -32,9 +32,9 @@
   .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
   .app{min-height:100vh;display:flex;flex-direction:column}
 
-  .cmd{position:sticky;top:0;z-index:40;display:flex;align-items:center;flex-wrap:wrap;gap:12px 16px;padding:11px 18px;background:linear-gradient(180deg,#0b0c07,#080905);border-bottom:1px solid var(--line2)}
+  .cmd{position:sticky;top:0;z-index:40;display:flex;align-items:center;flex-wrap:wrap;gap:12px 16px;padding:11px 18px;background:linear-gradient(180deg,#14160e,#101208);border-bottom:1px solid var(--line2)}
   .brand{display:flex;align-items:center;gap:11px;min-width:0}
-  .mark{width:34px;height:34px;flex:none;position:relative;border:1px solid var(--gold-d);background:#0a0b06;display:grid;place-items:center;box-shadow:0 0 0 1px #000 inset,0 0 22px rgba(199,178,76,.14)}
+  .mark{width:34px;height:34px;flex:none;position:relative;border:1px solid var(--gold-d);background:#13150e;display:grid;place-items:center;box-shadow:0 0 0 1px #000 inset,0 0 22px rgba(199,178,76,.14)}
   .mark::before,.mark::after{content:"";position:absolute;background:var(--gold)}
   .mark::before{width:14px;height:1px;box-shadow:0 -5px 0 var(--gold-d),0 5px 0 var(--gold-d)}
   .mark::after{width:1px;height:14px;box-shadow:-5px 0 0 var(--gold-d),5px 0 0 var(--gold-d)}
@@ -54,10 +54,10 @@
   .cmd .tools{display:flex;align-items:center;flex-wrap:wrap;gap:8px;justify-content:flex-end}
   .cmd .spacer{flex:1 1 auto;min-width:0}
   .brand{flex:0 1 auto;min-width:0}
-  .modeseg{display:flex;border:1px solid var(--line2);background:#0a0b06;height:38px}
+  .modeseg{display:flex;border:1px solid var(--line2);background:#13150e;height:38px}
   .modeseg button{padding:0 13px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
   .modeseg button.active{background:var(--gold);color:var(--void);font-weight:700}
-  .iconbtn{width:38px;height:38px;border:1px solid var(--line2);background:#0a0b06;display:grid;place-items:center;position:relative;transition:.12s}
+  .iconbtn{width:38px;height:38px;border:1px solid var(--line2);background:#13150e;display:grid;place-items:center;position:relative;transition:.12s}
   .iconbtn:hover{border-color:var(--line3);background:#12130b}
   .iconbtn.on{border-color:var(--gold-d);color:var(--gold-b);box-shadow:0 0 16px rgba(199,178,76,.18)}
   .iconbtn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7}
@@ -78,7 +78,7 @@
   .kpi.pos .val{color:var(--pos)}
 
   .work{display:grid;grid-template-columns:330px 1fr;flex:1;min-height:0}
-  .rail{border-right:1px solid var(--line2);background:linear-gradient(180deg,#080905,#060704);overflow-y:auto}
+  .rail{border-right:1px solid var(--line2);background:linear-gradient(180deg,#101208,#0d0f0a);overflow-y:auto}
   .main{overflow-y:auto;min-width:0}
   .block{border-bottom:1px solid var(--line)}
   .block>.head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px 9px}
@@ -87,7 +87,7 @@
   .block .body{padding:4px 16px 16px;display:flex;flex-direction:column;gap:14px}
   .field{display:flex;flex-direction:column;gap:6px}
   .field label{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-  .inp,.sel{width:100%;height:34px;padding:0 10px;background:#0b0c07;border:1px solid var(--line2);color:var(--txt);font-size:13px}
+  .inp,.sel{width:100%;height:34px;padding:0 10px;background:#14160e;border:1px solid var(--line2);color:var(--txt);font-size:13px}
   .inp.num{font-family:var(--mono)}
   .inp::placeholder{color:var(--faint)}
   .inp:hover{border-color:var(--line3)}
@@ -95,7 +95,7 @@
   .search svg{position:absolute;left:10px;top:9px;width:15px;height:15px;stroke:var(--dim);fill:none;stroke-width:1.7}
   .search .inp{padding-left:32px}
   .chips{display:flex;flex-wrap:wrap;gap:6px}
-  .chip{padding:5px 11px;border:1px solid var(--line2);background:#0a0b06;font-size:10.5px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;transition:.1s;white-space:nowrap}
+  .chip{padding:5px 11px;border:1px solid var(--line2);background:#13150e;font-size:10.5px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;transition:.1s;white-space:nowrap}
   .chip:hover{border-color:var(--line3);color:var(--txt)}
   .chip.active{border-color:var(--gold-d);color:var(--void);background:var(--gold);font-weight:700}
   .chip .c{font-family:var(--mono);opacity:.6;margin-left:5px}
@@ -103,7 +103,7 @@
   .toggle span{font-size:11.5px;color:var(--txt)}
   .toggle small{display:block;font-size:9.5px;color:var(--dim);margin-top:1px}
   .toggle.dis{opacity:.5;cursor:not-allowed}
-  .sw{width:38px;height:20px;flex:none;border:1px solid var(--line3);background:#0b0c07;position:relative;transition:.14s}
+  .sw{width:38px;height:20px;flex:none;border:1px solid var(--line3);background:#14160e;position:relative;transition:.14s}
   .sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;background:var(--dim);transition:.14s}
   .toggle.on .sw{border-color:var(--gold-d);background:rgba(199,178,76,.12)}
   .toggle.on .sw::after{left:20px;background:var(--gold-b);box-shadow:0 0 8px var(--gold)}
@@ -114,7 +114,7 @@
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;background:var(--gold);border:1px solid #000;box-shadow:0 0 8px rgba(199,178,76,.4);cursor:pointer}
   input[type=range]::-moz-range-thumb{width:15px;height:15px;background:var(--gold);border:1px solid #000;border-radius:0;cursor:pointer}
 
-  .acct{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border:1px solid var(--line2);background:#0a0b06;margin-bottom:8px}
+  .acct{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border:1px solid var(--line2);background:#13150e;margin-bottom:8px}
   .acct .ai{display:flex;align-items:center;gap:9px;min-width:0}
   .acct .aico{width:26px;height:26px;flex:none;display:grid;place-items:center;border:1px solid var(--line3);font-family:var(--mono);font-size:10px;font-weight:700;color:var(--muted)}
   .acct.pm .aico{color:var(--gold-b);border-color:var(--gold-d)}
@@ -137,13 +137,13 @@
   .summary b{font-family:var(--mono);font-size:14px;margin-left:7px;color:var(--txt)}
   .summary b.sv{color:var(--pos)}
 
-  .mainhead{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#0a0b07,#080905ee);backdrop-filter:blur(4px);border-bottom:1px solid var(--line2);padding:13px 20px 0}
+  .mainhead{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#12140d,#101208ee);backdrop-filter:blur(4px);border-bottom:1px solid var(--line2);padding:13px 20px 0}
   .mainhead .row1{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .mainhead h2{margin:0;font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:700}
   .mainhead h2 .cnt{color:var(--gold-b);font-family:var(--mono)}
   .mainhead .upd{font-size:10px;color:var(--dim);font-family:var(--mono)}
   .mainhead .row1 .spacer{flex:1}
-  .sortseg{display:flex;border:1px solid var(--line2);background:#0a0b06}
+  .sortseg{display:flex;border:1px solid var(--line2);background:#13150e}
   .sortseg button{padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-right:1px solid var(--line)}
   .sortseg button:last-child{border-right:0}
   .sortseg button.active{background:var(--gold);color:var(--void);font-weight:700}
@@ -190,13 +190,13 @@
   .act{display:flex;justify-content:flex-end;align-items:center;gap:8px}
   .hitbadge{font-size:8.5px;letter-spacing:.1em;font-weight:800;padding:3px 6px;background:var(--gold);color:var(--void);animation:hb 1s infinite}
   @keyframes hb{0%,100%{box-shadow:0 0 0 rgba(199,178,76,.5)}50%{box-shadow:0 0 12px rgba(199,178,76,.8)}}
-  .rowcalc{border:1px solid var(--line3);background:#0a0b06;padding:2px 6px;font-size:15px;color:var(--gold);line-height:1}
+  .rowcalc{border:1px solid var(--line3);background:#13150e;padding:2px 6px;font-size:15px;color:var(--gold);line-height:1}
   .rowcalc:hover{color:var(--gold-b);border-color:var(--gold-d)}
   .empty{padding:54px 20px;text-align:center;color:var(--dim);font-family:var(--mono);font-size:12px;line-height:1.7}
 
   .tk-empty{padding:8px 0;color:var(--dim);font-size:11px;font-family:var(--mono);line-height:1.6}
   .tk-ev{font-size:13px;font-weight:600;line-height:1.3}
-  .tk-legs{display:flex;flex-direction:column;border:1px solid var(--line2);background:#0a0b06}
+  .tk-legs{display:flex;flex-direction:column;border:1px solid var(--line2);background:#13150e}
   .tk-leg{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 11px;border-bottom:1px solid var(--line)}
   .tk-leg:last-child{border-bottom:0}
   .tk-leg .ll{display:flex;align-items:center;gap:8px;min-width:0}
@@ -205,31 +205,31 @@
   .tk-leg .lr b{color:var(--txt);font-size:13px}
   .tk-row{display:flex;gap:7px;align-items:stretch}
   .tk-row .inp{flex:1}
-  .qchip{padding:0 11px;border:1px solid var(--line3);background:#0a0b06;font-family:var(--mono);font-size:12px;color:var(--gold-b);white-space:nowrap}
+  .qchip{padding:0 11px;border:1px solid var(--line3);background:#13150e;font-family:var(--mono);font-size:12px;color:var(--gold-b);white-space:nowrap}
   .qchip:hover{background:#15170d;border-color:var(--gold-d)}
   .tk-profit{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border:1px solid var(--pos-d);background:rgba(159,191,59,.06)}
   .tk-profit .pk{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--pos)}
   .tk-profit .pv{font-family:var(--mono);color:var(--pos);font-size:17px;font-weight:700}
-  .tk-profit.zero{border-color:var(--line2);background:#0a0b06}
+  .tk-profit.zero{border-color:var(--line2);background:#13150e}
   .tk-profit.zero .pk,.tk-profit.zero .pv{color:var(--dim)}
   .placebtn{width:100%;height:46px;border:1px solid var(--gold-d);background-color:#1a1608;color:var(--gold-b);font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;transition:.12s}
   .placebtn:hover:not(:disabled){background-color:#2a2410;box-shadow:0 0 24px rgba(199,178,76,.28)}
   .placebtn:active:not(:disabled){transform:translateY(1px)}
-  .placebtn:disabled{border-color:var(--line2);color:var(--dim);background-color:#0b0c07;cursor:not-allowed}
+  .placebtn:disabled{border-color:var(--line2);color:var(--dim);background-color:#14160e;cursor:not-allowed}
   .tk-warn{font-size:10.5px;font-family:var(--mono);color:var(--neg);text-align:center;min-height:1px}
   .tk-note{font-size:9.5px;color:var(--dim);line-height:1.55}
   .tk-note b{color:var(--muted)}
 
   .calc-in{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .calc-in .field.full{grid-column:1/3}
-  .verdict{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line2);background:#0a0b06;font-family:var(--mono)}
+  .verdict{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line2);background:#13150e;font-family:var(--mono)}
   .verdict .tag{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:3px 8px}
   .verdict.ok{border-color:var(--pos-d);background:rgba(159,191,59,.06)}
   .verdict.ok .tag{background:var(--pos);color:#0a0f00}
   .verdict.no{border-color:var(--neg-d);background:rgba(176,64,46,.06)}
   .verdict.no .tag{background:var(--neg);color:#fff}
   .verdict .pct{font-size:20px;font-weight:600}
-  .calc-out{display:flex;flex-direction:column;border:1px solid var(--line2);background:#0a0b06}
+  .calc-out{display:flex;flex-direction:column;border:1px solid var(--line2);background:#13150e}
   .orow{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
   .orow:last-child{border-bottom:0}
   .orow .k{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
@@ -245,7 +245,7 @@
   .toast .go{margin-top:7px;padding-top:6px;border-top:1px solid var(--line);
     font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
   .toasts{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;flex-direction:column;gap:10px;width:320px;max-width:calc(100vw - 36px)}
-  .toast{border:1px solid var(--gold-d);background:linear-gradient(180deg,#14140b,#0b0c07);box-shadow:0 0 30px rgba(0,0,0,.6),0 0 24px rgba(199,178,76,.12);padding:12px 14px;animation:tin .3s ease;position:relative;overflow:hidden}
+  .toast{border:1px solid var(--gold-d);background:linear-gradient(180deg,#14140b,#14160e);box-shadow:0 0 30px rgba(0,0,0,.6),0 0 24px rgba(199,178,76,.12);padding:12px 14px;animation:tin .3s ease;position:relative;overflow:hidden}
   .toast::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold);box-shadow:0 0 12px var(--gold)}
   .toast.warn{border-color:var(--neg-d)}
   .toast.warn::before{background:var(--neg);box-shadow:0 0 12px var(--neg)}
@@ -259,7 +259,7 @@
   .toast .x{position:absolute;top:8px;right:9px;color:var(--dim);font-size:14px;line-height:1}
   .toast .x:hover{color:var(--txt)}
 
-  .logpop{position:absolute;top:52px;right:20px;z-index:55;width:360px;max-width:calc(100vw - 40px);border:1px solid var(--line3);background:linear-gradient(180deg,#0c0d08,#080905);box-shadow:0 24px 60px rgba(0,0,0,.7);display:none;max-height:70vh;flex-direction:column}
+  .logpop{position:absolute;top:52px;right:20px;z-index:55;width:360px;max-width:calc(100vw - 40px);border:1px solid var(--line3);background:linear-gradient(180deg,#0c0d08,#101208);box-shadow:0 24px 60px rgba(0,0,0,.7);display:none;max-height:70vh;flex-direction:column}
   .logpop.show{display:flex}
   .logpop .lh{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line2)}
   .logpop .lh b{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
@@ -275,8 +275,8 @@
   .footnote b{color:var(--muted)}
   .footnote a{color:var(--gold)}
 
-  .scanbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px 16px;padding:11px 20px;border-bottom:1px solid var(--line2);background:linear-gradient(180deg,#0a0b07,#080905)}
-  .radar{width:76px;height:50px;flex:none;position:relative;border:1px solid var(--line3);background:#080905;overflow:hidden}
+  .scanbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px 16px;padding:11px 20px;border-bottom:1px solid var(--line2);background:linear-gradient(180deg,#12140d,#101208)}
+  .radar{width:76px;height:50px;flex:none;position:relative;border:1px solid var(--line3);background:#101208;overflow:hidden}
   .radar .grid{position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:11px 11px;opacity:.6}
   .radar .sweep{position:absolute;top:0;bottom:0;width:2px;left:-2px;background:linear-gradient(180deg,var(--gold-b),transparent);box-shadow:0 0 14px var(--gold);animation:sweep 1.8s linear infinite}
   .radar.off .sweep{animation:none;opacity:.2}
@@ -289,14 +289,14 @@
   .odds .pmpc{font-family:var(--mono);font-size:10px;color:var(--dim);margin-left:5px;white-space:nowrap}
   /* Direktlinks je Zeile, damit sich jede Meldung nachprüfen lässt */
   .act .rowlink{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:var(--gold);
-    border:1px solid var(--line3);padding:3px 5px;text-decoration:none;background:#0a0b06;margin-right:4px}
+    border:1px solid var(--line3);padding:3px 5px;text-decoration:none;background:#13150e;margin-right:4px}
   .act .rowlink:hover{color:var(--gold-b);border-color:var(--gold-d);background:#141206}
   .roi .verd{display:inline-block;margin-left:5px;width:13px;height:13px;line-height:12px;text-align:center;
     border:1px solid var(--neg);color:var(--neg);font-size:9px;font-family:var(--mono);cursor:help}
 
   /* --- Was jede Quelle gerade tut (in der Seitenleiste unter den Konten) --- */
   #srcAnalyse{display:flex;flex-direction:column;gap:8px;margin:2px 0 0}
-  .srcCard{border:1px solid var(--line2);background:#0a0b06;padding:10px 11px}
+  .srcCard{border:1px solid var(--line2);background:#13150e;padding:10px 11px}
   .srcCard.ok{border-color:#3d4a1c}
   .srcCard.bad{border-color:#5c2a1e}
   .srcCard .sh{display:flex;align-items:center;gap:8px;padding-bottom:9px;border-bottom:1px solid var(--line)}
@@ -315,7 +315,7 @@
 
   /* --- Gegenprobe von Hand: dieselben Märkte auf beiden Büchern --- */
   #schnittWrap{margin-top:10px}
-  .schnitt{border:1px solid var(--line2);background:#0a0b06}
+  .schnitt{border:1px solid var(--line2);background:#13150e}
   .schnitt > .sh{display:flex;align-items:center;gap:8px;padding:10px 11px;cursor:pointer;user-select:none;border-bottom:1px solid var(--line)}
   .schnitt > .sh b{font-size:11.5px;flex:1}
   .schnitt > .sh .cnt{font-family:var(--mono);font-size:12px;color:var(--gold-b);font-variant-numeric:tabular-nums}
@@ -334,6 +334,13 @@
   .paar a:hover{color:var(--gold-b);border-color:var(--gold-d)}
   .schnitt .leer{padding:14px 11px;font-size:11px;color:var(--dim);font-family:var(--mono);line-height:1.6}
 
+  /* Hinweis unter der Liste, wenn mehr Treffer da sind als gezeigt werden */
+  .mehr{padding:12px 14px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim);
+    border-top:1px solid var(--line);background:var(--void2)}
+  /* Weichere Übergänge — Farbwechsel sollen nicht springen */
+  .acct,.srcCard,.r-o,.opp,.toast,.lnk,.rowlink{transition:background .18s ease,border-color .18s ease,color .18s ease}
+  .r-o:hover{background:var(--void2)}
+
   /* --- Hinweis auf eine veraltete Bridge --- */
   .upd{border:1px solid #7a5220;background:linear-gradient(180deg,#161009,#0c0906);margin:0 0 14px}
   .upd .uh{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid #3a2a12}
@@ -342,7 +349,7 @@
   .upd .ub{padding:13px 16px;font-size:13px;color:var(--muted);line-height:1.62}
   .upd .ub p{margin:0}
   .upd .ub b{color:var(--txt)}
-  .upd .ub code{font-family:var(--mono);font-size:11.5px;color:var(--gold-b);background:#0a0b06;
+  .upd .ub code{font-family:var(--mono);font-size:11.5px;color:var(--gold-b);background:#13150e;
     border:1px solid var(--line2);padding:1px 4px}
   .upd .ub ul{margin:5px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
   .upd .ub li{font-size:12.5px}
@@ -350,10 +357,10 @@
   .upd .ubtn{padding:9px 15px;border:1px solid var(--warn);background:#2a1c0a;color:#f0c48a;
     text-decoration:none;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
   .upd .ubtn:hover{background:#3a2710}
-  .upd .ubtn.grau{border-color:var(--line3);background:#0a0b06;color:var(--txt)}
+  .upd .ubtn.grau{border-color:var(--line3);background:#13150e;color:var(--txt)}
 
   /* --- Fertig gerechnete Chancen aus der Bridge --- */
-  #oppWrap{border:1px solid var(--line3);background:linear-gradient(180deg,#0d0f0a,#080905);margin:0 0 14px}
+  #oppWrap{border:1px solid var(--line3);background:linear-gradient(180deg,#0d0f0a,#101208);margin:0 0 14px}
   .oppHead{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line2);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
   .oppHead b{color:var(--gold-b)}
   .oppHead span{color:var(--dim);font-family:var(--mono);letter-spacing:0;text-transform:none;font-size:11px}
@@ -371,7 +378,7 @@
   .oppLeg .amt{font-family:var(--mono);font-size:13px;color:var(--gold-b);text-align:right}
   .oppLeg .what{font-size:12px;color:var(--txt)}
   .oppLeg .what small{display:block;color:var(--dim);font-family:var(--mono);font-size:10px;margin-top:2px}
-  .oppLeg a{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);border:1px solid var(--line3);padding:6px 10px;text-decoration:none;background:#0a0b06;white-space:nowrap}
+  .oppLeg a{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);border:1px solid var(--line3);padding:6px 10px;text-decoration:none;background:#13150e;white-space:nowrap}
   .oppLeg a:hover{color:var(--gold-b);border-color:var(--gold-d)}
   .oppProof{margin-top:9px;padding:8px 11px;border-left:3px solid var(--pos);background:rgba(159,191,59,.06);font-family:var(--mono);font-size:11px;color:var(--muted)}
   .oppProof b{color:var(--pos)}
@@ -389,7 +396,7 @@
   .scanstats .ssv.gold{color:var(--gold-b)}.scanstats .ssv.pos{color:var(--pos)}
   .scanstats .ssl{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:3px}
   @media(max-width:760px){.scanstats .ss:nth-child(3){display:none}.radar{display:none}}
-  #srcPanel{position:fixed;z-index:80;width:270px;max-width:calc(100vw - 20px);max-height:calc(100vh - 24px);overflow-y:auto;display:none;border:1px solid var(--line3);background:linear-gradient(180deg,#0d0f0a,#080905);box-shadow:0 20px 50px rgba(0,0,0,.6)}
+  #srcPanel{position:fixed;z-index:80;width:270px;max-width:calc(100vw - 20px);max-height:calc(100vh - 24px);overflow-y:auto;display:none;border:1px solid var(--line3);background:linear-gradient(180deg,#0d0f0a,#101208);box-shadow:0 20px 50px rgba(0,0,0,.6)}
   #srcPanel .sh{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:1px solid var(--line2)}
   #srcPanel .sh b{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
   #srcPanel .sh .x{cursor:pointer;color:var(--dim);font-size:16px;line-height:1}
@@ -401,8 +408,8 @@
   #srcPanel .st2 .d.err{background:var(--neg)}
   #srcPanel .st2 .d.demo{background:var(--gold)}
   #srcPanel label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-  #srcPanel .in2{height:32px;padding:0 9px;background:#0b0c07;border:1px solid var(--line2);color:var(--txt);font-size:11px;font-family:var(--mono)}
-  #srcPanel .tgl{height:34px;border:1px solid var(--line3);background:#0a0b06;color:var(--txt);font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+  #srcPanel .in2{height:32px;padding:0 9px;background:#14160e;border:1px solid var(--line2);color:var(--txt);font-size:11px;font-family:var(--mono)}
+  #srcPanel .tgl{height:34px;border:1px solid var(--line3);background:#13150e;color:var(--txt);font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
   #srcPanel .tgl.on{border-color:var(--gold-d);color:var(--gold-b);background:#1a1608}
   #srcPanel .bal2{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
   #srcPanel .nt{font-size:9.5px;color:var(--dim);line-height:1.5}
@@ -419,7 +426,7 @@
 </style>
 </head>
 <body>
-<div id="authGate" style="position:fixed;inset:0;z-index:9999;background:#060704;display:grid;place-items:center;color:#8b8c7c;font-family:ui-monospace,Consolas,monospace;font-size:12px;letter-spacing:.1em">Anmeldung wird geprüft …</div>
+<div id="authGate" style="position:fixed;inset:0;z-index:9999;background:#0d0f0a;display:grid;place-items:center;color:#a3a494;font-family:ui-monospace,Consolas,monospace;font-size:12px;letter-spacing:.1em">Anmeldung wird geprüft …</div>
 <script>
 (async function(){
   var auth = await window.arRequireAuth();      // leitet zu login.html, falls nicht angemeldet / gebannt
@@ -445,18 +452,18 @@
     var chip=document.createElement('div');
     chip.style.cssText='display:flex;align-items:center;gap:8px;margin-right:6px;font-family:var(--mono);font-size:11px;color:var(--muted)';
     chip.innerHTML='<span title="'+prof.email+'" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+prof.email+'</span>'+
-      '<a href="konto.html" style="color:#c7b24c;border:1px solid #41391f;padding:6px 9px;text-decoration:none;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px">Mein Bereich</a>'+
+      '<a href="konto.html" style="color:#c7b24c;border:1px solid #4e4630;padding:6px 9px;text-decoration:none;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px">Mein Bereich</a>'+
       (prof.role==='admin'?'<a href="admin.html" style="color:#e7d882;border:1px solid #7f7130;padding:6px 9px;text-decoration:none;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px">Admin</a>':'')+
-      '<a href="#" id="arLogout" style="color:#8b8c7c;border:1px solid #2f2b18;padding:6px 9px;text-decoration:none;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px">Logout</a>';
+      '<a href="#" id="arLogout" style="color:#a3a494;border:1px solid #3a3626;padding:6px 9px;text-decoration:none;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px">Logout</a>';
     tools.insertBefore(chip, tools.firstChild);
     document.getElementById('arLogout').onclick=async function(e){ e.preventDefault(); await sb.auth.signOut(); location.replace('login.html'); };
   }
   // ---- Verlauf & Analyse (Diagramm) ----
   function eur2(x){ return (+x||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
-  function statBox(l,v,c){ return '<div style="border:1px solid #211f12;background:#0a0b06;padding:10px 12px"><div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#8b8c7c">'+l+'</div><div style="font-family:ui-monospace,Consolas,monospace;font-size:17px;margin-top:4px;color:'+c+'">'+v+'</div></div>'; }
+  function statBox(l,v,c){ return '<div style="border:1px solid #2b2a1c;background:#13150e;padding:10px 12px"><div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#a3a494">'+l+'</div><div style="font-family:ui-monospace,Consolas,monospace;font-size:17px;margin-top:4px;color:'+c+'">'+v+'</div></div>'; }
   function renderHistory(acts){
     var body=document.getElementById('histBody');
-    if(!acts || !acts.length){ body.innerHTML='<div style="color:#5c5d50;font-family:ui-monospace,monospace;font-size:12px;padding:26px;text-align:center;line-height:1.7">Noch keine Aktivität.<br>Sobald du im Ticket setzt (oder im Demo-Modus übst), erscheint hier dein Verlauf mit Diagramm und Analyse.</div>'; return; }
+    if(!acts || !acts.length){ body.innerHTML='<div style="color:#7a7c6c;font-family:ui-monospace,monospace;font-size:12px;padding:26px;text-align:center;line-height:1.7">Noch keine Aktivität.<br>Sobald du im Ticket setzt (oder im Demo-Modus übst), erscheint hier dein Verlauf mit Diagramm und Analyse.</div>'; return; }
     var cum=0, staked=0, profit=0, fee=0, pts=acts.map(function(a){ staked+=(+a.stake||0); profit+=(+a.amount||0); fee+=(+a.fee||0); cum+=(+a.amount||0); return {t:new Date(a.created_at).getTime(), y:cum}; });
     var grossOut=staked+profit+fee, netBack=staked+profit;
     var total=cum, n=acts.length;
@@ -474,26 +481,26 @@
     var area=d+' L'+X(pts[pts.length-1].t).toFixed(1)+' '+baseY.toFixed(1)+' L'+X(pts[0].t).toFixed(1)+' '+baseY.toFixed(1)+' Z';
     var zeroY=Y(0);
     var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+
-      '<line x1="'+pad+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-pad)+'" y2="'+zeroY.toFixed(1)+'" stroke="#2f2b18" stroke-width="1" stroke-dasharray="3 3"/>'+
+      '<line x1="'+pad+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-pad)+'" y2="'+zeroY.toFixed(1)+'" stroke="#3a3626" stroke-width="1" stroke-dasharray="3 3"/>'+
       '<path d="'+area+'" fill="rgba(199,178,76,.12)"/>'+
       '<path d="'+d+'" fill="none" stroke="#c7b24c" stroke-width="2"/>'+
       '<circle cx="'+X(pts[pts.length-1].t).toFixed(1)+'" cy="'+Y(pts[pts.length-1].y).toFixed(1)+'" r="3.5" fill="#e7d882"/>'+
       '</svg>';
-    var plRow=function(k,v,c){ return '<div style="display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid #1a1810"><span style="font-size:12.5px;color:#8b8c7c">'+k+'</span><span style="font-family:ui-monospace,monospace;font-size:14px;color:'+(c||'#f2f1e7')+'">'+v+'</span></div>'; };
-    var pl='<div style="border:1px solid #211f12;background:#0a0b06;padding:4px 14px;margin-bottom:14px">'+
+    var plRow=function(k,v,c){ return '<div style="display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid #1a1810"><span style="font-size:12.5px;color:#a3a494">'+k+'</span><span style="font-family:ui-monospace,monospace;font-size:14px;color:'+(c||'#f2f1e7')+'">'+v+'</span></div>'; };
+    var pl='<div style="border:1px solid #2b2a1c;background:#13150e;padding:4px 14px;margin-bottom:14px">'+
       plRow('Eingesetzt', eur2(staked))+
       plRow('Auszahlung (brutto)', eur2(grossOut))+
-      plRow('− Brokergebühr', '−'+eur2(fee), '#b0402e')+
+      plRow('− Brokergebühr', '−'+eur2(fee), '#d05a44')+
       plRow('= Netto zurück', eur2(netBack), '#e7d882')+
-      '<div style="display:flex;justify-content:space-between;padding:11px 2px"><span style="font-size:13px;color:#e7d882;font-weight:600">Gewinn (netto)</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700;color:'+(profit>=0?'#9fbf3b':'#b0402e')+'">'+(profit>=0?'+':'')+eur2(profit)+'</span></div></div>';
-    body.innerHTML=pl+'<div style="border:1px solid #211f12;background:#0a0b06;padding:14px;margin-bottom:14px"><div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#8b8c7c;margin-bottom:8px">Gewinnentwicklung (kumuliert, netto)</div>'+svg+'</div>'+
+      '<div style="display:flex;justify-content:space-between;padding:11px 2px"><span style="font-size:13px;color:#e7d882;font-weight:600">Gewinn (netto)</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700;color:'+(profit>=0?'#b0d150':'#d05a44')+'">'+(profit>=0?'+':'')+eur2(profit)+'</span></div></div>';
+    body.innerHTML=pl+'<div style="border:1px solid #2b2a1c;background:#13150e;padding:14px;margin-bottom:14px"><div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#a3a494;margin-bottom:8px">Gewinnentwicklung (kumuliert, netto)</div>'+svg+'</div>'+
       '<a href="konto.html" style="display:block;text-align:center;padding:11px;border:1px solid #7f7130;color:#e7d882;text-decoration:none;font-size:11px;letter-spacing:.14em;text-transform:uppercase">Mein Bereich öffnen — mit Zeitfilter (Monat …)</a>';
   }
   var histBtn=document.getElementById('histBtn'), histPop=document.getElementById('histPop');
   if(histBtn && histPop){
     histBtn.onclick=async function(){
       histPop.style.display='flex';
-      document.getElementById('histBody').innerHTML='<div style="color:#5c5d50;padding:30px;text-align:center;font-family:ui-monospace,monospace">Lade Verlauf …</div>';
+      document.getElementById('histBody').innerHTML='<div style="color:#7a7c6c;padding:30px;text-align:center;font-family:ui-monospace,monospace">Lade Verlauf …</div>';
       var r=await sb.from('activity').select('*').order('created_at',{ascending:true});
       renderHistory(r.data||[]);
     };
@@ -512,7 +519,8 @@
     </div>
     <div class="srcs">
       <div class="srcstat"><span class="d" id="dPm"></span>Polymarket <b id="sPm">…</b></div>
-      <div class="srcstat"><span class="d" id="dOb"></span>SX Bet <b id="sOb">…</b></div>
+      <div class="srcstat"><span class="d" id="dBf"></span>Betfair <b id="sBf">…</b></div>
+      <div class="srcstat" id="stOb" style="display:none"><span class="d" id="dOb"></span>SX Bet <b id="sOb">…</b></div>
     </div>
     <div class="poll" id="pollInfo">verbinde …</div>
     <div class="spacer"></div>
@@ -649,7 +657,7 @@
           <span class="upd" id="lastUpd">–</span>
           <div class="spacer"></div>
           <button id="allDeals" title="Alle Filter aus — jeden Deal zeigen" style="height:38px;padding:0 13px;border:1px solid var(--gold-d);background:#1a1608;color:var(--gold-b);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer">⊕ Alle Deals</button>
-          <button id="reloadBtn" title="Jetzt neu laden" style="height:38px;width:40px;border:1px solid var(--line3);background:#0a0b06;color:var(--muted);font-size:15px;cursor:pointer">⟳</button>
+          <button id="reloadBtn" title="Jetzt neu laden" style="height:38px;width:40px;border:1px solid var(--line3);background:#13150e;color:var(--muted);font-size:15px;cursor:pointer">⟳</button>
           <div class="sortseg" id="sortSeg">
             <button data-sort="arb" class="active">Arb-% ▴</button>
             <button data-sort="roi">Rendite</button>
@@ -721,7 +729,11 @@ var CONFIG={
   PM_FULL_MS:20000, // in diesem Takt wird der KOMPLETTE Bestand neu bepreist
   // Ab dieser Rendite ist es kein Fund mehr, sondern ein Fehler. Zwei liquide
   // Börsen liegen nie zweistellig auseinander.
-  MAX_PLAUSIBEL:20
+  MAX_PLAUSIBEL:20,
+  // So viele Tabellenzeilen werden höchstens gebaut. Die Liste ist nach der
+  // besten Chance sortiert; darunter schaut ohnehin niemand. Vorher wurden
+  // bis zu 759 Zeilen im Sekundentakt neu erzeugt.
+  MAX_ZEILEN:120
 };
 var state={
   mode:'live', running:true, sound:true, desktop:false,
@@ -1002,19 +1014,40 @@ function trefferIn(frage, name){
   for(var i=0;i<m.length;i++) if(w[m[i]]) return m[i];
   return null;
 }
+var istJahr=function(w){ return /^(19|20)\d{2}$/.test(w); };
 /* Passt ein Buch-Markt (zwei Teilnehmer) zur Polymarket-Frage?
-   Regel: jeder Teilnehmer muss über ein EIGENES Merkmal getroffen werden.
-   Wird nur einer genannt, muss zusätzlich der Ereignisname passen — sonst ist
-   es ein anderes Rennen mit denselben Teilnehmernamen. */
+
+   Regel 1 — beide Teilnehmer namentlich in der Frage, über VERSCHIEDENE Wörter.
+             Das ist der eindeutige Fall (Zweikampf).
+   Regel 2 — nur einer genannt: dann müssen MINDESTENS ZWEI Kontextwörter des
+             Ereignisses in der Frage stehen, davon mindestens eines, das keine
+             Jahreszahl ist.
+
+   Warum so streng: ein einzelnes gemeinsames Wort reicht nie. "Will Lula da
+   Silva qualify for Brazil's runoff" traf den Kampf "Louie Sutherland vs Jose
+   Montanha da SILVA" — über den Nachnamen, bestätigt durch das Füllwort "da".
+   Ein falscher Treffer kostet Geld, ein verpasster nur eine Gelegenheit. */
 function passtZu(frage, n1, n2, kontext){
   var fw=wortSatz(frage);
   var t1=trefferIn(fw,n1), t2=trefferIn(fw,n2);
   if(t1 && t2) return t1!==t2;                   // beide genannt, aber nicht über dasselbe Wort
   if(!t1 && !t2) return false;
-  var eigen={}; merkmale(n1).concat(merkmale(n2)).forEach(function(w){ eigen[w]=1; });
-  var k=nrm(kontext||'').split(' ').filter(function(w){ return w.length>1 && !STOPP.has(w) && !eigen[w]; });
-  for(var i=0;i<k.length;i++) if(fw[k[i]]) return true;
-  return false;
+
+  // ALLE Wörter beider Namen ausschliessen, auch kurze wie "da", "de", "van" —
+  // sonst bestätigt der Name sich über sein eigenes Füllwort selbst.
+  var eigen={};
+  nrm(n1+' '+n2).split(' ').forEach(function(w){ if(w) eigen[w]=1; });
+
+  // Ab 2 Zeichen, weil die Kennung eines Rennens oft genau darin steckt
+  // ("UT" + "03"). Gefährlich sind kurze Wörter nur, wenn sie aus dem Namen
+  // stammen — die sind oben vollständig ausgeschlossen.
+  var k=nrm(kontext||'').split(' ').filter(function(w){
+    return w.length>=2 && !STOPP.has(w) && !eigen[w];
+  });
+  var treffer=k.filter(function(w){ return fw[w]; });
+  // Zwei Treffer, die BEIDE keine Jahreszahl sind. Eine Jahreszahl steht in
+  // fast jedem Titel und bestätigt nichts.
+  return treffer.filter(function(w){ return !istJahr(w); }).length>=2;
 }
 function matchSX(mk){
   if(!sxRaw.length)return null;
@@ -1596,12 +1629,21 @@ function updateAccountsUI(){
   }).join('');
   $('#plCount').textContent=state.placed;
   $('#plSecured').textContent='+'+eur(state.secured);
-  var dm={live:'live',error:'err',demo:'demo',needkey:'demo',offline:'',off:''};
-  [['pm','dPm','sPm'],['ob','dOb','sOb']].forEach(function(t){
-    var k=t[0], s=state.srcOn[k]?state.accounts[k].status:'off';
-    $('#'+t[1]).className='d '+(dm[s]||'');
-    $('#'+t[2]).textContent = !state.srcOn[k]?'aus':(s==='live'?'Live':(s==='demo'?'Demo':(s==='needkey'?'Proxy':(s==='error'?'Fehler':(s==='offline'?'aus':'…')))));
+  /* Kopfzeile: die beiden Anbieter mit ihrem echten Verbindungsstand.
+     Punkt und Text kommen aus zustand(), also aus derselben Uhr wie überall —
+     sie können nicht auf einem alten "Live" hängenbleiben. */
+  var punkt={live:'live',fehler:'err',tot:'err',alt:'demo',demo:'demo',verbindet:'',off:''};
+  var wort={live:'Live',fehler:'Störung',tot:'getrennt',alt:'veraltet',demo:'Demo',verbindet:'…',off:'aus'};
+  [['pm','dPm','sPm'],['bf','dBf','sBf'],['ob','dOb','sOb']].forEach(function(t){
+    var d=$('#'+t[1]), s=$('#'+t[2]); if(!d||!s)return;
+    var z=zustand(t[0]);
+    d.className='d '+(punkt[z]||'');
+    s.textContent=wort[z]||'…';
+    var g=grundVon(t[0]);
+    var box=d.parentNode; if(box) box.title = g || (t[0]==='pm'?'Polymarket':(t[0]==='bf'?'Betfair / 96ex':'SX Bet'))+': '+(wort[z]||'');
   });
+  // SX Bet nur zeigen, wenn es überhaupt eingeschaltet ist
+  var ob=$('#stOb'); if(ob) ob.style.display = state.srcOn.ob? '' : 'none';
 }
 
 // Quelle anklicken -> Konto-Panel (verbinden/trennen + Konto)
@@ -1633,7 +1675,7 @@ function openSrcPanel(k,x,y){
     var age=(state.bfAge!=null)?(state.bfAge<180?('aktuell, vor '+state.bfAge+' s'):('veraltet: vor '+Math.round(state.bfAge/60)+' min')):'—';
     body+='<div class="nt" style="line-height:1.6">Betfair/Orbit blockt Cloud-Server. Deshalb läuft ein <b>kleines Programm auf deinem eigenen PC</b>, das die Kurse holt.<br>'+
       '<b>Deine Zugangsdaten bleiben auf deinem PC</b> — hochgeladen werden nur Quoten.</div>'+
-      '<div style="border:1px solid var(--line2);background:#0a0b06;padding:9px 10px;font-size:10px;color:var(--muted);line-height:1.75">'+
+      '<div style="border:1px solid var(--line2);background:#13150e;padding:9px 10px;font-size:10px;color:var(--muted);line-height:1.75">'+
       '<b style="color:var(--gold-b)">So richtest du es ein (einmalig):</b><br>'+
       '1. <b>Node.js</b> installieren (nodejs.org)<br>'+
       '2. Ordner <b>bridge/</b> aus dem Repo herunterladen<br>'+
@@ -1644,7 +1686,7 @@ function openSrcPanel(k,x,y){
       '7. Fenster offen lassen → hier springt der Status auf <b style="color:var(--pos)">Live</b></div>'+
       '<div class="bal2">Bridge-Status: '+age+' · '+(state.bfCount||0)+' Quoten · '+(state.bfMatches||0)+' gematcht</div>'+
       '<a href="bridge-setup.html" style="text-align:center;padding:9px;border:1px solid var(--gold-d);background:#1a1608;color:var(--gold-b);text-decoration:none;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">📖 Schritt-für-Schritt-Anleitung öffnen</a>'+
-      '<a href="logik.html" style="text-align:center;padding:9px;margin-top:7px;border:1px solid var(--line3);background:#0a0b06;color:var(--txt);text-decoration:none;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">Suchlogik &amp; Delayed vs Live Key</a>';
+      '<a href="logik.html" style="text-align:center;padding:9px;margin-top:7px;border:1px solid var(--line3);background:#13150e;color:var(--txt);text-decoration:none;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">Suchlogik &amp; Delayed vs Live Key</a>';
   } else {
     body+='<label>Eigener Proxy (optional)</label><input class="in2" id="sp_proxy" value="'+(state.obProxy||'')+'">'+
       '<div class="nt"><b>SX Bet</b> ist eine echte Wettbörse (Krypto/USDC) — <b>kein Key, kein Login</b> nötig zum Scannen. Zum Setzen brauchst du dort ein eigenes Konto mit Guthaben.<br>Feld oben nur für einen eigenen Proxy (optional).</div>';
@@ -1760,13 +1802,21 @@ function actToast(ok,title,sub){
   while(wrap.children.length>3)wrap.firstChild.remove();
   setTimeout(function(){el.style.transition='opacity .4s';el.style.opacity='0';setTimeout(function(){el.remove();},400);},6000);
 }
+/* Ist der Nutzer gerade oben bei der Übersicht? Dann sieht er die Chance
+   ohnehin in der Liste — eine Einblendung wäre nur im Weg. Weiter unten oder
+   in einem anderen Tab bekommt er sie gemeldet, sonst geht sie unter. */
+function amAnfang(){
+  return !document.hidden && (window.scrollY||document.documentElement.scrollTop||0) < 200;
+}
 function fireHit(v){
   var now=new Date(), t=now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   // id mitgeben, damit die Meldung anklickbar ist und zur Chance führt
   var h={t:t,ev:v.m.ev,cat:v.m.cat,roi:v.roi,arb:v.arbPct,cross:v.cross,id:v.m.id};
   state.hits++; state.log.unshift(h); if(state.log.length>40)state.log.pop();
   state.unread++; $('#bellBadge').textContent=state.unread>9?'9+':state.unread; $('#bellBadge').classList.add('show');
-  toast(h); beep(); renderLog();
+  // Oben auf der Übersicht nicht einblenden — dort steht die Chance schon
+  if(!amAnfang()) toast(h);
+  beep(); renderLog();
   if(state.desktop){try{new Notification('◈ Surebet +'+pct(v.roi,2),{body:v.m.ev+' · Arb '+pct(v.arbPct,2),silent:true});}catch(e){}}
   if(state.mode==='demo' && state.autopilot){ var rec=Math.min(state.stdStake,Math.floor(feasibleMax(v))); if(rec>=5)placeDemo(v,rec,true); }
 }
@@ -1805,7 +1855,7 @@ function buildTicket(){
       '<div class="tk-leg"><div class="ll"><span class="src" id="tkSrc2"></span><span class="lo" id="tkOc2"></span></div><div class="lr"><span id="tkOdds2"></span> · <b id="tkE2"></b></div></div>'+
     '</div>'+
     '<div class="tk-row"><input class="inp num" id="tkStakeInp" type="number" step="10" min="0" inputmode="numeric"><button class="qchip" data-q="50">+50</button><button class="qchip" data-q="100">+100</button><button class="qchip" data-q="max">Max</button></div>'+
-    '<div id="tkPayout" style="border:1px solid var(--line2);background:#0a0b06;font-family:var(--mono);font-size:11px"></div>'+
+    '<div id="tkPayout" style="border:1px solid var(--line2);background:#13150e;font-family:var(--mono);font-size:11px"></div>'+
     '<div class="tk-profit" id="tkProfitBox"><span class="pk">Sicherer Gewinn</span><span class="pv" id="tkProfit">–</span></div>'+
     '<button class="placebtn" id="tkPlace">–</button>'+
     '<div class="tk-warn" id="tkWarn"></div>'+
@@ -1857,8 +1907,8 @@ function renderTicket(){
   // Direktlinks zu beiden Büchern
   var links='<div style="display:flex;gap:6px;margin-bottom:8px">'+
     '<a href="'+pmLink(m)+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #7f7130;color:#e7d882;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">Polymarket öffnen ↗</a>'+
-    (m.obLink?'<a href="'+m.obLink+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #41391f;color:#c9c7bd;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">SX Bet ↗</a>':'')+
-    (m.bfLink?'<a href="'+m.bfLink+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #41391f;color:#c9c7bd;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">Betfair ↗</a>':'')+
+    (m.obLink?'<a href="'+m.obLink+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #4e4630;color:#c9c7bd;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">SX Bet ↗</a>':'')+
+    (m.bfLink?'<a href="'+m.bfLink+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #4e4630;color:#c9c7bd;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">Betfair ↗</a>':'')+
     '</div>';
   $('#tkNote').innerHTML= links + dnpNote + (isDemo
     ? '<b>Beide Seiten</b> simuliert auf die Konten. Empfohlen = Standard-Einsatz, begrenzt durchs Guthaben.'
@@ -1993,6 +2043,21 @@ function render(){
     return l.join('');
   }
 
+  /* Nur so viele Zeilen bauen, wie ein Mensch je ansieht. Die Liste ist nach
+     der besten Chance sortiert — Zeile 400 hat noch nie jemand geöffnet.
+     Vorher wurden bis zu 759 Zeilen im Sekundentakt komplett neu gebaut, das
+     war der Grund für den hohen Akku- und Speicherverbrauch. */
+  var gesamt=view.length;
+  if(view.length>CONFIG.MAX_ZEILEN) view=view.slice(0,CONFIG.MAX_ZEILEN);
+
+  /* Und nur dann wirklich neu zeichnen, wenn sich etwas geändert hat.
+     Eine kurze Kennung über die sichtbaren Werte genügt als Vergleich. */
+  var kennung=view.map(function(v){
+    return v.m.id+':'+v.s1.odds.toFixed(3)+':'+v.s2.odds.toFixed(3)+':'+(v.ok?1:0);
+  }).join('|')+'#'+state.ticketId+'#'+state.hitTh;
+  if(kennung===state._zeilenKennung && rows.children.length){ zeigeRest(gesamt); return; }
+  state._zeilenKennung=kennung;
+
   rows.innerHTML=view.map(function(v){
     var m=v.m, ag=ageInfo(m.since), hit=v.ok&&v.roi>=state.hitTh;
     var roiCls=!v.ok?'down':(v.roi>=state.hitTh?'big':(v.roi>0?'up':''));
@@ -2012,6 +2077,20 @@ function render(){
         '<button class="rowcalc" title="In Rechner laden">∑</button></div>'+
     '</div>';
   }).join('');
+  zeigeRest(gesamt);
+}
+
+// Hinweis, wenn mehr Treffer da sind als angezeigt werden
+function zeigeRest(gesamt){
+  var rows=$('#rows'); if(!rows)return;
+  var alt=rows.querySelector('.mehr'); if(alt)alt.remove();
+  if(gesamt>CONFIG.MAX_ZEILEN){
+    var d=document.createElement('div');
+    d.className='mehr';
+    d.textContent='+ '+(gesamt-CONFIG.MAX_ZEILEN)+' weitere · nach Rendite sortiert, die besten stehen oben. '+
+                  'Filter oder Suche eingrenzen, um andere zu sehen.';
+    rows.appendChild(d);
+  }
 }
 
 /* ---- Rechner ---- */
@@ -2132,13 +2211,22 @@ buildChips();
 $('#tgAuto').classList.add('dis'); // Auto-Pilot nur im Demo
 drawGlyph(); setRunning(true); updateCalc(); updateAccountsUI();
 cycle();
-setInterval(cycle, CONFIG.POLL_MS);
-setInterval(function(){ render(); }, 1000);  // Frische/Alter aktualisieren
+/* Der Abruf läuft weiter, solange der Tab offen ist. Ist er im Hintergrund,
+   wird seltener geholt: das eigentliche Scannen macht ohnehin die Bridge auf
+   dem PC, und sie protokolliert auch dann weiter. Der Browser ist nur Anzeige,
+   und eine Anzeige, die niemand ansieht, muss nicht im Sekundentakt rechnen. */
+setInterval(function(){ if(!document.hidden) cycle(); }, CONFIG.POLL_MS);
+setInterval(function(){ if(document.hidden) cycle(); }, 60000);
+
+/* Anzeige auffrischen. Im Vordergrund jede Sekunde, im Hintergrund gar nicht —
+   render() bewertet sonst 1200 Märkte und baut die Tabelle neu, für niemanden. */
+setInterval(function(){ if(!document.hidden) render(); }, 1000);
 
 /* Überwachung: läuft unabhängig vom Abrufzyklus. Selbst wenn gar nichts mehr
    antwortet oder der Browser den Tab einfriert, altert die Anzeige weiter und
    schlägt um, statt auf einem alten "Live" stehenzubleiben. */
 setInterval(function(){
+  if(document.hidden) return;
   try{
     // Hängt ein Abruf fest? Dann läuft die Zeit trotzdem weiter und
     // zustand() stuft die Quelle von selbst herab.

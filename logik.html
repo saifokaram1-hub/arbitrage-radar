@@ -6,17 +6,17 @@
 <title>Orion Panel — Suchlogik</title>
 <meta name="robots" content="noindex, nofollow">
 <style>
-  :root{--void:#060704;--void2:#0a0b07;--panel:#0b0c07;--panel2:#0d0f0a;--line:#211f12;--line2:#2f2b18;--line3:#41391f;
-    --txt:#f2f1e7;--muted:#8b8c7c;--dim:#5c5d50;--gold:#c7b24c;--gold-b:#e7d882;--gold-d:#7f7130;
-    --pos:#9fbf3b;--neg:#b0402e;--warn:#d98c4a;
+  :root{--void:#0d0f0a;--void2:#12140d;--panel:#14160e;--panel2:#0d0f0a;--line:#2b2a1c;--line2:#3a3626;--line3:#4e4630;
+    --txt:#f2f1e7;--muted:#a3a494;--dim:#7a7c6c;--gold:#c7b24c;--gold-b:#e7d882;--gold-d:#7f7130;
+    --pos:#b0d150;--neg:#d05a44;--warn:#d98c4a;
     --mono:ui-monospace,"Cascadia Code",Consolas,monospace;--sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Arial,sans-serif}
   *{box-sizing:border-box}html,body{margin:0;padding:0}
   body{background:var(--void);color:var(--txt);font-family:var(--sans);font-size:15px;line-height:1.62;
     background-image:radial-gradient(120% 50% at 100% 0%,rgba(199,178,76,.05),transparent 55%)}
 
   .cmd{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:14px;padding:12px 20px;
-    background:linear-gradient(180deg,#0b0c07,#080905);border-bottom:1px solid var(--line2)}
-  .mark{width:30px;height:30px;position:relative;border:1px solid var(--gold-d);background:#0a0b06;flex:none}
+    background:linear-gradient(180deg,#14160e,#101208);border-bottom:1px solid var(--line2)}
+  .mark{width:30px;height:30px;position:relative;border:1px solid var(--gold-d);background:#13150e;flex:none}
   .mark::before,.mark::after{content:"";position:absolute;background:var(--gold)}
   .mark::before{left:8px;top:14px;width:13px;height:1px;box-shadow:0 -5px 0 var(--gold-d),0 5px 0 var(--gold-d)}
   .mark::after{left:14px;top:8px;width:1px;height:13px;box-shadow:-5px 0 0 var(--gold-d),5px 0 0 var(--gold-d)}
@@ -24,11 +24,11 @@
   h1 span{color:var(--gold-b)}
   .cmd .sp{flex:1}
   .lnk{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);border:1px solid var(--line3);
-    padding:8px 12px;text-decoration:none;background:#0a0b06;white-space:nowrap}
+    padding:8px 12px;text-decoration:none;background:#13150e;white-space:nowrap}
   .lnk:hover{color:var(--gold-b);border-color:var(--gold-d)}
 
   .wrap{max-width:900px;margin:0 auto;padding:28px 20px 80px;display:flex;flex-direction:column;gap:32px}
-  .intro{border:1px solid var(--line2);background:linear-gradient(180deg,#0d0f0a,#080905);padding:22px 24px;display:flex;flex-direction:column;gap:10px}
+  .intro{border:1px solid var(--line2);background:linear-gradient(180deg,#0d0f0a,#101208);padding:22px 24px;display:flex;flex-direction:column;gap:10px}
   .intro h2{margin:0;font-size:19px;color:var(--gold-b);text-wrap:balance}
   .intro p{margin:0;color:var(--muted);font-size:14.5px;max-width:66ch}
   .stamp{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.05em}
@@ -482,8 +482,8 @@ Maximum = verfügbare Größe × (L − 1)</pre>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=27"></script>
-<script src="pdf.js?v=27"></script>
+<script src="config.js?v=28"></script>
+<script src="pdf.js?v=28"></script>
 <script>
 // PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.
 document.getElementById('pdfBtn').addEventListener('click', function(){

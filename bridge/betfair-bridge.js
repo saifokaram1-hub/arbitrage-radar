@@ -169,8 +169,8 @@ const O = {
    erkennt, ob auf einem PC noch eine veraltete Bridge läuft, und den Nutzer
    auffordern kann, die neue Datei zu holen. BEI JEDER inhaltlichen Änderung
    an der Suchlogik hochzählen — sonst merkt niemand, dass er alt ist. */
-const BRIDGE_BUILD = 6;
-const BRIDGE_VERSION = '2.6';
+const BRIDGE_BUILD = 7;
+const BRIDGE_VERSION = "2.7";
 
 const BF_LOGIN = 'https://identitysso.betfair.com/api/login';
 const BF_KEEP  = 'https://identitysso.betfair.com/api/keepAlive';
@@ -541,6 +541,10 @@ async function polymarketScan() {
     m.ask = [a.p, b.p];
     m.size = [a.s, b.s];
     m.ts = Date.now();
+    // Wortmengen einmal vorbereiten — die Gegenprobe fragt sie oft ab
+    const w = nrm(m.q).split(' ');
+    m.fw = new Set(w.filter(x => x.length > 2));
+    m.kf = new Set(w.filter(x => x.length > 1 && !STOPP.has(x)));
     PM.set(id, m);
     handelbar++;
   });
@@ -582,6 +586,25 @@ function trefferIn(fragWoerter, name) {
   return null;
 }
 const istUnentschieden = n => /^(the )?(draw|tie|unentschieden)$/i.test(String(n || '').trim());
+// Eine blosse Jahreszahl bestaetigt gar nichts — die steht in fast jedem Titel
+const istJahr = w => /^(19|20)\d{2}$/.test(w);
+
+/* Kennungen wie "UT-03", "NFC 2", "Runde 5" sind die eigentlichen Namen eines
+   Rennens — und bestehen ausgerechnet aus den kurzen Teilen, die eine reine
+   Wortlaengen-Regel wegwirft. Deshalb werden benachbarte kurze Teile, von
+   denen einer eine Ziffer traegt, zu einem Stueck zusammengezogen:
+   "ut 03" -> "ut03". Das ist unterscheidungskraeftig genug, um allein zu zaehlen. */
+function kennungen(text) {
+  const w = nrm(text).split(' ').filter(Boolean);
+  const out = new Set();
+  for (let i = 0; i < w.length - 1; i++) {
+    if (w[i].length > 4 || w[i + 1].length > 4) continue;
+    if (!/\d/.test(w[i]) && !/\d/.test(w[i + 1])) continue;
+    if (istJahr(w[i]) && istJahr(w[i + 1])) continue;
+    out.add(w[i] + w[i + 1]);
+  }
+  return out;
+}
 
 /* ═══════════════ Arbitrage-Rechnung (der Kern) ═══════════════ */
 
@@ -705,13 +728,87 @@ function layBein(runner, gebuehr) {
 }
 
 /**
+ * Wie gut passt ein Betfair-Markt zu einer Frage? Gibt Punkte zurück, oder
+ * null wenn er gar nicht passt. Eine einzige Stelle, damit der Abgleich in
+ * BEIDE Richtungen nach exakt denselben Regeln bewertet wird.
+ */
+function bewerte(fragWoerter, kontextDerFrage, e) {
+  const echte = e.runners.filter(r => !istUnentschieden(r.name));
+  if (echte.length < 2) return null;
+
+  // Welches Merkmal jedes Teilnehmers steht in der Frage?
+  const treffer = echte.map(r => ({ r: r, w: trefferIn(fragWoerter, r.name) }));
+  const genannt = treffer.filter(t => t.w);
+  // Ein Wort darf NICHT für zwei Teilnehmer zugleich zählen. Genau daran
+  // scheiterte es vorher: "party" galt für beide Parteien gleichzeitig.
+  if (new Set(genannt.map(t => t.w)).size !== genannt.length) return null;
+
+  // Kontext des Betfair-Marktes: Ereignisname und Markttitel, ohne die
+  // Teilnehmernamen selbst — sonst bestätigt sich der Treffer selbst.
+  // ALLE Wörter der Namen ausschliessen, auch kurze wie "da", "de", "van":
+  // genau so hat sich ein Kampfmarkt über sein eigenes "da" bestätigt.
+  const eigenNamen = new Set();
+  e.runners.forEach(r => nrm(r.name).split(' ').forEach(w => { if (w) eigenNamen.add(w); }));
+  // Ab 2 Zeichen, weil die Kennung eines Rennens oft genau darin steckt
+  // ("UT 03"). Gefährlich sind kurze Wörter nur, wenn sie aus dem Namen
+  // selbst stammen — und die sind oben bereits vollständig ausgeschlossen.
+  const kontextBf = nrm((e.ev || '') + ' ' + (e.mn || '')).split(' ')
+    .filter(w => w.length >= 2 && !STOPP.has(w) && !eigenNamen.has(w));
+  const kontextTreffer = kontextBf.filter(w => kontextDerFrage.has(w));
+
+  if (genannt.length >= 2 && genannt.length === echte.length) {
+    // Beide Seiten des Zweikampfs stehen namentlich in der Frage — eindeutig.
+    return 10 + kontextTreffer.length;
+  }
+  if (genannt.length === 1) {
+    // Nur EIN Teilnehmer genannt (typisch bei "Gewinnt X das Turnier?").
+    // Ein einzelnes gemeinsames Wort reicht nie: so wurde ein brasilianischer
+    // Wahlmarkt an einen Kampf gegen "Jose Montanha da SILVA" gehängt,
+    // bestätigt allein durch das Füllwort "da".
+    // Zwei Kontexttreffer, die BEIDE keine Jahreszahl sind. Eine Jahreszahl
+    // steht in fast jedem Titel und bestätigt nichts. Auf eine Mindestlänge
+    // wird bewusst verzichtet: die Kennung eines Rennens ist oft kurz
+    // ("UT" + "03"), und lange Wörter wie "house" fallen als Allerweltswort
+    // schon vorher weg.
+    const ohneJahr = kontextTreffer.filter(w => !istJahr(w));
+    if (ohneJahr.length < 2) return null;
+    return kontextTreffer.length;
+  }
+  return null;
+}
+
+/**
+ * Gegenprobe in die andere Richtung.
+ *
+ * Betfair ist das kleinere und viel besser strukturierte Buch: Ereignisname,
+ * Markttyp, saubere Teilnehmernamen. Polymarket liefert nur Freitext. Deshalb
+ * genügt es nicht zu fragen "welcher Betfair-Markt passt zu dieser Frage" —
+ * es muss auch umgekehrt gelten: unter ALLEN Polymarket-Fragen darf keine
+ * besser zu diesem Betfair-Markt passen als die gewählte.
+ *
+ * Genau daran wäre die Verwechslung gescheitert: der Kampf "Sutherland gegen
+ * Jose Montanha da Silva" passt offensichtlich besser zu einer Frage über
+ * diesen Kampf als zu einer über Brasiliens Präsidentschaftswahl.
+ */
+function bestaetigtRueckwaerts(pmId, e, punkte) {
+  let besser = false;
+  PM.forEach((p, id) => {
+    if (besser || id === pmId) return;
+    if (!p.fw || !p.kf) return;
+    const s = bewerte(p.fw, p.kf, e);
+    if (s != null && s > punkte) besser = true;
+  });
+  return !besser;
+}
+
+/**
  * Sucht zu einem Polymarket-Markt den passenden Betfair-Markt.
  * Ergebnis: welcher Betfair-Teilnehmer ist gemeint (subjekt), und welcher
  * Polymarket-Ausgang bedeutet "dieser Teilnehmer gewinnt" (jaIdx).
  */
-function zuordnen(pm, idx) {
+function zuordnen(pm, idx, pmId) {
   const frage = nrm(pm.q);
-  const fragWoerter = new Set(frage.split(' ').filter(w => w.length > 2));
+  const fragWoerter = pm.fw || new Set(frage.split(' ').filter(w => w.length > 2));
   const kandidaten = new Map();
   fragWoerter.forEach(w => { (idx.get(w) || []).forEach(e => kandidaten.set(e.mid, e)); });
   if (!kandidaten.size) return null;
@@ -725,49 +822,22 @@ function zuordnen(pm, idx) {
   // Wörter, die den KONTEXT tragen: Ort, Wettbewerb, Kennung des Rennens.
   // "UT 03", "massachusetts", "wimbledon" — daran hängt, um welches Ereignis
   // es überhaupt geht. Ohne diesen Abgleich passt jeder Wahlmarkt auf jeden.
-  const kontextDerFrage = new Set(
+  const kontextDerFrage = pm.kf || new Set(
     frage.split(' ').filter(w => w.length > 1 && !STOPP.has(w))
   );
 
   kandidaten.forEach(e => {
-    const echte = e.runners.filter(r => !istUnentschieden(r.name));
-    if (echte.length < 2) return;
-
-    // Welches Merkmal jedes Teilnehmers steht in der Frage?
-    const treffer = echte.map(r => ({ r: r, w: trefferIn(fragWoerter, r.name) }));
-    const genannt = treffer.filter(t => t.w);
-    // Ein Wort darf NICHT für zwei Teilnehmer zugleich zählen. Genau daran
-    // scheiterte es vorher: "party" galt für beide Parteien gleichzeitig.
-    const verschieden = new Set(genannt.map(t => t.w)).size === genannt.length;
-    if (!verschieden) return;
-
-    // Kontext des Betfair-Marktes: Ereignisname und Markttitel, ohne die
-    // Teilnehmernamen selbst — sonst bestätigt sich der Treffer selbst.
-    const eigenNamen = new Set();
-    echte.forEach(r => merkmale(r.name).forEach(w => eigenNamen.add(w)));
-    const kontextBf = nrm((e.ev || '') + ' ' + (e.mn || '')).split(' ')
-      .filter(w => w.length > 1 && !STOPP.has(w) && !eigenNamen.has(w));
-    const kontextTreffer = kontextBf.filter(w => kontextDerFrage.has(w)).length;
-
-    let score;
-    if (genannt.length >= 2 && genannt.length === echte.length) {
-      // Beide Seiten des Zweikampfs stehen namentlich in der Frage — eindeutig.
-      score = 10 + kontextTreffer;
-    } else if (genannt.length === 1) {
-      // Nur EIN Teilnehmer genannt (typisch bei "Gewinnt X das Turnier?").
-      // Dann MUSS der Kontext stimmen, sonst ist es ein anderes Rennen.
-      if (kontextTreffer < 1) return;
-      score = kontextTreffer;
-    } else {
-      return;
-    }
-
+    const score = bewerte(fragWoerter, kontextDerFrage, e);
+    if (score == null) return;
     const frueher = !bester || (e.start && bester.start && Date.parse(e.start) < Date.parse(bester.start));
     if (score > besterScore || (score === besterScore && frueher)) {
       bester = e; besterScore = score;
     }
   });
   if (!bester) return null;
+
+  // Erst wenn auch die Gegenrichtung zustimmt, gilt die Paarung
+  if (pmId != null && PM.size && !bestaetigtRueckwaerts(pmId, bester, besterScore)) return null;
 
   const echte = bester.runners.filter(r => !istUnentschieden(r.name));
 
@@ -843,8 +913,8 @@ function schnittmengeIds() {
   const idx = bfIndex();
   if (!idx.size) return [];
   const ids = new Set();
-  PM.forEach(pm => {
-    const zu = zuordnen(pm, idx);
+  PM.forEach((pm, pmId) => {
+    const zu = zuordnen(pm, idx, pmId);
     if (zu) ids.add(zu.markt.mid);
   });
   return Array.from(ids);
@@ -858,7 +928,7 @@ function crossBookChancen() {
   let verworfenAlt = 0, unplausibel = 0;
 
   PM.forEach((pm, pmId) => {
-    const zu = zuordnen(pm, idx);
+    const zu = zuordnen(pm, idx, pmId);
     if (!zu) return;
     const m = zu.markt;
 
@@ -1284,7 +1354,8 @@ module.exports = {
   effektiv, pmGebuehr, pmEffektiv, rechne, buendeln, layBein, bfIndex, zuordnen, maxAlterMs, minRoiFuer,
   schluessel, merkmale, trefferIn, nrm, istUnentschieden,
   setKeyArt: (a) => { KEY_ART = a; }, getKeyArt: () => KEY_ART, istVerzoegert,
-  crossBookChancen, schnittmengeIds, betfairIntern, polymarketIntern,
+  crossBookChancen, schnittmengeIds, bewerte, bestaetigtRueckwaerts,
+  betfairIntern, polymarketIntern,
   pmListe, pmKurse, polymarketScan, kategorie,
   PM, KATALOG, BUCH, O
 };

@@ -530,7 +530,95 @@ console.log('\n══════════ 15. Die Fehlpaarungen aus dem Live
          zuS? '('+zuS.subjekt.name+')':'');
 }
 
-console.log('\n══════════ 16. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
+console.log('\n══════════ 16. Namensgleichheit über verschiedene Sportarten hinweg ══════════\n');
+{
+  function idxAus(ev, mn, r1, r2){
+    const markt={ mid:'1.K', ev:ev, mn:mn, mt:'MATCH_ODDS', anzahl:2, satz:0.05,
+      start:new Date(Date.now()+4*3600e3).toISOString(), inplay:false, ts:Date.now(),
+      runners:[{name:r1,q:1.03,size:999,lq:1.61,lsize:20},{name:r2,q:2.4,size:525,lq:2.44,lsize:28}] };
+    const idx=new Map();
+    [r1,r2].forEach(function(n){ B.merkmale(n).forEach(function(w){
+      if(!idx.has(w)) idx.set(w,[]); idx.get(w).push(markt); }); });
+    return idx;
+  }
+
+  // Der Fall vom Bildschirmfoto: brasilianischer Wahlmarkt gegen einen Kampf,
+  // verbunden allein ueber den Nachnamen "Silva" und das Fuellwort "da".
+  const kampf=idxAus('Louie Sutherland v Jose Montanha da Silva','Fight Result',
+                     'Louie Sutherland','Jose Montanha da Silva');
+  const zu1=B.zuordnen({ q:"Will Luiz Inacio Lula da Silva qualify for Brazil's presidential runoff?",
+                         outs:['Yes','No'] }, kampf);
+  pruefe('Wahlmarkt wird NICHT an den Kampf gehaengt', zu1===null,
+         zu1? '(faelschlich → '+zu1.markt.ev+')':'');
+
+  const zu2=B.zuordnen({ q:'Will Luiz Inacio Lula da Silva win the 2026 Brazilian election?',
+                         outs:['Yes','No'] }, kampf);
+  pruefe('auch die zweite Lula-Frage wird abgelehnt', zu2===null);
+
+  // Blosse Jahreszahl darf nichts bestaetigen
+  const lck=idxAus('LCK 2026 Season','Winner','KT Rolster','Gen G');
+  const zu3=B.zuordnen({ q:'Will Fnatic win the 2026 World Championship?', outs:['Yes','No'] }, lck);
+  pruefe('gemeinsame Jahreszahl allein reicht nicht', zu3===null);
+
+  // Der ECHTE Fall muss weiterhin durchkommen
+  const zu4=B.zuordnen({ q:'Will KT Rolster win the LCK 2026 season playoffs?', outs:['Yes','No'] }, lck);
+  pruefe('das passende LCK-Rennen wird gefunden', !!zu4,
+         zu4? '(→ '+zu4.markt.ev+')':'(nichts gefunden)');
+  if(zu4) pruefe('mit dem richtigen Teilnehmer', /Rolster/.test(zu4.subjekt.name));
+
+  // Zweikampf braucht keinen Kontext, beide Namen genuegen
+  const duell=idxAus('Sutherland v Silva','Fight Result','Louie Sutherland','Jose Montanha da Silva');
+  const zu5=B.zuordnen({ q:'Will Louie Sutherland beat Jose Montanha da Silva?', outs:['Yes','No'] }, duell);
+  pruefe('echter Zweikampf wird weiterhin erkannt', !!zu5 && /Sutherland/.test(zu5.subjekt.name));
+}
+
+console.log('\n══════════ 17. Gegenprobe in beide Richtungen ══════════\n');
+{
+  // Betfair ist das kleinere, strukturierte Buch. Eine Paarung gilt erst,
+  // wenn unter ALLEN Polymarket-Fragen keine besser zu diesem Betfair-Markt
+  // passt als die gewählte.
+  B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
+
+  const kampf={ mid:'1.F', ev:'Louie Sutherland v Jose Montanha da Silva', mn:'Fight Result',
+    mt:'MATCH_ODDS', anzahl:2, satz:0.05, start:new Date(Date.now()+4*3600e3).toISOString(),
+    inplay:false, ts:Date.now(),
+    runners:[{name:'Louie Sutherland',q:1.03,size:999,lq:1.61,lsize:20},
+             {name:'Jose Montanha da Silva',q:2.4,size:525,lq:2.44,lsize:28}] };
+  const idx=new Map();
+  kampf.runners.forEach(function(r){ B.merkmale(r.name).forEach(function(w){
+    if(!idx.has(w)) idx.set(w,[]); idx.get(w).push(kampf); }); });
+
+  function pmEintrag(id,q){
+    const w=B.nrm(q).split(' ');
+    B.PM.set(id,{ q:q, outs:['Yes','No'], toks:['a','b'], slug:'x', liq:1, vol:1, cat:'Sport',
+      ask:[0.5,0.52], size:[900,900], ts:Date.now(), feeSatz:0, feeExp:1, feeTyp:'keine',
+      fw:new Set(w.filter(x=>x.length>2)),
+      kf:new Set(w.filter(x=>x.length>1 && !['the','and','for','win','wins','beat','beats','vs','yes','no'].includes(x))) });
+  }
+
+  // Nur die Lula-Frage vorhanden: der Kampf ist der einzige Kandidat
+  pmEintrag('lula',"Will Luiz Inacio Lula da Silva qualify for Brazil's presidential runoff?");
+  pruefe('Lula-Frage wird schon durch die Textregel abgelehnt',
+         B.zuordnen(B.PM.get('lula'), idx, 'lula')===null);
+
+  // Jetzt zusaetzlich die passende Kampf-Frage
+  pmEintrag('kampf','Will Louie Sutherland beat Jose Montanha da Silva?');
+  const zuKampf=B.zuordnen(B.PM.get('kampf'), idx, 'kampf');
+  pruefe('die echte Kampf-Frage wird zugeordnet', !!zuKampf,
+         zuKampf? '('+zuKampf.subjekt.name+')':'');
+  pruefe('die Lula-Frage bleibt abgelehnt', B.zuordnen(B.PM.get('lula'), idx, 'lula')===null);
+
+  // Gegenprobe direkt: eine schwaechere Paarung muss weichen, wenn es eine bessere gibt
+  const punkteKampf=10;
+  pruefe('Gegenprobe erkennt die bessere Frage',
+         B.bestaetigtRueckwaerts('lula', kampf, 1)===false,
+         '(die Kampf-Frage passt besser)');
+  pruefe('und bestaetigt die beste selbst', B.bestaetigtRueckwaerts('kampf', kampf, punkteKampf)===true);
+
+  B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
+}
+
+console.log('\n══════════ 18. Gegenprobe: fauler Markt darf nichts melden ══════════\n');
 {
   B.PM.clear(); B.KATALOG.clear(); B.BUCH.clear();
   B.PM.set('test2', {
