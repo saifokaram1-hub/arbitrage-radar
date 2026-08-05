@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=25"></script>
+<script src="config.js?v=26"></script>
 <style>
   :root{
     --void:#060704; --void2:#0a0b07;
@@ -521,7 +521,7 @@
   <div class="scanbar" id="scanbar">
     <div class="radar" id="radar"><div class="grid"></div><div class="sweep"></div><div class="blip" id="radarBlip"></div></div>
     <div class="scaninfo">
-      <div class="scanline"><span class="livedot" id="sbDot"></span><b id="sbState">SCANNE</b> · Polymarket + SX Bet · <span id="sbMarkets">0</span> Märkte · <span id="sbMatch">–</span> · <span id="sbUpd">verbinde …</span></div>
+      <div class="scanline"><span class="livedot" id="sbDot"></span><b id="sbState">SCANNE</b> · <span id="sbQuellen">Polymarket + Betfair</span> · <span id="sbMarkets">0</span> Märkte · <span id="sbMatch">–</span> · <span id="sbUpd">verbinde …</span></div>
       <div class="scanticker" id="sbTicker">Suche nach Arbitrage-Fenstern …</div>
       <div id="sbAnalyse" style="font-size:10.5px;color:var(--dim);font-family:var(--mono);margin-top:3px">Scan-Analyse sammelt Daten — wird mit der Zeit genauer …</div>
     </div>
@@ -706,8 +706,11 @@ var state={
   mode:'live', running:true, sound:true, desktop:false,
   cat:'Alle', src:'all', sort:'arb', search:'', minRoi:0, onlyOpp:false, onlyLowRisk:false, hitTh:0.5,
   hits:0, closed:0, log:[], unread:0,
-  accounts:{pm:{status:'…'}, ob:{status:'offline'}, bf:{status:'nobridge'}}, srcOn:{pm:true, ob:true, bf:true},
-  balPm:0, balOb:0, feePm:0, feeOb:3, obProxy:'https://noexklrgtqveiclijdwp.supabase.co/functions/v1/ob-proxy', stdStake:100, autopilot:false, placed:0, secured:0,
+  // SX Bet ist vorerst abgeschaltet: es deckt fast nur NFL ab und überschneidet
+  // sich kaum mit Polymarket. Der Fokus liegt auf Polymarket ⇄ Betfair/96ex.
+  // Über die Kontokachel jederzeit wieder einschaltbar.
+  accounts:{pm:{status:'…'}, ob:{status:'offline'}, bf:{status:'nobridge'}}, srcOn:{pm:true, ob:false, bf:true},
+  balPm:0, balOb:0, feePm:0, feeOb:3, obProxy:'https://noexklrgtqveiclijdwp.supabase.co/functions/v1/ob-proxy', stdStake:1000, autopilot:false, placed:0, secured:0,
   ticketId:null, ticketStake:100, ticketDirty:false,
   walletAddr:'',
   lastUpd:0, polling:false, pmErr:''
@@ -1145,10 +1148,13 @@ function renderOpps(){
         '<span class="oppMeta">max ~'+(o.maxStake||0)+(o.tage!=null?' · '+o.tage+' Tage':'')+'</span>'+
       '</div>'+
       beine+
-      '<div class="oppProof">Bei '+S.toFixed(2)+' Gesamteinsatz: '+
-        s1.toFixed(2)+' + '+s2.toFixed(2)+' → Auszahlung <b>'+aus.toFixed(2)+
-        '</b> bei BEIDEN Ausgängen · Gewinn <b>+'+gew.toFixed(2)+'</b>'+
-        (deckel? ' · <span style="color:#d98c4a">Achtung: nur ~'+o.maxStake+' im Buch verfügbar</span>':'')+
+      '<div class="oppProof">Von <b>'+S.toFixed(0)+' €</b> Gesamteinsatz: '+
+        '<b>'+s1.toFixed(2)+' €</b> auf '+esc(o.legs[0].book)+' · '+
+        '<b>'+s2.toFixed(2)+' €</b> auf '+esc(o.legs[1].book)+
+        ' → Auszahlung <b>'+aus.toFixed(2)+' €</b> bei BEIDEN Ausgängen · '+
+        'Gewinn <b>+'+gew.toFixed(2)+' €</b> (Gebühren beider Bücher bereits abgezogen)'+
+        (deckel? ' · <span style="color:#d98c4a">Achtung: nur ~'+o.maxStake+' € im Buch verfügbar, '+
+                 'mehr lässt sich gerade nicht unterbringen</span>':'')+
       '</div>'+
     '</div>';
   }).join('');
@@ -1844,7 +1850,32 @@ function render(){
     $('#radar').classList.toggle('off',!state.running);
     $('#sbDot').classList.toggle('off',!state.running);
     $('#sbState').textContent=state.mode==='demo'?'DEMO-SCAN':(state.running?(state._wsOn?'⚡ ECHTZEIT':'SCANNE'):'PAUSE');
-    var sbm=$('#sbMatch'); if(sbm)sbm.textContent=(state.sxCount||0)+' SX-Märkte · '+(state.sxMatches||0)+' gematcht';
+
+    /* Ehrliche Anzeige, WAS gerade gescannt wird. Es soll auf einen Blick
+       erkennbar sein, ob eine Quelle wirklich mitläuft — und wie viele
+       Märkte tatsächlich beidseitig verglichen werden können. */
+    var q=$('#sbQuellen');
+    if(q){
+      var teile=[];
+      ACC.forEach(function(a){
+        if(!state.srcOn[a[0]]) return;
+        var z=zustand(a[0]);
+        var name=a[0]==='pm'?'Polymarket':(a[0]==='bf'?'Betfair':'SX Bet');
+        teile.push(name+(z==='live'?'':' ('+(z==='tot'?'getrennt':z)+')'));
+      });
+      q.textContent=teile.length? teile.join(' + ') : 'keine Quelle aktiv';
+    }
+    var sbm=$('#sbMatch');
+    if(sbm){
+      var st=state.bfStats||{};
+      var t2=[];
+      t2.push((state.pmHandelbar||0)+' handelbar');
+      if(state.srcOn.bf && st.bf_katalog) t2.push(st.bf_gelesen+'/'+st.bf_katalog+' Betfair gelesen');
+      var gem = st.gemeinsam!=null? st.gemeinsam : (state.bfMatches||0);
+      t2.push(gem+' auf beiden Büchern');
+      if(state.oppsVerworfen) t2.push(state.oppsVerworfen+' unplausibel verworfen');
+      sbm.textContent=t2.join(' · ');
+    }
   }
 
   var view=all.filter(function(v){
