@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=37"></script>
+<script src="config.js?v=38"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -406,6 +406,31 @@
      Zeilen in den Live-Chancen — filterbar und sortierbar wie alles andere.
      Erkennbar sind sie am Zeichen in der Zeile; ihre volle Aufschluesselung
      erscheint im Wett-Ticket, sobald man sie anklickt. */
+  /* Sicherheitsprüfung im Ticket — jede Bedingung einzeln sichtbar */
+  .chkBox{border:1px solid var(--line3);background:#181b12;margin-bottom:9px;font-family:var(--mono)}
+  .chkBox.frei{border-color:#4a6b22}
+  .chkBox.gesperrt{border-color:#6e4020}
+  .chkKopf{display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+    padding:8px 10px;border-bottom:1px solid var(--line2)}
+  .chkKopf b{font-size:10.5px;letter-spacing:.06em;font-family:var(--sans,inherit)}
+  .chkBox.frei .chkKopf b{color:var(--pos)}
+  .chkBox.gesperrt .chkKopf b{color:var(--warn)}
+  .chkKopf span{font-size:10px;color:var(--dim)}
+  .chkZeile{display:grid;grid-template-columns:16px 1fr;gap:2px 7px;padding:5px 10px;
+    border-bottom:1px solid var(--line);font-size:10.5px}
+  .chkZeile:last-of-type{border-bottom:0}
+  .chkIcon{grid-row:1/3;font-size:11px;line-height:1.3}
+  .chkZeile.ja .chkIcon{color:var(--pos)}
+  .chkZeile.nein .chkIcon{color:var(--neg)}
+  .chkZeile.hinweis .chkIcon{color:var(--warn)}
+  .chkName{color:var(--txt);font-size:11px}
+  .chkZeile.nein .chkName{color:var(--neg)}
+  .chkText{color:var(--dim);font-size:10px;line-height:1.45;overflow-wrap:anywhere}
+  .chkFuss{padding:7px 10px;font-size:10px;color:var(--muted);line-height:1.5;
+    border-top:1px solid var(--line2)}
+  .chkFuss b{color:var(--txt)}
+  .chkFuss.warn{color:var(--warn)}
+
   /* Chance ist gefunden, aber noch nicht über mehrere Durchläufe bestätigt */
   .prueftag{font-size:9px;letter-spacing:.06em;padding:1px 6px;border:1px solid #5c4526;
     color:#d98c4a;background:rgba(217,140,74,.09);white-space:nowrap}
@@ -2190,12 +2215,144 @@ function buildTicket(){
     '</div>'+
     '<div class="tk-row"><input class="inp num" id="tkStakeInp" type="number" step="10" min="0" inputmode="numeric"><button class="qchip" data-q="50">+50</button><button class="qchip" data-q="100">+100</button><button class="qchip" data-q="max">Max</button></div>'+
     '<div id="tkFees"></div>'+
+    '<div id="tkCheck"></div>'+
     '<div id="tkPayout" style="border:1px solid var(--line2);background:#181b12;font-family:var(--mono);font-size:11px"></div>'+
     '<div class="tk-profit" id="tkProfitBox"><span class="pk">Sicherer Gewinn</span><span class="pv" id="tkProfit">–</span></div>'+
     '<button class="placebtn" id="tkPlace">–</button>'+
     '<div class="tk-warn" id="tkWarn"></div>'+
     '<div class="tk-note" id="tkNote"></div>';
 }
+/* ═══════════════ Sicherheitsprüfung vor dem Einsatz ═════════════════════
+   Ein Fehler kostet den ganzen Einsatz, ein Treffer bringt wenige Prozent.
+   Bei 3 % Rendite braucht es rund 33 Treffer, um einen Totalverlust
+   auszugleichen. Deshalb wird hier nicht um Vertrauen gebeten, sondern
+   jede einzelne Bedingung offengelegt — mit Ergebnis und Begründung.
+
+   KRITISCH heißt: ohne diesen Punkt wird nicht gesetzt, Knopf gesperrt.
+   HINWEIS heißt: sollte man wissen, verhindert das Setzen aber nicht.
+
+   Was diese Liste NICHT leisten kann, und das gehört dazugesagt:
+   sie prüft den Zustand in diesem Augenblick. Zwischen der Prüfung und dem
+   Klick auf beiden Seiten können Sekunden vergehen, in denen sich ein Kurs
+   bewegt. Deshalb bleibt der letzte Blick auf die echten Bücher Pflicht. */
+function sicherheitsPruefung(mk, v, S){
+  var p=[];
+  var add=function(name, ok, kritisch, text){ p.push({name:name, ok:ok, kritisch:kritisch, text:text}); };
+
+  // 1 — Zuordnung über mehrere Durchläufe stabil
+  add('Zuordnung bestätigt', !!mk._sicher, true,
+      mk._sicher ? 'Dieselbe Paarung über mehrere Durchläufe unverändert'
+                 : (mk._grund||'wird noch geprüft'));
+
+  // 2 — Zwei getrennte Rechenwege müssen übereinstimmen
+  var g=gegenrechnung(v);
+  add('Zwei Rechenwege einig', !!g.ok, true,
+      g.ok ? 'Kehrwert-Weg und Quoten-Weg ergeben denselben Betrag'
+           : (g.grund||'Rechenwege uneinig'));
+
+  // 3 — Beide Ausgänge müssen auf den Cent gleich auszahlen
+  var r=routing(v,S>0?S:100), S2=(S>0?S:100);
+  var pay1=r.E1*v.s1.oddsEff, pay2=r.E2*v.s2.oddsEff;
+  var gleich=Math.abs(pay1-pay2)<0.02;
+  add('Beide Ausgänge zahlen gleich', gleich, true,
+      gleich ? eur(pay1)+' — egal wie es ausgeht'
+             : 'Abweichung '+eur(Math.abs(pay1-pay2))+' — keine echte Absicherung');
+
+  // 4 — Zwei verschiedene Bücher. Innerhalb eines Buches gibt es keine Arbitrage
+  add('Zwei verschiedene Börsen', !!v.cross, true,
+      v.cross ? buchName(v.s1.src)+' gegen '+buchName(v.s2.src)
+              : 'Beide Beine auf demselben Buch — das ist keine Arbitrage');
+
+  // 5 — Gebührensätze müssen BEKANNT sein, nicht geraten
+  var fehlt=[];
+  if(mk.fertig && mk.opp && mk.opp.legs){
+    /* Auf null/undefined PRÜFEN, nicht auf +wert>=0 rechnen: +null ergibt 0,
+       ein fehlender Satz käme so als "0 % Gebühr" durch. Genau dieser Fehler
+       hat schon einmal Scheinchancen erzeugt (aus −0,52 % wurde +0,46 %). */
+    mk.opp.legs.forEach(function(l){
+      if(l.fee==null || !isFinite(+l.fee)) fehlt.push(buchName(buchKuerzel(l.book)));
+    });
+  } else {
+    [0,1].forEach(function(i){
+      var s=i===0?v.s1:v.s2;
+      if(s.src==='pm' && mk.feeSatz==null) fehlt.push('Polymarket');
+      if(s.src==='bf' && mk.bfSatz==null && state.feeBf==null) fehlt.push('Betfair');
+    });
+  }
+  add('Gebühren beider Seiten bekannt', fehlt.length===0, true,
+      fehlt.length===0 ? 'Beide Sätze kommen aus den Marktdaten, keiner geschätzt'
+                       : 'Satz fehlt bei: '+fehlt.join(', ')+' — nicht als 0 gerechnet, aber unsicher');
+
+  // 6 — Rendite im plausiblen Bereich
+  var plaus = v.roi>0.02 && v.roi<=CONFIG.MAX_PLAUSIBEL;
+  add('Rendite plausibel', plaus, true,
+      !(v.roi>0.02) ? 'Kein Vorteil vorhanden'
+        : (v.roi>CONFIG.MAX_PLAUSIBEL
+            ? '+'+pct(v.roi,2)+' liegt über '+CONFIG.MAX_PLAUSIBEL+' % — das ist ein Fehler, kein Fund'
+            : '+'+pct(v.roi,2)+' — im realistischen Bereich'));
+
+  // 7 — Zwei verschiedene Links, beide vorhanden
+  var l1 = mk.fertig&&mk.opp&&mk.opp.legs? (mk.opp.legs[0].link||'') : (mk.linkPm||pmLink(mk));
+  var l2 = mk.fertig&&mk.opp&&mk.opp.legs? (mk.opp.legs[1].link||'') : (mk.bfLink||mk.obLink||'');
+  var linksOk = !!l1 && !!l2 && l1!==l2;
+  add('Zwei echte Links', linksOk, true,
+      !l1||!l2 ? 'Ein Link fehlt — die Meldung lässt sich nicht nachprüfen'
+        : (l1===l2 ? 'Beide Links zeigen auf dieselbe Seite — Zuordnung unbrauchbar'
+                   : 'Beide Bücher direkt erreichbar'));
+
+  // 8 — Genug Tiefe im Buch für den geplanten Einsatz
+  var tiefe = mk.fertig? (+mk.liq||0) : (+mk.liq||0);
+  var tiefeOk = !(S>0) || tiefe<=0 || tiefe>=S;
+  add('Genug im Buch', tiefeOk, false,
+      tiefe<=0 ? 'Tiefe nicht gemeldet — vor dem Setzen im Buch selbst nachsehen'
+        : (tiefeOk ? 'rund '+nf0.format(Math.round(tiefe))+' verfügbar'
+                   : 'nur rund '+nf0.format(Math.round(tiefe))+' verfügbar, Einsatz ist höher'));
+
+  // 9 — Frische der Kurse
+  var alt = mk.fertig ? (state.bfAge!=null? state.bfAge : null) : null;
+  var frisch = alt==null || alt<180;
+  add('Kurse frisch', frisch, false,
+      alt==null ? 'Alter nicht gemeldet — Kurse vor dem Setzen prüfen'
+        : (frisch ? 'Daten '+Math.round(alt)+' s alt' : 'Daten '+Math.round(alt/60)+' Min alt — zu alt zum Setzen'));
+
+  // 10 — DNP/Void-Risiko
+  var risk=dnpRisk(mk.ev,mk.cat);
+  add('Auszahlungsregeln', risk==='niedrig', false,
+      risk==='niedrig' ? 'Kein erhöhtes DNP-Risiko erkannt'
+        : 'Erhöhtes Risiko ('+risk+'): bei Nichtantreten zahlt Polymarket meist nicht zurück, Betfair schon — Marktregeln lesen');
+
+  var kritischOffen = p.filter(function(x){ return x.kritisch && !x.ok; });
+  var hinweise      = p.filter(function(x){ return !x.kritisch && !x.ok; });
+  return {punkte:p, freigegeben:kritischOffen.length===0,
+          kritischOffen:kritischOffen, hinweise:hinweise};
+}
+
+function renderSicherheit(mk, v, S){
+  var el=$('#tkCheck'); if(!el)return null;
+  var pr=sicherheitsPruefung(mk,v,S);
+  var esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+
+  el.innerHTML='<div class="chkBox'+(pr.freigegeben?' frei':' gesperrt')+'">'+
+    '<div class="chkKopf"><b>'+(pr.freigegeben? '✓ Alle Bedingungen erfüllt' : '✕ Noch nicht einsetzbar')+'</b>'+
+      '<span>'+pr.punkte.filter(function(x){return x.ok;}).length+' von '+pr.punkte.length+'</span></div>'+
+    pr.punkte.map(function(x){
+      var z = x.ok? 'ja' : (x.kritisch? 'nein' : 'hinweis');
+      return '<div class="chkZeile '+z+'">'+
+        '<span class="chkIcon">'+(x.ok?'✓':(x.kritisch?'✕':'!'))+'</span>'+
+        '<span class="chkName">'+esc(x.name)+'</span>'+
+        '<span class="chkText">'+esc(x.text)+'</span>'+
+      '</div>';
+    }).join('')+
+    (pr.freigegeben
+      ? '<div class="chkFuss">Zuletzt gilt trotzdem: <b>beide Links öffnen</b> und die Quoten dort '+
+        'gegenprüfen. Zwischen dieser Prüfung und deinem Klick können sich Kurse bewegen.</div>'
+      : '<div class="chkFuss warn">Solange ein Punkt mit ✕ offen ist, bleibt der Einsatz gesperrt. '+
+        'Das ist kein Fehler des Programms, sondern der Schutz davor.</div>')+
+  '</div>';
+  return pr;
+}
+
 /* ---- Gegenprobe: ist das wirklich dieselbe Wette? ---------------------
    Der teuerste Fehler bei Arbitrage ist nicht eine falsche Quote, sondern
    eine falsche PAARUNG: zwei Links, die verschiedene Ereignisse meinen.
@@ -2363,16 +2520,22 @@ function renderTicket(){
   if(v.ok&&S>0){ box.classList.remove('zero'); $('#tkProfit').textContent='+'+eur(r.profit); } else { box.classList.add('zero'); $('#tkProfit').textContent='–'; }
   var isDemo=(state.mode==='demo');
   $('#tkPlace').textContent=isDemo?'⚡ 1-Klick einsetzen (Demo)':'Markt öffnen & Beträge setzen →';
+  /* Die Sicherheitsprüfung entscheidet, ob überhaupt gesetzt werden darf.
+     Sie steht sichtbar im Ticket — jeder Punkt einzeln, mit Begründung. */
+  var pr=null;
+  try{ pr=renderSicherheit(m,v,S); }catch(e){}
+  var freigegeben = pr? pr.freigegeben : (v.ok && m._sicher);
+
   var reason='';
   if(!v.ok)reason='Fenster geschlossen — noch kein Vorteil';
-  /* Nicht setzen lassen, solange die Chance nicht bestätigt ist. Das ist der
-     Kern der Absicherung: eine Meldung, die im nächsten Durchlauf verschwindet
-     oder deren Zuordnung springt, darf gar nicht erst gesetzt werden können. */
-  else if(!m._sicher)reason=(m._grund||'wird noch geprüft')+' — noch nicht setzen';
+  else if(pr && !pr.freigegeben){
+    // Den ERSTEN offenen Punkt beim Namen nennen, nicht nur "gesperrt"
+    reason=pr.kritischOffen[0].name+': '+pr.kritischOffen[0].text;
+  }
   else if(isDemo&&max<=0)reason='Guthaben eintragen';
   else if(S<=0)reason='Betrag eingeben';
   else if(max<1e9&&S>max)reason='Guthaben reicht bis '+eur(max);
-  $('#tkPlace').disabled=(isDemo? !!reason : (!v.ok || !m._sicher));
+  $('#tkPlace').disabled=(isDemo? !!reason : !freigegeben);
   $('#tkWarn').textContent=reason?('⚠ '+reason):'';
   var risk=dnpRisk(m.ev,m.cat);
   var dnpNote = risk!=='niedrig'

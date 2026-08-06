@@ -30,7 +30,8 @@ function holeFunktion(name) {
 }
 
 const quelle = ['buchKuerzel', 'syncBridgeMarkets', 'evalMarket', 'feasibleMax',
-                'paarungsAbdruck', 'gegenrechnung', 'bestaetige']
+                'paarungsAbdruck', 'gegenrechnung', 'bestaetige',
+                'buchName', 'routing', 'dnpRisk', 'sicherheitsPruefung']
   .map(holeFunktion).join('\n\n');
 
 // Umgebung wie im Browser, aber nur so viel wie diese Funktionen brauchen
@@ -45,8 +46,15 @@ const sandbox = {
   // fuer die Bestaetigungsschleife
   BESTAETIGUNG: { noetig: 2, hoechstpause: 180000 },
   kandidaten: {},
+  // fuer die Sicherheitspruefung
+  eur: x => (+x || 0).toFixed(2) + ' €',
+  pct: (x, n) => (+x || 0).toFixed(n == null ? 2 : n) + ' %',
+  nf0: { format: x => String(Math.round(+x || 0)) },
+  pmLink: m => (m && m.slug) ? 'https://polymarket.com/event/' + m.slug : 'https://polymarket.com/markets',
   Array, Math, String, Number, isFinite, console, Date, Object
 };
+sandbox.CONFIG.MIN_LIQ = 150;
+sandbox.state.feeBf = 5;
 vm.createContext(sandbox);
 vm.runInContext(quelle, sandbox);
 
@@ -276,6 +284,79 @@ console.log('\n═════ 11. Zweiter Rechenweg als Gegenprobe ════
   pruef('beide Herleitungen ergeben dieselbe Aufteilung',
         Math.abs(wegA - wegB) < 0.0001,
         wegA.toFixed(4) + ' € gegen ' + wegB.toFixed(4) + ' €');
+}
+
+console.log('\n═════ 12. Sicherheitsprüfung sperrt, was sie sperren muss ═════');
+/* Diese Liste entscheidet, ob echtes Geld gesetzt werden darf. Sie muss
+   nicht nur die gute Chance durchlassen, sondern vor allem jede schlechte
+   aufhalten — einzeln geprueft, damit kein Fall durchrutscht. */
+{
+  // Eine saubere, vollstaendige Chance als Ausgangspunkt
+  const guteChance = () => ({
+    id:'s1', ev:'Lakers vs Celtics', cat:'Basketball', o1:'Lakers', o2:'No',
+    _sicher:true, _grund:'', liq:500, fertig:true,
+    linkPm:'https://polymarket.com/event/x', bfLink:'https://betfair.com/1.2',
+    opp:{ maxStake:500, legs:[
+      {book:'Betfair', pick:'Lakers', q:2.10, qEff:2.045, fee:5, link:'https://betfair.com/1.2'},
+      {book:'Polymarket', pick:'No', q:2.15, qEff:2.09, fee:6, link:'https://polymarket.com/event/x'}
+    ]}
+  });
+  const guteBewertung = () => ({
+    ok:true, roi:3.3628, arbPct:96.73, cross:true, m:null,
+    s1:{src:'bf', odds:2.10, oddsEff:2.045},
+    s2:{src:'pm', odds:2.15, oddsEff:2.09}
+  });
+  sandbox.state.bfAge = 20;
+
+  let m = guteChance(), v = guteBewertung(); v.m = m;
+  let pr = sandbox.sicherheitsPruefung(m, v, 100);
+  pruef('vollständige Chance wird freigegeben', pr.freigegeben === true,
+        pr.punkte.filter(x => x.ok).length + '/' + pr.punkte.length + ' Punkte');
+
+  // Jeder einzelne Mangel muss den Einsatz sperren
+  const sperrt = (was, kaputt) => {
+    const mm = guteChance(), vv = guteBewertung(); vv.m = mm;
+    kaputt(mm, vv);
+    const r = sandbox.sicherheitsPruefung(mm, vv, 100);
+    pruef('gesperrt: ' + was, r.freigegeben === false,
+          r.kritischOffen.length ? r.kritischOffen[0].name : 'NICHT GESPERRT');
+  };
+
+  sperrt('Zuordnung noch nicht bestätigt', m => { m._sicher = false; m._grund = 'wird geprüft 1/2'; });
+  sperrt('beide Beine auf demselben Buch',  (m,v) => { v.cross = false; v.s2.src = 'bf'; });
+  sperrt('Rendite über der Plausibilitätsgrenze', (m,v) => {
+    v.roi = 61; v.s1.oddsEff = 2.9; v.s2.oddsEff = 3.3; });
+  sperrt('kein Vorteil vorhanden', (m,v) => {
+    v.roi = -1.2; v.s1.oddsEff = 1.90; v.s2.oddsEff = 1.95; });
+  sperrt('beide Links identisch', m => {
+    m.opp.legs[1].link = m.opp.legs[0].link; });
+  sperrt('ein Link fehlt', m => { m.opp.legs[1].link = ''; });
+  sperrt('Gebührensatz einer Seite unbekannt', m => { m.opp.legs[1].fee = null; });
+
+  // Hinweise duerfen NICHT sperren - sonst wird die Liste unbrauchbar
+  const hinweisNichtSperrend = (was, kaputt) => {
+    const mm = guteChance(), vv = guteBewertung(); vv.m = mm;
+    kaputt(mm, vv);
+    const r = sandbox.sicherheitsPruefung(mm, vv, 100);
+    pruef('Hinweis, aber nicht gesperrt: ' + was,
+          r.freigegeben === true && r.hinweise.length > 0,
+          r.hinweise.length ? r.hinweise[0].name : 'kein Hinweis erzeugt');
+  };
+  hinweisNichtSperrend('zu wenig Tiefe im Buch', m => { m.liq = 40; });
+  hinweisNichtSperrend('DNP-Risiko bei Über/Unter', m => { m.cat = 'Über/Unter'; });
+
+  // Die Liste muss vollstaendig sein
+  m = guteChance(); v = guteBewertung(); v.m = m;
+  pr = sandbox.sicherheitsPruefung(m, v, 100);
+  pruef('alle zehn Punkte werden geprüft', pr.punkte.length === 10,
+        pr.punkte.length + ' Punkte');
+  pruef('jeder Punkt hat eine Begründung',
+        pr.punkte.every(x => typeof x.text === 'string' && x.text.length > 0));
+  pruef('kritische und Hinweise sind getrennt',
+        pr.punkte.filter(x => x.kritisch).length === 7 &&
+        pr.punkte.filter(x => !x.kritisch).length === 3,
+        pr.punkte.filter(x => x.kritisch).length + ' kritisch, ' +
+        pr.punkte.filter(x => !x.kritisch).length + ' Hinweise');
 }
 
 console.log('\n' + '═'.repeat(46));

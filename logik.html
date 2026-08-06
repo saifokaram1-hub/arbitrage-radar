@@ -391,6 +391,25 @@ Gewinn in beiden Fällen: rund <b>+3,37 €</b> auf 100 € Einsatz</pre>
     <section>
       <h3>Was im Wett-Ticket steht</h3>
       <p>Klickst du eine Chance in der Liste an, erscheint links genau diese Rechnung mit deinen Zahlen — je Anbieter einzeln:</p>
+      <h4>Die Checkliste vor dem Einsatz</h4>
+      <p>Statt um Vertrauen zu bitten, legt das Ticket <strong>jede einzelne Bedingung offen</strong> — mit Ergebnis und Begründung. Sieben davon sind zwingend: ist auch nur eine offen, bleibt der Setzen-Knopf gesperrt.</p>
+      <div class="scroll">
+        <table>
+          <tr><th>Bedingung</th><th>Art</th><th>Wofür sie schützt</th></tr>
+          <tr><td class="k">Zuordnung bestätigt</td><td>zwingend</td><td>Paarung war über mehrere Durchläufe unverändert</td></tr>
+          <tr><td class="k">Zwei Rechenwege einig</td><td>zwingend</td><td>Ein Rechenfehler müsste in zwei Formeln gleichzeitig auftreten</td></tr>
+          <tr><td class="k">Beide Ausgänge zahlen gleich</td><td>zwingend</td><td>Sonst ist es keine Absicherung, sondern eine Wette</td></tr>
+          <tr><td class="k">Zwei verschiedene Börsen</td><td>zwingend</td><td>Innerhalb eines Buches gibt es keine Arbitrage</td></tr>
+          <tr><td class="k">Gebühren beider Seiten bekannt</td><td>zwingend</td><td>Ein fehlender Satz darf nie als 0 % durchgehen</td></tr>
+          <tr><td class="k">Rendite plausibel</td><td>zwingend</td><td>Über 20 % ist es ein Fehler, kein Fund</td></tr>
+          <tr><td class="k">Zwei echte Links</td><td>zwingend</td><td>Beide vorhanden und verschieden — sonst nicht nachprüfbar</td></tr>
+          <tr><td class="k">Genug im Buch</td><td>Hinweis</td><td>Tiefe reicht für den geplanten Einsatz</td></tr>
+          <tr><td class="k">Kurse frisch</td><td>Hinweis</td><td>Alter der Daten</td></tr>
+          <tr><td class="k">Auszahlungsregeln</td><td>Hinweis</td><td>DNP-/Void-Risiko bei Nichtantreten</td></tr>
+        </table>
+      </div>
+      <div class="call warn"><b>Was diese Liste nicht leisten kann.</b> Sie prüft den Zustand in diesem Augenblick. Zwischen der Prüfung und deinem Klick auf beiden Seiten vergehen Sekunden, in denen sich ein Kurs bewegen kann. Deshalb bleibt der letzte Blick in die echten Bücher Pflicht — die Checkliste ersetzt ihn nicht, sie bereitet ihn vor.</div>
+
       <h4>Zuerst: meinen beide Links dasselbe Ereignis?</h4>
       <p>Ganz oben im Ticket steht die <strong>Gegenprobe</strong> — was jedes Buch den Markt nennt, mit dem Link direkt daneben. Bei Polymarket die Frage im Freitext, bei Betfair der strukturierte Marktname.</p>
       <div class="call bad"><b>Der teuerste Fehler bei Arbitrage ist nicht eine falsche Quote, sondern eine falsche Paarung.</b> Zwei Links, die verschiedene Ereignisse meinen — dann ist es keine Absicherung, sondern zweimal blind gesetzt, und beide können verlieren. Der Scanner prüft das vierfach, aber vor dem Einsatz gehört es einmal mit eigenen Augen geprüft. Stimmen die beiden Zeilen nicht überein: <b>nicht setzen</b>.</div>
@@ -467,8 +486,8 @@ node oberflaeche-pruefung.js  <span class="c">32 Prüfungen — Anzeige, Gebühr
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=37"></script>
-<script src="pdf.js?v=37"></script>
+<script src="config.js?v=38"></script>
+<script src="pdf.js?v=38"></script>
 <script>
 // PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.
 document.getElementById('pdfBtn').addEventListener('click', function(){
