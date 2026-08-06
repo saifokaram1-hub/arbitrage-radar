@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="de">
 <head>
 <meta charset="utf-8">
@@ -168,313 +168,252 @@
   <div class="wrap">
 
     <div class="intro">
-      <h2>Wie gesucht wird, wie schnell, und was der Schlüssel daran ändert</h2>
-      <p>Der Scanner vergleicht Polymarket mit der Betfair-Börse und meldet nur Wetten, bei denen beide Ausgänge zusammen mehr zurückzahlen als eingesetzt wurde. Hier steht, wie das abläuft, wie lange es dauert, wie das Programm selbst erkennt, ob dein Schlüssel verzögerte oder echtzeitfähige Kurse liefert, und welche Denkfehler dabei gefunden und behoben wurden.</p>
+      <h2>Wie der Scanner sucht, wie er rechnet, und warum dabei kein Konto gesperrt wird</h2>
+      <p>Diese Seite erklärt das ganze Verfahren von vorn: welche zwei Bücher verglichen werden, in welcher Reihenfolge gesucht wird, wie die Gebühren beider Anbieter je einzelnem Markt in die Rechnung kommen, und wie aus alldem ein konkreter Vorschlag wird — wie viel Geld wohin, was es kostet, was übrig bleibt. Jede Formel steht mit einem durchgerechneten Beispiel dabei.</p>
       <div class="stamp" id="stamp">Bridge v2 · Endpunkt bf-bridge unverändert</div>
     </div>
 
-    <div class="gauges" id="gauges">
-      <div class="g"><div class="v">2 100</div><div class="l">Polymarket-Märkte</div><div class="s">vorher 100</div></div>
-      <div class="g"><div class="v pos">1 251</div><div class="l">beidseitig handelbar</div><div class="s">838 mit echter Tiefe</div></div>
-      <div class="g"><div class="v">6,5 s</div><div class="l">Vollscan Polymarket</div><div class="s">38 Anfragen</div></div>
-      <div class="g"><div class="v">20 s</div><div class="l">schnellster Takt</div><div class="s">breit 150 s · voll 900 s</div></div>
-      <div class="g"><div class="v pos">62</div><div class="l">Prüfungen bestanden</div><div class="s">0 fehlgeschlagen</div></div>
-      <div class="g"><div class="v">18</div><div class="l">Denkfehler behoben</div><div class="s">1 offen</div></div>
-    </div>
-
     <section>
-      <h3>Wie gesucht wird</h3>
-      <p>Beide Seiten liest das Programm auf deinem PC, nicht der Browser. Deshalb sammelt sich die Historie auch nachts, wenn niemand die Seite offen hat.</p>
-      <div class="flow">
-        <div class="stage"><div class="n">1</div><div class="b">
-          <span class="t">Polymarket: Marktliste durchblättern</span>
-          <span class="d">Die Schnittstelle gibt höchstens 100 Einträge pro Anfrage zurück, egal welche Anzahl man verlangt. Deshalb wird geblättert, bis das Ende erreicht ist. Hinter dem letzten Eintrag antwortet sie mit einem Fehlercode statt mit einer leeren Liste, das wird als Ende gewertet.</span>
-          <span class="m">21 Anfragen · 2,2 s · 2 100 Märkte</span>
-        </div></div>
-        <div class="stage"><div class="n">2</div><div class="b">
-          <span class="t">Polymarket: Preise im Stapel holen</span>
-          <span class="d">Statt zwei Einzelanfragen je Markt gehen bis zu 250 Wertpapiere gebündelt raus. Zurück kommt das ganze Orderbuch, also auch die Tiefe. Der Kaufpreis ist immer der <em>niedrigste</em> Verkaufskurs, nicht der erste in der Liste.</span>
-          <span class="m">17 Anfragen · 4,3 s · 3 893 Kurse</span>
-        </div></div>
-        <div class="stage"><div class="n">3</div><div class="b">
-          <span class="t">Betfair: Bestand erfassen</span>
-          <span class="d">Alle Sportarten außer Pferde- und Windhundrennen. Die Katalogabfrage bricht bei 1 000 Treffern ab, deshalb wird der Bestand in Zeitfenster zerlegt und ein volles Fenster automatisch halbiert, bis nichts mehr verloren geht.</span>
-          <span class="m">alle 900 s · nur Börse, nie Buchmacher</span>
-        </div></div>
-        <div class="stage"><div class="n">4</div><div class="b">
-          <span class="t">Betfair: Kurse in drei Takten</span>
-          <span class="d">Laufende und bald startende Spiele sowie alles, was namentlich zu einem Polymarket-Markt passt, alle 20 Sekunden. Der gesamte Bestand alle 150 Sekunden. Gelesen werden Zurückwetten <em>und</em> Dagegenhalten, jeweils mit dem Geld, das dahinter liegt.</span>
-          <span class="m">40 Märkte je Anfrage · 4 Anfragen/s</span>
-        </div></div>
-        <div class="stage"><div class="n">5</div><div class="b">
-          <span class="t">Zuordnen</span>
-          <span class="d">Aus jedem Teilnehmernamen wird ein Schlüsselwort gebildet, Vereinszusätze fallen weg. Beim Zweikampf müssen beide Namen in der Polymarket-Frage stehen. Bei großen Feldern wie dem Ballon d'Or muss genau ein Name passen und zusätzlich der Markttitel, damit „Mbappé trifft zuerst" nicht mit „Mbappé gewinnt" verwechselt wird.</span>
-        </div></div>
-        <div class="stage"><div class="n">6</div><div class="b">
-          <span class="t">Gleichstand herstellen</span>
-          <span class="d">Verglichen werden darf nur, was es auf <em>beiden</em> Büchern gibt. Genau diese Schnittmenge wird deshalb unmittelbar vor der Rechnung noch einmal frisch gelesen. Ohne diesen Schritt läge zwischen den beiden Seiten der halbe Durchlauf, und man würde zwei verschiedene Zeitpunkte miteinander verrechnen statt zweier Kurse desselben Augenblicks.</span>
-          <span class="m">Schnittmenge und Nachlesezahl stehen im Bridge-Fenster</span>
-        </div></div>
-        <div class="stage"><div class="n">7</div><div class="b">
-          <span class="t">Frische prüfen</span>
-          <span class="d">Jeder Kurs trägt seinen Lesezeitpunkt. Sind die beiden Beine unterschiedlich alt und überschreitet eines die Grenze für dieses Markttempo, wird die Chance verworfen statt gemeldet.</span>
-          <span class="m">laufend 60 s · vor Anpfiff 180 s · Langzeit 1 800 s</span>
-        </div></div>
-        <div class="stage"><div class="n">8</div><div class="b">
-          <span class="t">Rechnen, melden, protokollieren</span>
-          <span class="d">Gemeldet wird nur, was über der Renditeschwelle liegt <em>und</em> genug Geld im Buch hat. Jede Chance kommt mit beiden Direktlinks, dem Einsatz je Seite und der Gegenrechnung. Gleichzeitig wandert sie dauerhaft in die Historie.</span>
-        </div></div>
-      </div>
-    </section>
-
-    <section>
-      <h3>Die Rechnung</h3>
-      <p>Zwei sich ausschließende Ausgänge, je einer auf einem anderen Buch. Die Kommission trifft nur den Gewinn, nicht den Einsatz.</p>
-      <pre>qE  = 1 + (q − 1) × (1 − Gebühr)      <span class="c">Effektivquote nach Kommission</span>
-inv = 1/qE1 + 1/qE2                  <span class="c">Arbitrage liegt vor, wenn inv &lt; 1</span>
-
-S1  = S × (1/qE1) / inv              <span class="c">Einsatz Seite 1</span>
-S2  = S − S1                         <span class="c">Einsatz Seite 2</span>
-
-Auszahlung = S / inv                 <span class="c">bei BEIDEN Ausgängen derselbe Betrag</span>
-Rendite    = (1/inv − 1) × 100 %</pre>
-      <p class="note">Ausdrücklich nicht halbe-halbe. Die Aufteilung folgt den Quoten, sonst gewinnt man bei einem Ausgang und verliert beim anderen. Beispiel bei 1 000 Einsatz, Polymarket 0,44 gegen Betfair 2,50 mit 5 % Kommission: 516,21 und 483,79, Auszahlung 1 173,20 in beiden Fällen, Gewinn 173,20.</p>
-
-      <h4>Gebühren: jeder Markt hat seinen eigenen Satz</h4>
-      <p>Beide Bücher nehmen Gebühren, aber auf völlig verschiedene Weise. Wer das in einen Topf wirft oder pauschal rechnet, findet Chancen, die es nicht gibt. Die Sätze werden deshalb <strong>pro Markt aus der jeweiligen Quelle gelesen</strong>, nicht geschätzt.</p>
-      <pre>BETFAIR  Kommission auf den GEWINN, Satz steht je Markt in marketBaseRate
-         qE = 1 + (q − 1) × (1 − Satz)          <span class="c">je nach Markt 2 bis 7 %</span>
-
-POLYMARKET  Gebühr auf die ANTEILE, abhängig vom Preis
-         Gebühr je Anteil = Satz × min(p, 1 − p)
-         qE = (1 − Gebühr je Anteil) / p        <span class="c">Satz 4, 5 oder 7 %</span></pre>
-      <p class="note">Die Polymarket-Gebühr ist bei einem Preis um 0,50 am höchsten und fällt zu den Rändern hin ab. Das ist unangenehm, denn genau um 0,50 herum liegen die meisten Zweikämpfe. Nur Taker zahlen sie, und wer zum Briefkurs kauft, ist immer Taker.</p>
-      <div class="scroll">
-        <table>
-          <tr><th>Preis</th><th>Satz</th><th>Gebühr je Anteil</th><th>Quote ohne</th><th>Quote mit</th><th>Verlust</th></tr>
-          <tr><td class="k">0,50</td><td class="k">4 %</td><td class="num">0,0200</td><td class="num">2,0000</td><td class="num">1,9600</td><td class="num">−2,00 %</td></tr>
-          <tr><td class="k">0,44</td><td class="k">4 %</td><td class="num">0,0176</td><td class="num">2,2727</td><td class="num">2,2327</td><td class="num">−1,76 %</td></tr>
-          <tr><td class="k">0,44</td><td class="k">7 %</td><td class="num">0,0308</td><td class="num">2,2727</td><td class="num">2,2027</td><td class="num">−3,08 %</td></tr>
-          <tr><td class="k">0,90</td><td class="k">4 %</td><td class="num">0,0040</td><td class="num">1,1111</td><td class="num">1,1067</td><td class="num">−0,40 %</td></tr>
-        </table>
-      </div>
-      <div class="call bad"><b>Warum das so wichtig ist:</b> Polymarket 0,49 gegen Betfair 2,03 sieht ohne Gebühr nach <b>+0,46 %</b> aus. Mit der Marktgebühr von 4 % sind es <b>−0,52 %</b>. Solche knappen Fälle machen den Großteil aller Treffer aus. Wer die Gebühr weglässt, jagt Gespenstern hinterher.</div>
-      <div class="call"><b>Gebühren gibt es nur, weil beide Bücher Marktplätze zwischen Nutzern sind.</b> Gegen einen Buchmacher zu wetten kostet keine Kommission, dafür ist die Quote von vornherein schlechter und wer gewinnt, fliegt raus. Solche Bücher werden hier bewusst nicht angefasst, also ist auch keine Buchmacher-Marge einzurechnen. Beide Beine laufen immer gegen andere Leute.</div>
-      <p class="note">Meldet eine Quelle Gebühren, nennt aber keinen Satz, wird der ungünstigste bekannte Satz angenommen. Eine unbekannte Gebühr darf niemals als null durchgehen.</p>
-
-      <h4>Dagegenhalten statt zurückwetten</h4>
-      <p>Bei Märkten mit vielen Teilnehmern gibt es keine sinnvolle Gegenseite zum Zurückwetten. Dort hält man dagegen, und die Haftung ist der Einsatz.</p>
-      <pre>qE      = 1 + (1 − Gebühr) / (L − 1)   <span class="c">L = Lay-Quote</span>
-Einsatz = Haftung = stake × (L − 1)
-Maximum = verfügbare Größe × (L − 1)</pre>
-      <div class="call good"><b>Von Hand gegengerechnet:</b> Lay-Quote 5,00, Gegenüber setzt 200, deine Haftung 800. Verliert der Teilnehmer, bekommst du 800 + 200 − 5 % = 990 zurück. Das sind 1,2375 je eingesetztem Euro, exakt der Wert, den die Formel liefert.</div>
-    </section>
-
-    <section>
-      <h3>Wie lange es dauert</h3>
-      <p>Die Polymarket-Zahlen sind gemessen. Die Betfair-Zahlen sind aus den dokumentierten Grenzen gerechnet, nicht gemessen. Sobald eine Bridge läuft, meldet sie die echten Werte selbst.</p>
-      <div class="scroll">
-        <table>
-          <tr><th>Vorgang</th><th>Grenze</th><th>Anfragen</th><th>Dauer</th><th>Herkunft</th></tr>
-          <tr><td>Polymarket Marktliste</td><td class="k">100 je Anfrage</td><td class="num">21</td><td class="num">2,2 s</td><td class="k">gemessen</td></tr>
-          <tr><td>Polymarket Preise</td><td class="k">250 Token je Anfrage</td><td class="num">17</td><td class="num">4,3 s</td><td class="k">gemessen</td></tr>
-          <tr><td>Betfair Bestandserfassung</td><td class="k">1 000 je Abfrage</td><td class="num">~150+</td><td class="num">40–90 s</td><td class="k">gerechnet</td></tr>
-          <tr><td>Betfair 2 000 Märkte</td><td class="k">40 je Abfrage</td><td class="num">50</td><td class="num">12,5 s</td><td class="k">gerechnet</td></tr>
-          <tr><td>Betfair 5 000 Märkte</td><td class="k">40 je Abfrage</td><td class="num">125</td><td class="num">31 s</td><td class="k">gerechnet</td></tr>
-          <tr><td>Betfair 10 000 Märkte</td><td class="k">40 je Abfrage</td><td class="num">250</td><td class="num">63 s</td><td class="k">gerechnet</td></tr>
-          <tr><td>Betfair 20 000 Märkte</td><td class="k">40 je Abfrage</td><td class="num">500</td><td class="num">125 s</td><td class="k">gerechnet</td></tr>
-        </table>
-      </div>
-      <p class="note">Die Rechnung dahinter ist einfach: Betfair liefert 40 Märkte pro Kursabfrage, das Programm fragt viermal pro Sekunde. Macht 160 Märkte pro Sekunde. Drosselt Betfair, senkt das Programm das Tempo von allein und meldet das im Fenster.</p>
-    </section>
-
-    <section>
-      <h3>Delayed Key gegen Live Key</h3>
-
+      <h3>Das Wichtigste zuerst: nur Börsen, nie ein Buchmacher</h3>
+      <p>Beide Anbieter, die verglichen werden, sind <strong>Börsen</strong>. Das heißt: Die Wette läuft gegen andere Nutzer, die dagegenhalten. Der Anbieter ist nur Vermittler und verdient an der Gebühr — er verliert nichts, wenn du gewinnst.</p>
+      <div class="call good"><b>Deshalb droht hier kein Ausschluss.</b> Ein Buchmacher hält selbst dagegen und verliert an dir; wer dort dauerhaft gewinnt, bekommt sein Konto begrenzt oder geschlossen. An einer Börse ist dem Betreiber gleichgültig, wer gewinnt — er nimmt seine Gebühr in jedem Fall. Genau deshalb sind Buchmacher hier bewusst <b>nicht</b> angebunden, und das soll auch so bleiben.</p></div>
       <div class="versus">
         <div class="vs">
-          <span class="cap">im Einsatz</span>
-          <span class="nm">Delayed App Key</span>
-          <span class="price">0 € · sofort verfügbar</span>
+          <span class="cap">Börse — hier verwendet</span>
+          <span class="nm">Betfair · Polymarket</span>
           <ul>
-            <li>Kurse kommen <b>verzögert</b>, Betfair nennt keine feste Zahl. In der Praxis Sekunden bis rund eine Minute.</li>
-            <li>Lesen ist uneingeschränkt möglich, auch bei eingeschränktem Konto.</li>
-            <li>Taugt für <b>langsame Märkte</b>: Politik, Langzeitwetten, Ballon d'Or, Meisterschaftssieger.</li>
-            <li>Bei laufenden Spielen praktisch unbrauchbar, das Fenster ist zu, bevor man klickt.</li>
+            <li>Du wettest gegen <b>andere Menschen</b></li>
+            <li>Der Betreiber nimmt eine <b>Gebühr</b> und hat kein eigenes Risiko</li>
+            <li>Dauerhaftes Gewinnen ist <b>kein Grund für eine Sperre</b></li>
+            <li>Der Einsatz ist durch die <b>Tiefe im Buch</b> begrenzt — es muss jemand dagegenhalten</li>
           </ul>
         </div>
         <div class="vs">
-          <span class="cap">Aufrüstung</span>
-          <span class="nm">Live App Key</span>
-          <span class="price">£ 499 einmalig</span>
+          <span class="cap">Buchmacher — bewusst nicht angebunden</span>
+          <span class="nm">bwin, Tipico und ähnliche</span>
           <ul>
-            <li>Kurse in <b>Echtzeit</b>, beide Beine sind gleich aktuell.</li>
-            <li>Erst damit werden laufende Spiele und schnelle Sportmärkte nutzbar.</li>
-            <li>Dünne Margen ab etwa 0,5 % werden greifbar, weil sie beim Klicken noch da sind.</li>
-            <li>Umstieg ist <b>ein Handgriff</b>: in der Zugangsdatei den Schlüssel ersetzen, Programm neu starten. Am Code ändert sich nichts.</li>
+            <li>Du wettest <b>gegen das Haus</b></li>
+            <li>Der Betreiber <b>verliert</b>, wenn du gewinnst</li>
+            <li>Wer gewinnt, wird <b>begrenzt oder gesperrt</b></li>
+            <li>Quoten wirken besser, sind es nach der Sperre aber nicht</li>
           </ul>
         </div>
       </div>
-
-      <h4>Woher das Programm weiß, welchen Schlüssel du eingetragen hast</h4>
-      <p>Du musst nichts angeben. Das Programm fragt Betfair direkt und richtet sich danach.</p>
-      <div class="flow">
-        <div class="stage"><div class="n">A</div><div class="b">
-          <span class="t">Es fragt beim Anmelden deine Schlüsselliste ab</span>
-          <span class="d">Betfair führt zu jedem Konto seine App-Keys, und jede Fassung trägt ein Merkmal, ob sie verzögerte Daten liefert. Das Programm sucht darin genau den Schlüssel, den du eingetragen hast.</span>
-          <span class="m">AccountAPING · getDeveloperAppKeys · delayData</span>
-        </div></div>
-        <div class="stage"><div class="n">B</div><div class="b">
-          <span class="t">Es schreibt das Ergebnis ins Fenster</span>
-          <span class="d">Beim Start steht dort entweder „App-Key: DELAYED — Kurse kommen verzögert" oder „App-Key: LIVE — Kurse in Echtzeit". Du siehst also sofort, woran du bist, ohne irgendwo nachzusehen.</span>
-        </div></div>
-        <div class="stage"><div class="n">C</div><div class="b">
-          <span class="t">Es passt die Schwelle selbst an</span>
-          <span class="d">Bei einem verzögerten Schlüssel brauchen schnelle Märkte mehr Luft, weil die Quote beim Klicken schon weg sein kann. Langsame Märkte sind davon kaum betroffen und behalten die normale Schwelle.</span>
-          <span class="m">verzögert: langsam 0,5 % · schnell 2,5 %   |   live: überall 0,5 %</span>
-        </div></div>
-        <div class="stage"><div class="n">D</div><div class="b">
-          <span class="t">Im Zweifel wird vorsichtig gerechnet</span>
-          <span class="d">Lässt sich die Art nicht klären, etwa weil der Schlüssel zu einem anderen Betfair-Konto gehört, behandelt das Programm ihn wie einen verzögerten. Lieber eine Chance zu wenig als eine, die es nicht mehr gibt.</span>
-        </div></div>
-      </div>
-      <p class="note">Beide Schwellen lassen sich in der Zugangsdatei überschreiben: <code>minRoiPercent</code> für langsame Märkte, <code>minRoiSchnellPercent</code> für schnelle bei verzögertem Schlüssel.</p>
-
-      <div class="call warn"><b>Der unangenehme Teil:</b> Gerade eine auffällig hohe Rendite auf einem schnellen Markt ist mit verzögerten Daten verdächtig. Große sichtbare Spannen entstehen meist, weil der Kurs sich schon bewegt hat und man das alte Bild sieht. Auf langsamen Märkten gilt das nicht, dort ist eine gefundene Spanne echt. Deshalb ist der Delayed Key für Politik und Langzeitwetten brauchbar und für Live-Sport nicht.</div>
     </section>
 
     <section>
-      <h3>Was war kaputt, was ist jetzt</h3>
-      <div class="ledger">
-
-        <div class="row krit"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Der Scanner sah 100 von 2 100 Märkten</b><span class="tag krit">kritisch</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">vorher</span>Im Code stand „bis zu 500 Märkte". Die Schnittstelle liefert aber nie mehr als 100 pro Anfrage, egal was man verlangt. 95 % des Bestands waren nie im Scan.</div>
-            <div class="jetzt"><span class="lab">jetzt</span>Es wird geblättert, bis alles da ist. 2 100 Märkte, davon 1 251 beidseitig handelbar. Das ist der eigentliche Grund, warum wochenlang nichts gefunden wurde.</div>
-          </div>
-        </div></div>
-
-        <div class="row krit"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Kurse aus dem Volldurchlauf galten als frisch</b><span class="tag krit">kritisch</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">vorher</span>Betfair-Kurse blieben zwischen den Durchläufen im Speicher. Ein Markt, den nur der 15-Minuten-Durchlauf anfasst, wurde gegen einen sekundenfrischen Polymarket-Preis gerechnet und als aktuelle Chance gemeldet.</div>
-            <div class="jetzt"><span class="lab">jetzt</span>Jeder Kurs trägt seinen Lesezeitpunkt. Ist ein Bein zu alt für das Tempo dieses Marktes, wird die Chance verworfen und im Protokoll gezählt.</div>
-          </div>
-        </div></div>
-
-        <div class="row krit"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Polymarkets Gebühr galt als null</b><span class="tag krit">kritisch</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">vorher</span>Im Code stand Polymarket-Gebühr = 0 %. Tatsächlich erheben rund 1 090 von 1 200 Märkten eine Gebühr von 4, 5 oder 7 %, und sie ist genau um einen Preis von 0,50 herum am höchsten. Knappe Chancen wurden dadurch als echt gemeldet, obwohl sie nach Gebühr im Minus lagen.</div>
-            <div class="jetzt"><span class="lab">jetzt</span>Der Satz wird pro Markt aus den Marktdaten gelesen und mit der richtigen Formel abgezogen. Betfair genauso: statt pauschal 5 % gilt der Satz, den Betfair je Markt selbst angibt.</div>
-          </div>
-        </div></div>
-
-        <div class="row krit"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Dagegenhalten gab es nicht</b><span class="tag krit">kritisch</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">vorher</span>Nur Zurückwetten. Damit waren alle Märkte mit vielen Teilnehmern unerreichbar, obwohl genau dort Polymarkets Bestand liegt.</div>
-            <div class="jetzt"><span class="lab">jetzt</span>Lay wird mitgerechnet, Formel von Hand gegengeprüft. Das öffnet eine ganze Marktklasse, die vorher gar nicht sichtbar war.</div>
-          </div>
-        </div></div>
-
-        <div class="row mit"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Die Art des Schlüssels war dem Programm egal</b><span class="tag mit">mittel</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">vorher</span>Ob verzögert oder Echtzeit wurde nirgends geprüft. Mit einem Delayed Key wurden dieselben dünnen Margen auf laufenden Spielen gemeldet wie mit einem Live Key, obwohl sie dort praktisch nie erreichbar sind.</div>
-            <div class="jetzt"><span class="lab">jetzt</span>Das Programm liest die Art beim Anmelden bei Betfair aus, schreibt sie ins Fenster und hebt die Schwelle für schnelle Märkte automatisch an, solange die Kurse verzögert kommen.</div>
-          </div>
-        </div></div>
-
-        <div class="row mit"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Die Verbindungsanzeige konnte einfrieren</b><span class="tag mit">mittel</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">vorher</span>Der Status änderte sich nur, wenn eine Antwort eintraf. Blieb der Abrufzyklus stehen, ging das Terminal aus oder drosselte der Browser den Tab im Hintergrund, blieb „Live" einfach stehen — obwohl längst nichts mehr ankam.</div>
-            <div class="jetzt"><span class="lab">jetzt</span>Eine Uhr läuft im Sekundentakt unabhängig vom Abruf und stuft jede Quelle nach ihrem eigenen Alter herab. Unter jedem Anbieter steht mitlaufend, was gerade gescannt wird und wie alt die Daten sind. Klemmt etwas, steht dort auch, was zu tun ist.</div>
-          </div>
-        </div></div>
-
-        <div class="row mit"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Die beiden Seiten wurden zu unterschiedlichen Zeitpunkten gelesen</b><span class="tag mit">mittel</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">vorher</span>Erst lief der Betfair-Durchlauf, danach der Polymarket-Scan, dann wurde gerechnet. Je nach Stufe lagen zwischen den beiden Kursen bis zu zwei Minuten. Die Altersprüfung hat solche Paare verworfen, aber damit fielen auch brauchbare Chancen weg.</div>
-            <div class="jetzt"><span class="lab">jetzt</span>Vor jeder Rechnung wird ermittelt, welche Märkte es auf beiden Büchern gibt, und genau diese werden noch einmal frisch gelesen. Beide Beine liegen dadurch Sekunden auseinander statt Minuten, und es werden wirklich dieselben Märkte verglichen.</div>
-          </div>
-        </div></div>
-
-        <div class="row mit"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Fußball fiel komplett durch</b><span class="tag mit">mittel</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">vorher</span>Märkte mit drei Ausgängen wurden übersprungen. Weil Fußball fast immer Sieg, Unentschieden, Niederlage hat, war die größte Sportart praktisch ausgeschlossen.</div>
-            <div class="jetzt"><span class="lab">jetzt</span>Die Gegenseite wird gebündelt: „nicht Bayern" heißt Unentschieden plus Dortmund, so aufgeteilt, dass beide Teilausgänge gleich auszahlen.</div>
-          </div>
-        </div></div>
-
-        <div class="row mit"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Quoten ohne Geld dahinter zählten mit</b><span class="tag mit">mittel</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">vorher</span>Nur der Preis wurde gelesen, nicht die dahinterliegende Summe. Eine Traumquote mit drei Euro Volumen sah aus wie eine echte Chance.</div>
-            <div class="jetzt"><span class="lab">jetzt</span>Beide Seiten müssen eine Mindestsumme hinter sich haben, und der maximal mögliche Einsatz wird mitgeliefert.</div>
-          </div>
-        </div></div>
-
-        <div class="row mit"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Die Historie füllte sich nur bei offenem Tab</b><span class="tag mit">mittel</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">vorher</span>Gescannt wurde im Browser. Nachts oder bei geschlossenem Laptop lief nichts, und es wurde auch nichts aufgezeichnet.</div>
-            <div class="jetzt"><span class="lab">jetzt</span>Das Programm auf dem PC liest beide Seiten selbst und schreibt gefundene Chancen dauerhaft mit.</div>
-          </div>
-        </div></div>
-
-        <div class="row"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Ende der Marktliste galt als Fehler</b><span class="tag">klein</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">vorher</span>Hinter dem letzten Eintrag antwortet die Schnittstelle mit einem Fehlercode statt mit einer leeren Liste. Das hätte den Scan mittendrin abgebrochen.</div>
-            <div class="jetzt"><span class="lab">jetzt</span>Wird als Ende der Daten gewertet. Was bis dahin gesammelt wurde, bleibt nutzbar.</div>
-          </div>
-        </div></div>
-
-        <div class="row"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Gerundete Prozentsätze verschoben die Auszahlung</b><span class="tag">klein</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">vorher</span>Die Aufteilung wurde auf zwei Stellen gerundet ausgegeben, was vier Cent Unterschied je 1 000 Einsatz zwischen den beiden Ausgängen ergab.</div>
-            <div class="jetzt"><span class="lab">jetzt</span>Sechs Stellen bei den Quoten, vier beim Anteil. Abweichung 0,0004 je 1 000.</div>
-          </div>
-        </div></div>
-
-        <div class="row"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Die Oberfläche glaubte ungeprüft, was ankam</b><span class="tag">klein</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">vorher</span>Angezeigt wurde, was geliefert wurde. Bei verfälschten Daten hätte dort ein garantierter Gewinn gestanden, der keiner ist.</div>
-            <div class="jetzt"><span class="lab">jetzt</span>Jede Chance wird vor der Anzeige nachgerechnet. Was nicht wirklich unter 1 liegt, erscheint nicht.</div>
-          </div>
-        </div></div>
-
-        <div class="row"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Halbfertige Zugangsdatei galt als fertig</b><span class="tag">klein</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">vorher</span>Geprüft wurde nur auf „HIER-" mit Bindestrich. Eine Datei mit „HIER_" rutschte als vollständig durch und scheiterte erst später unverständlich.</div>
-            <div class="jetzt"><span class="lab">jetzt</span>Alle Platzhalterformen werden erkannt, und das Token wird beim Start geprüft, bevor Betfair überhaupt angefasst wird.</div>
-          </div>
-        </div></div>
-
-        <div class="row offen"><div class="stripe"></div><div class="body">
-          <div class="ttl"><b>Zwei Anzeigefelder kommen noch nicht durch</b><span class="tag offen">offen</span></div>
-          <div class="ba">
-            <div class="vor"><span class="lab">Zustand</span>Die Serverseite reicht nur bekannte Felder weiter. Das Alter der beiden Kurse und die Tage bis zur Entscheidung werden dadurch noch nicht angezeigt.</div>
-            <div class="jetzt"><span class="lab">Auswirkung</span>Keine auf die Sicherheit: veraltete Chancen werden schon auf dem PC aussortiert und erreichen den Server gar nicht. Es fehlt nur die Anzeige.</div>
-          </div>
-        </div></div>
-
+      <h3>Die zwei Bücher sind sehr ungleich</h3>
+      <p>Das ist kein Schönheitsfehler, sondern bestimmt die ganze Suchreihenfolge.</p>
+      <div class="scroll">
+        <table>
+          <tr><th>&nbsp;</th><th>Betfair</th><th>Polymarket</th></tr>
+          <tr><td class="k">Umfang</td><td>einige hundert Märkte, fast nur Sport</td><td class="num">rund 2 100 Märkte</td></tr>
+          <tr><td class="k">Inhalt</td><td>Sport, klar strukturiert</td><td>zu etwa 90 % Politik und Wirtschaft</td></tr>
+          <tr><td class="k">Benennung</td><td>geordnet: <code>Lakers vs Celtics</code></td><td>Freitext: <code>Will the Lakers beat the Celtics?</code></td></tr>
+          <tr><td class="k">Kurse</td><td>je nach Schlüssel verzögert oder live</td><td>live</td></tr>
+          <tr><td class="k">Gebühr</td><td>Kommission auf den Gewinn, 2–7 % je Markt</td><td>Gebühr je Anteil, preisabhängig, 4/5/7 % je Markt</td></tr>
+        </table>
       </div>
+      <div class="call"><b>Die Überschneidung ist strukturell klein.</b> Polymarket ist überwiegend Politik, Betfair fast nur Sport. Realistisch sind wenige Treffer am Tag und Renditen von 0,5 bis 5 % — nicht alle zwanzig Minuten eine Chance. Wer mehr verspricht, rechnet die Gebühren nicht mit.</div>
+    </section>
+
+    <section>
+      <h3>Warum bei Betfair angefangen wird</h3>
+      <p>Gesucht wird <strong>zuerst bei Betfair</strong>, und dann wird die passende Polymarket-Frage dazu gesucht — nicht umgekehrt.</p>
+      <div class="flow">
+        <div class="stage"><div class="n">1</div><div class="b">
+          <span class="t">Betfair ist die kleinere und geordnete Seite</span>
+          <span class="d">Ein Betfair-Markt heißt <code>Lakers vs Celtics</code>. Daraus lassen sich die zwei Teilnehmer sauber ablesen. Es gibt wenige Märkte, also wenige Ausgangspunkte — jeder einzelne kann gründlich geprüft werden.</span>
+        </div></div>
+        <div class="stage"><div class="n">2</div><div class="b">
+          <span class="t">Polymarket ist Freitext und viel größer</span>
+          <span class="d">Dort steht ein ganzer Satz: <code>Will the Lakers beat the Celtics?</code> Von 2 100 Freitextfragen auszugehen und für jede den passenden Sportmarkt zu suchen, erzeugt viel mehr Fehlpaarungen — bei jedem Versuch kann etwas Ähnliches danebengreifen.</span>
+        </div></div>
+        <div class="stage"><div class="n">3</div><div class="b">
+          <span class="t">Vom Geordneten ins Ungeordnete, nie andersherum</span>
+          <span class="d">Aus zwei bekannten Namen im Freitext zu suchen ist verlässlich. Aus einem Freitext auf zwei Namen zu schließen ist Raten. Diese Richtung war früher vertauscht und hat Fehlpaarungen erzeugt.</span>
+        </div></div>
+      </div>
+    </section>
+
+    <section>
+      <h3>Vier Prüfungen, bevor überhaupt gerechnet wird</h3>
+      <p>Eine Paarung muss <strong>alle vier</strong> bestehen. Fällt eine durch, wird die Chance verworfen und gar nicht erst angezeigt.</p>
+      <div class="flow">
+        <div class="stage"><div class="n">1</div><div class="b">
+          <span class="t">Jeder Teilnehmer über ein eigenes Wort getroffen</span>
+          <span class="d">Beide Namen müssen in der Frage vorkommen, und zwar über je ein tragendes Wort. Füllwörter wie „party", „seat" oder „house" zählen nicht mit.</span>
+          <span class="m">Ohne diese Regel wurden „Republican Party" und „Democratic Party" beide zu „party" — und jeder Wahlmarkt passte auf jeden anderen.</span>
+        </div></div>
+        <div class="stage"><div class="n">2</div><div class="b">
+          <span class="t">Steht nur ein Teilnehmer da: zwei Kontexttreffer</span>
+          <span class="d">Wird nur ein Name genannt, müssen zwei weitere inhaltliche Wörter passen. Jahreszahlen gelten nicht als Beleg.</span>
+          <span class="m">Ohne diese Regel wurde ein Wahlmarkt an einen MMA-Kampf gehängt, weil beide „da Silva" enthielten — bestätigt durch das Füllwort „da".</span>
+        </div></div>
+        <div class="stage"><div class="n">3</div><div class="b">
+          <span class="t">Gegenprobe rückwärts</span>
+          <span class="d">Es wird geprüft, ob unter allen anderen Polymarket-Fragen eine <em>besser</em> zum Betfair-Markt passt. Wenn ja, gilt die Paarung nicht. Der beste Treffer muss eindeutig der beste sein.</span>
+        </div></div>
+        <div class="stage"><div class="n">4</div><div class="b">
+          <span class="t">Zeitabgleich</span>
+          <span class="d">Ist bei Betfair ein Anpfiff hinterlegt, dürfen beide höchstens zwölf Stunden auseinanderliegen. Fehlt die Zeitangabe, darf das Ereignis wenigstens nicht nach dem Auflösungstermin des Polymarket-Marktes liegen.</span>
+          <span class="m">Ohne diese Regel wurde ein Spiel von heute Abend mit einem Markt verglichen, der erst in Wochen entschieden wird.</span>
+        </div></div>
+      </div>
+    </section>
+
+    <section>
+      <h3>Die Rechnung, Schritt für Schritt</h3>
+
+      <h4>Schritt 1 — Quote und Wahrscheinlichkeit sind dasselbe in zwei Schreibweisen</h4>
+      <p>Betfair schreibt Quoten (<code>2,10</code>), Polymarket schreibt Preise in Prozent (<code>46,5 %</code>). Das lässt sich ineinander umrechnen:</p>
+      <pre>Quote = 1 / Preis          <span class="c">1 / 0,465 = 2,15</span>
+Preis = 1 / Quote          <span class="c">1 / 2,10  = 0,476  →  47,6 %</span></pre>
+      <p class="note">Ein Preis von 0,465 heißt: Der Markt hält diesen Ausgang für 46,5 % wahrscheinlich. Trittst du ein, bekommst du für 46,5 Cent einen ganzen Euro zurück.</p>
+
+      <h4>Schritt 2 — Wann ist es überhaupt Arbitrage?</h4>
+      <p>Man setzt auf <strong>beide</strong> Ausgänge, je einen auf einem anderen Buch. Genau einer tritt ein. Lohnend ist es, wenn die Kehrwerte der Quoten zusammen unter 1 liegen:</p>
+      <pre>1/Quote₁ + 1/Quote₂ &lt; 1</pre>
+      <p>Diese Summe ist der <strong>Arb-Wert</strong>, in der Liste als Prozent gezeigt. Unter 100 % ist ein Vorteil, darüber ein Verlust. Die Rendite folgt daraus:</p>
+      <pre>Rendite = 1 / (1/Quote₁ + 1/Quote₂) − 1</pre>
+      <div class="call warn"><b>Diese Formel allein führt in die Irre.</b> Sie gilt für Quoten <em>ohne</em> Gebühr. Beide Börsen nehmen aber welche — und zwar auf völlig verschiedene Weise. Deshalb wird nie mit den rohen Quoten gerechnet, sondern mit den Quoten nach Gebühr.</div>
+
+      <h4>Schritt 3 — Betfair: Kommission auf den Gewinn</h4>
+      <p>Betfair nimmt einen Anteil vom <strong>Nettogewinn</strong>, nicht vom Einsatz. Der Satz steht am einzelnen Markt und liegt zwischen 2 und 7 %.</p>
+      <pre>Quote nach Gebühr = 1 + (Quote − 1) × (1 − Satz)
+
+<span class="c">Beispiel: Quote 2,10 bei 5 % Kommission</span>
+= 1 + (2,10 − 1) × 0,95
+= 1 + 1,10 × 0,95
+= 1 + 1,045
+= <b>2,045</b></pre>
+
+      <h4>Schritt 4 — Polymarket: Gebühr je Anteil, preisabhängig</h4>
+      <p>Polymarket rechnet ganz anders: eine Gebühr <strong>je gekauftem Anteil</strong>, deren Höhe vom Preis abhängt. Sie ist bei einem Kurs um 50 % am höchsten — also genau dort, wo die meisten Chancen liegen.</p>
+      <pre>Gebühr je Anteil = Satz × kleinerer Wert von (Preis, 1 − Preis)
+Quote nach Gebühr = (1 − Gebühr je Anteil) / Preis
+
+<span class="c">Beispiel: Preis 0,465 bei 6 % Satz</span>
+kleinerer Wert von (0,465 · 0,535) = 0,465
+Gebühr je Anteil = 0,06 × 0,465 = 0,0279
+Quote nach Gebühr = (1 − 0,0279) / 0,465
+                  = 0,9721 / 0,465
+                  = <b>2,0906</b></pre>
+      <div class="call bad"><b>Eine unbekannte Gebühr wird nie als null behandelt.</b> Von rund 1 200 geprüften Märkten melden 1 088 eine Gebühr. Sie versehentlich auf 0 zu setzen, hat einmal aus einem echten Verlust von −0,52 % einen scheinbaren Gewinn von +0,46 % gemacht. Meldet ein Markt keinen Satz, wird er als unsicher behandelt, nicht als gebührenfrei.</div>
+
+      <h4>Schritt 5 — Jetzt erst die Entscheidung</h4>
+      <p>Mit den Quoten <em>nach</em> Gebühr wird die Bedingung aus Schritt 2 erneut geprüft:</p>
+      <pre>1/2,045 + 1/2,0906
+= 0,48900 + 0,47833
+= <b>0,96733</b>   <span class="c">also 96,73 % — unter 100 %, es bleibt etwas übrig</span>
+
+Rendite = 1 / 0,96733 − 1 = <b>0,0338</b>  →  <b>+3,38 %</b></pre>
+
+      <h4>Schritt 6 — Wie viel Geld wohin?</h4>
+      <p>Die Aufteilung ist <strong>nicht</strong> halbe-halbe. Sie wird so gewählt, dass beide Ausgänge <em>denselben</em> Betrag zurückzahlen — nur dann ist der Gewinn sicher, egal wie es ausgeht. Gerechnet wird mit den Quoten nach Gebühr:</p>
+      <pre>Einsatz₁ = Gesamt × (1/Quote₁ᴳ) / (1/Quote₁ᴳ + 1/Quote₂ᴳ)
+Einsatz₂ = Gesamt − Einsatz₁
+
+<span class="c">Bei 100 € Gesamteinsatz:</span>
+Einsatz₁ = 100 × 0,48900 / 0,96733 = <b>50,55 €</b>  → Betfair
+Einsatz₂ = 100 − 50,55             = <b>49,45 €</b>  → Polymarket</pre>
+      <p>Die Probe — beide Seiten müssen gleich auszahlen:</p>
+      <pre>Lakers gewinnen:  50,55 × 2,045   = <b>103,37 €</b>
+No gewinnt:       49,45 × 2,0906  = <b>103,38 €</b>
+                                     <span class="c">gleich, bis auf Rundung</span>
+Gewinn in beiden Fällen: rund <b>+3,37 €</b> auf 100 € Einsatz</pre>
+
+      <h4>Schritt 7 — Was die Gebühr tatsächlich kostet</h4>
+      <p>Für beide Bücher gilt dieselbe einfache Formel, obwohl sie völlig verschieden abrechnen:</p>
+      <pre>Gebühr = Einsatz × (Rohquote − Quote nach Gebühr)</pre>
+      <div class="scroll">
+        <table>
+          <tr><th>Seite</th><th>Rechnung</th><th>Gebühr</th><th>Gegenprobe</th></tr>
+          <tr>
+            <td class="k">Betfair</td>
+            <td class="k">50,55 × (2,10 − 2,045)</td>
+            <td class="num">2,78 €</td>
+            <td class="k">Gewinn 55,61 € × 5 % = 2,78 €</td>
+          </tr>
+          <tr>
+            <td class="k">Polymarket</td>
+            <td class="k">49,45 × (2,15 − 2,0906)</td>
+            <td class="num">2,97 €</td>
+            <td class="k">106,34 Anteile × 0,0279 = 2,97 €</td>
+          </tr>
+        </table>
+      </div>
+      <div class="call good"><b>Es fällt immer nur eine der beiden Gebühren an</b> — die der Seite, die gewinnt. Die andere Wette verliert und kostet keine Gebühr. Beide zu addieren wäre falsch und würde die Kosten fast verdoppeln. Dass die zwei Beträge verschieden hoch sind, ändert nichts am Gewinn: die Aufteilung aus Schritt 6 ist bereits mit den Quoten nach Gebühr gerechnet, deshalb bleibt unter dem Strich in beiden Fällen dasselbe übrig.</div>
+    </section>
+
+    <section>
+      <h3>Was im Wett-Ticket steht</h3>
+      <p>Klickst du eine Chance in der Liste an, erscheint links genau diese Rechnung mit deinen Zahlen — je Anbieter einzeln:</p>
+      <div class="scroll">
+        <table>
+          <tr><th>Angabe</th><th>Bedeutung</th></tr>
+          <tr><td class="k">Hier einzahlen</td><td>Der Betrag für <em>dieses</em> Buch, in Euro und als Anteil am Gesamteinsatz</td></tr>
+          <tr><td class="k">Quote</td><td>Die rohe Quote und daneben die Quote nach Abzug der Gebühr</td></tr>
+          <tr><td class="k">Gebührensatz</td><td>Der Satz <b>dieses einzelnen Marktes</b> — bei Betfair Kommission auf den Gewinn, bei Polymarket Gebühr je Anteil</td></tr>
+          <tr><td class="k">Gebühr, wenn diese Seite gewinnt</td><td>Was die Gebühr in Euro kostet, falls dieser Ausgang eintritt</td></tr>
+          <tr><td class="k">Tatsächliche Gebühr</td><td>Beide Beträge — mit dem Hinweis, dass nur einer davon anfällt</td></tr>
+          <tr><td class="k">Sicherer Gewinn</td><td>Was übrig bleibt, Gebühren bereits abgezogen, bei jedem Ausgang gleich</td></tr>
+          <tr><td class="k">Rendite</td><td>Derselbe Gewinn als Prozentsatz des Einsatzes</td></tr>
+        </table>
+      </div>
+      <p class="note">Darunter stehen die Direktlinks zu beiden Märkten. Gesetzt wird immer von Hand — das Programm setzt nichts selbst.</p>
+    </section>
+
+    <section>
+      <h3>Sicherheitsnetze</h3>
+      <div class="ledger">
+        <div class="row"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Obergrenze 20 % Rendite</b></div>
+          <p class="note">Zwei liquide Börsen liegen nie zweistellig auseinander. Was darüber liegt, ist keine Chance, sondern ein Fehler: eine Fehlpaarung, vertauschte Seiten oder ein bereits entschiedener Markt. Solche Meldungen werden verworfen und gezählt, nicht angezeigt.</p>
+        </div></div>
+        <div class="row"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Selbst nachrechnen statt vertrauen</b></div>
+          <p class="note">Auch was die Bridge als fertige Chance meldet, wird in der Website noch einmal gegengerechnet. Was dort nicht wirklich unter 1 liegt, wird nicht gezeigt — unabhängig davon, was mitgeliefert wurde.</p>
+        </div></div>
+        <div class="row"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Frische beider Kurse</b></div>
+          <p class="note">Ein alter Kurs ist kein Kurs. Beide Seiten müssen aktuell sein; veraltete Paarungen werden schon auf dem PC aussortiert.</p>
+        </div></div>
+        <div class="row mit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Einsatz durch die Tiefe im Buch begrenzt</b><span class="tag mit">wichtig</span></div>
+          <p class="note">An einer Börse muss jemand dagegenhalten. Liegen nur 340 € im Buch, lässt sich nicht mehr unterbringen — der Vorschlag wird entsprechend gedeckelt, auch wenn rechnerisch mehr ginge.</p>
+        </div></div>
+        <div class="row mit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>DNP- und Void-Regeln</b><span class="tag mit">selbst prüfen</span></div>
+          <p class="note">Tritt jemand nicht an, zahlt Polymarket meist <em>nicht</em> zurück, Betfair dagegen schon. Die Markierung im Programm ist eine Faustregel, keine Garantie — bei größeren Beträgen die Marktregeln selbst lesen.</p>
+        </div></div>
+      </div>
+    </section>
+
+    <section>
+      <h3>Wenn eine Verbindung hakt</h3>
+      <p>Polymarket ist die Seite, die immer stehen muss: die meisten Märkte, live. Reißt sie ab, findet der Scanner nichts mehr — und das darf nicht wie „gerade keine Chancen" aussehen.</p>
+      <p>Deshalb steht über der Liste im Klartext, welche Quelle nicht liefert, seit wann und warum. Bei Polymarket zusätzlich der Hinweis, dass ohne sie gar nichts verglichen werden kann.</p>
+      <div class="scroll">
+        <table>
+          <tr><th>Meldung</th><th>Was dahintersteckt</th></tr>
+          <tr><td class="k">Keine Verbindung</td><td>Internet, VPN oder ein Werbeblocker unterbindet die Anfrage</td></tr>
+          <tr><td class="k">Zeitüberschreitung</td><td>Die Gegenstelle antwortet zu langsam</td></tr>
+          <tr><td class="k">Abgewiesen (HTTP 4xx)</td><td>Die Anfrage wurde nicht akzeptiert — meist ein Schlüsselproblem</td></tr>
+          <tr><td class="k">Gegenstelle hat eine Störung (HTTP 5xx)</td><td>Der Fehler liegt beim Anbieter, nicht bei dir</td></tr>
+          <tr><td class="k">Bridge läuft nicht mehr</td><td>Das Programm auf dem PC ist beendet oder der Rechner schläft</td></tr>
+          <tr><td class="k">Bridge läuft, liefert aber keine Betfair-Quoten</td><td>Die Bridge lebt, aber Betfair antwortet ihr nicht</td></tr>
+        </table>
+      </div>
+      <div class="call"><b>Betfair braucht ein Programm auf dem eigenen PC.</b> Betfair sperrt Anfragen aus Rechenzentren, deshalb kann die Website die Kurse nicht selbst holen. Das Programm liest beide Bücher, rechnet die Chancen dort aus und lädt sie hoch — dadurch füllt sich die Historie auch dann, wenn niemand die Seite offen hat.</div>
     </section>
 
     <section>
       <h3>Selbst nachprüfen</h3>
-      <p>Im Bridge-Ordner rechnet ein Prüfprogramm die komplette Logik mit Zahlen durch und rechnet beide Ausgänge gegen. Es meldet sich nirgends an und lädt nichts hoch.</p>
-      <pre>node pruefung.js</pre>
-      <p class="note">62 Prüfungen, darunter die Lay-Rechnung von Hand gegengerechnet, der Nachweis, dass bei jeder gemeldeten Chance beide Ausgänge auf den Cent denselben Betrag zurückzahlen, und die Kontrolle, dass wirklich nur Märkte verglichen werden, die es auf beiden Büchern gibt.</p>
+      <p>Zwei Prüfprogramme rechnen die Logik mit Zahlen durch. Sie melden sich nirgends an und laden nichts hoch.</p>
+      <pre>node bridge/pruefung.js        <span class="c">91 Prüfungen — Suche, Zuordnung, Lay-Rechnung</span>
+node oberflaeche-pruefung.js  <span class="c">32 Prüfungen — Anzeige, Gebühren, Aufteilung</span></pre>
+      <p class="note">Darunter die Gegenprobe, dass bei jeder gemeldeten Chance beide Ausgänge auf den Cent denselben Betrag zurückzahlen, dass die Gebühr beider Bücher aus zwei völlig verschiedenen Regeln dieselbe Formel ergibt, und dass wirklich nur Märkte verglichen werden, die es auf beiden Büchern gibt.</p>
       <div class="call"><b>Diese Seite gehört zum Programm.</b> Ändert sich die Suchlogik, wird zuerst die Datei geändert, die man herunterlädt, und danach diese Erklärung nachgezogen. Was hier steht, gilt für die Fassung, die gerade zum Download bereitliegt.</div>
     </section>
 
@@ -482,8 +421,8 @@ Maximum = verfügbare Größe × (L − 1)</pre>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=32"></script>
-<script src="pdf.js?v=32"></script>
+<script src="config.js?v=35"></script>
+<script src="pdf.js?v=35"></script>
 <script>
 // PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.
 document.getElementById('pdfBtn').addEventListener('click', function(){

@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="de">
 <head>
 <meta charset="utf-8">
@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=34"></script>
+<script src="config.js?v=35"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -406,6 +406,43 @@
      Zeilen in den Live-Chancen — filterbar und sortierbar wie alles andere.
      Erkennbar sind sie am Zeichen in der Zeile; ihre volle Aufschluesselung
      erscheint im Wett-Ticket, sobald man sie anklickt. */
+  /* Klartext-Meldung, wenn eine Quelle nicht liefert */
+  #connBox{border-bottom:1px solid var(--line2)}
+  .connZeile{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:9px 14px;
+    border-left:3px solid #6e5a22;background:rgba(217,140,74,.06);font-size:11.5px;
+    border-bottom:1px solid var(--line)}
+  .connZeile.schwer{border-left-color:var(--neg);background:rgba(190,74,60,.08)}
+  .connZeile .cbuch{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-b);flex:none}
+  .connZeile .cwas{color:#d98c4a;font-weight:600;flex:none}
+  .connZeile.schwer .cwas{color:var(--neg)}
+  .connZeile .cgrund{color:var(--txt);font-family:var(--mono);font-size:11px;flex:1;min-width:180px}
+  .connZeile .cseit{color:var(--dim);font-family:var(--mono);font-size:10.5px;flex:none}
+  .connZeile .cfolge{flex-basis:100%;color:var(--muted);font-size:11px;line-height:1.5;margin-top:3px}
+
+  /* Aufteilung und Gebühren je Anbieter im Wett-Ticket. Der Satz haengt am
+     einzelnen Markt, nicht am Anbieter — deshalb steht er je Seite dabei. */
+  .gebBox{border:1px solid var(--line2);background:#181b12;font-family:var(--mono);font-size:11px}
+  .gebKopf{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:7px 10px;
+    border-bottom:1px solid var(--line2)}
+  .gebKopf b{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-family:var(--sans,inherit)}
+  .gebKopf span{color:var(--dim);font-size:10.5px}
+  .gebZeile{padding:8px 10px;border-bottom:1px solid var(--line)}
+  .gz1{display:flex;align-items:baseline;gap:8px;margin-bottom:5px}
+  .gbuch{font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border:1px solid var(--line3)}
+  .gbuch.pm{color:#e7d882;border-color:#7f7130}
+  .gbuch.bf{color:#8fb5d5;border-color:#3c5568}
+  .gbuch.ob{color:#c9c7bd;border-color:#4e4630}
+  .gaus{color:var(--txt);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gz2{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:2px 0}
+  .gz2 .gk{color:var(--dim);flex:none}
+  .gz2 .gv{color:var(--muted);text-align:right}
+  .gz2 .gv b{color:var(--txt)}
+  .gsatz{font-size:10px;color:var(--dim)}
+  .gminus{color:#d98c4a}
+  .gplus{color:var(--pos)}
+  .gebSumme{padding:8px 10px;border-bottom:1px solid var(--line);background:rgba(159,191,59,.05)}
+  .gebHinweis{padding:7px 10px;color:var(--dim);font-size:10px;line-height:1.55}
+  .gebHinweis b{color:var(--muted)}
   .fertigtag{font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:1px 6px;
     border:1px solid var(--gold-d);color:var(--gold-b);background:rgba(199,178,76,.09);white-space:nowrap}
   .fertigbox{border:1px solid var(--gold-d);background:linear-gradient(180deg,rgba(199,178,76,.07),transparent);padding:9px 11px;margin-bottom:9px}
@@ -698,6 +735,11 @@
       </div>
       <!-- Hinweis, wenn auf einem PC noch eine veraltete Bridge läuft -->
       <div id="updBox" style="display:none"></div>
+
+      <!-- Warum eine Quelle gerade nicht liefert — im Klartext, nicht nur als
+           Punkt in der Kopfzeile. Eine leere Liste ohne Begründung sieht aus
+           wie ein Fehler, ist aber meistens eine abgerissene Verbindung. -->
+      <div id="connBox" style="display:none"></div>
 
       <div class="tablewrap">
         <div class="thead">
@@ -1704,9 +1746,51 @@ function renderQuellen(){
     '</div>';
   }).join('');
 }
+/* ---- Warum eine Quelle gerade nicht liefert ---------------------------
+   Polymarket ist die Quelle, die immer stehen muss: sie hat mit Abstand die
+   meisten Märkte und liefert live. Reisst sie ab, findet der Scanner nichts
+   mehr — und das darf nicht wie "gerade keine Chancen" aussehen. Dasselbe
+   gilt fuer Betfair. Deshalb steht hier im Klartext, was hakt und warum. */
+function renderVerbindung(){
+  var box=document.getElementById('connBox'); if(!box)return;
+  if(state.mode==='demo'){ box.style.display='none'; return; }
+  var schutz=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+
+  var meldungen=[];
+  [['pm','Polymarket'],['bf','Betfair'],['ob','SX Bet']].forEach(function(t){
+    var k=t[0];
+    if(!state.srcOn[k]) return;              // bewusst abgeschaltet -> kein Vorwurf
+    var z=zustand(k);
+    if(z==='live'||z==='demo'||z==='verbindet') return;
+    var grund=grundVon(k)||'';
+    var seit=alterVon(k);
+    meldungen.push({
+      buch:t[1], k:k, z:z, grund:grund,
+      seit: seit==null? 'seit dem Start nie verbunden' : ('zuletzt Daten '+alterText(seit))
+    });
+  });
+
+  if(!meldungen.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='';
+  var wort={fehler:'Störung',tot:'Verbindung abgerissen',alt:'Daten veralten',off:'ausgeschaltet'};
+  box.innerHTML=meldungen.map(function(m){
+    var schwer=(m.k==='pm');   // ohne Polymarket findet der Scanner gar nichts
+    return '<div class="connZeile'+(schwer?' schwer':'')+'">'+
+      '<span class="cbuch">'+m.buch+'</span>'+
+      '<span class="cwas">'+(wort[m.z]||m.z)+'</span>'+
+      '<span class="cgrund">'+schutz(m.grund||'kein Grund gemeldet')+'</span>'+
+      '<span class="cseit">'+schutz(m.seit)+'</span>'+
+      (schwer? '<span class="cfolge">Ohne Polymarket gibt es nichts zu vergleichen — '+
+               'die Liste bleibt leer, bis die Verbindung wieder steht.</span>':'')+
+    '</div>';
+  }).join('');
+}
+
 function updateAccountsUI(){
   try{ renderQuellen(); }catch(e){}
   try{ renderSchnitt(); }catch(e){}
+  try{ renderVerbindung(); }catch(e){}
   var schutz=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
   $('#acctList').innerHTML=ACC.map(function(a){
@@ -1971,11 +2055,98 @@ function buildTicket(){
       '<div class="tk-leg"><div class="ll"><span class="src" id="tkSrc2"></span><span class="lo" id="tkOc2"></span></div><div class="lr"><span id="tkOdds2"></span> · <b id="tkE2"></b></div></div>'+
     '</div>'+
     '<div class="tk-row"><input class="inp num" id="tkStakeInp" type="number" step="10" min="0" inputmode="numeric"><button class="qchip" data-q="50">+50</button><button class="qchip" data-q="100">+100</button><button class="qchip" data-q="max">Max</button></div>'+
+    '<div id="tkFees"></div>'+
     '<div id="tkPayout" style="border:1px solid var(--line2);background:#181b12;font-family:var(--mono);font-size:11px"></div>'+
     '<div class="tk-profit" id="tkProfitBox"><span class="pk">Sicherer Gewinn</span><span class="pv" id="tkProfit">–</span></div>'+
     '<button class="placebtn" id="tkPlace">–</button>'+
     '<div class="tk-warn" id="tkWarn"></div>'+
     '<div class="tk-note" id="tkNote"></div>';
+}
+/* ---- Aufteilung und Gebühren, je Anbieter einzeln ---------------------
+   Beide Bücher nehmen Gebühren, aber auf völlig verschiedene Weise, und der
+   Satz hängt am einzelnen Markt — nicht am Anbieter. Wer nur "netto" sieht,
+   kann nicht nachrechnen, ob der Vorschlag stimmt. Deshalb steht hier je
+   Seite: was reingeht, welcher Satz gilt, was er kostet.
+
+   Der Gebührenbetrag ist bei BEIDEN Büchern dasselbe:
+       Gebühr = Einsatz × (Rohquote − Effektivquote)
+   Bei Betfair, weil qE = 1+(q−1)·(1−s)  ->  E·(q−1)·s   = Kommission auf den Gewinn.
+   Bei Polymarket, weil qE = (1−g)/p     ->  E·g/p       = Gebühr je Anteil × Anteile.
+   Zwei sehr verschiedene Regeln, eine gemeinsame Formel. */
+function buchName(s){ return s==='pm'?'Polymarket':(s==='bf'?'Betfair':'SX Bet'); }
+function satzText(m, v, idx){
+  var s = idx===0? v.s1 : v.s2;
+  // Fertig gerechnete Chance: den Satz nennt die Bridge je Bein selbst
+  if(m.fertig && m.opp && m.opp.legs && m.opp.legs[idx]){
+    var l=m.opp.legs[idx], f=+l.fee||0;
+    return s.src==='pm'
+      ? f+' % je Anteil (preisabhängig)'
+      : f+' % Kommission auf den Gewinn';
+  }
+  if(s.src==='bf'){
+    var sb = m.bfSatz!=null? m.bfSatz : feeOf('bf');
+    return (sb*100).toFixed(1).replace('.',',')+' % Kommission auf den Gewinn';
+  }
+  if(s.src==='ob') return (feeOf('ob')*100).toFixed(1).replace('.',',')+' % Kommission auf den Gewinn';
+  // Polymarket: Gebühr je Anteil, am höchsten bei einem Kurs um 50 %
+  var p = idx===0? m.ask0 : m.ask1;
+  var satz = m.feeSatz!=null? m.feeSatz : null;
+  if(satz==null) return 'Satz unbekannt — nicht als 0 gerechnet';
+  if(!(p>0&&p<1)) return (satz*100).toFixed(1).replace('.',',')+' % je Anteil';
+  var g = pmGebuehr(p, satz, m.feeExp);
+  return (satz*100).toFixed(0)+' % je Anteil → '+(g*100).toFixed(2).replace('.',',')+' ¢ pro 1 €-Anteil';
+}
+function renderFees(m, v, S){
+  var el=$('#tkFees'); if(!el)return;
+  if(!(S>0) || !v.ok){ el.innerHTML=''; return; }
+  var r=routing(v,S);
+  var zeile=function(idx){
+    var s = idx===0? v.s1 : v.s2;
+    var E = idx===0? r.E1 : r.E2;
+    var aus = idx===0? m.o1 : m.o2;
+    // Gebuehr = Einsatz mal Quotendifferenz (siehe Herleitung oben)
+    var geb = Math.max(0, E*(s.odds - s.oddsEff));
+    var anteil = S>0? (E/S*100) : 0;
+    return '<div class="gebZeile">'+
+      '<div class="gz1"><span class="gbuch '+s.src+'">'+buchName(s.src)+'</span>'+
+        '<span class="gaus">'+String(aus==null?'':aus)+'</span></div>'+
+      '<div class="gz2"><span class="gk">Hier einzahlen</span>'+
+        '<span class="gv"><b>'+eur(E)+'</b> · '+anteil.toFixed(1).replace('.',',')+' %</span></div>'+
+      '<div class="gz2"><span class="gk">Quote</span>'+
+        '<span class="gv">'+nf.format(s.odds)+' → <b>'+nf.format(s.oddsEff)+'</b> nach Gebühr</span></div>'+
+      '<div class="gz2"><span class="gk">Gebührensatz</span>'+
+        '<span class="gv gsatz">'+satzText(m,v,idx)+'</span></div>'+
+      '<div class="gz2"><span class="gk">Gebühr, wenn diese Seite gewinnt</span>'+
+        '<span class="gv gminus">−'+eur(geb)+'</span></div>'+
+    '</div>';
+  };
+  /* Es faellt immer nur EINE Gebuehr an — die der Seite, die gewinnt. Beide
+     zu addieren waere falsch und wuerde die Kosten fast verdoppeln. Weil die
+     Buecher verschieden abrechnen, sind die beiden Betraege unterschiedlich
+     hoch; der Gewinn ist trotzdem bei beiden Ausgaengen gleich, weil die
+     Aufteilung aus den Quoten NACH Gebuehr gerechnet wird. */
+  var geb1=Math.max(0, r.E1*(v.s1.odds-v.s1.oddsEff));
+  var geb2=Math.max(0, r.E2*(v.s2.odds-v.s2.oddsEff));
+  var lo=Math.min(geb1,geb2), hi=Math.max(geb1,geb2);
+  el.innerHTML=
+    '<div class="gebBox">'+
+      '<div class="gebKopf"><b>Aufteilung &amp; Gebühren</b>'+
+        '<span>Gesamteinsatz '+eur(S)+'</span></div>'+
+      zeile(0)+zeile(1)+
+      '<div class="gebSumme">'+
+        '<div class="gz2"><span class="gk">Tatsächliche Gebühr</span>'+
+          '<span class="gv gminus">'+(Math.abs(hi-lo)<0.005? '−'+eur(hi)
+            : '−'+eur(lo)+' oder −'+eur(hi))+'</span></div>'+
+        '<div class="gz2"><span class="gk gklein">nur eine davon — je nach Ausgang</span>'+
+          '<span class="gv"></span></div>'+
+        '<div class="gz2"><span class="gk">Sicherer Gewinn (netto)</span>'+
+          '<span class="gv gplus">+'+eur(r.profit)+'</span></div>'+
+        '<div class="gz2"><span class="gk">Rendite auf den Einsatz</span>'+
+          '<span class="gv gplus">+'+pct(v.roi,2)+'</span></div>'+
+      '</div>'+
+      '<div class="gebHinweis">Beides sind <b>Börsen</b> — die Wette läuft gegen andere '+
+        'Nutzer, nicht gegen das Haus. Deshalb droht kein Ausschluss.</div>'+
+    '</div>';
 }
 function renderTicket(){
   var m=state.ticketId&&mkMap.get(state.ticketId);
@@ -1996,6 +2167,8 @@ function renderTicket(){
   var pc1 = S>0 ? (r.E1/S*100) : 0, pc2 = S>0 ? (r.E2/S*100) : 0;
   $('#tkE1').textContent=eur(r.E1)+'  ('+pc1.toFixed(1)+' %)';
   $('#tkE2').textContent=eur(r.E2)+'  ('+pc2.toFixed(1)+' %)';
+  // Aufteilung und Gebühren je Anbieter, damit der Vorschlag nachrechenbar ist
+  try{ renderFees(m,v,S); }catch(e){}
   // Beweis: Auszahlung bei beiden Ausgängen (netto, nach Gebühr)
   var pay1=r.E1*v.s1.oddsEff, pay2=r.E2*v.s2.oddsEff;
   var pr=function(l,val,gew){ return '<div style="display:flex;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--line)"><span style="color:var(--muted)">'+l+'</span><span>'+eur(val)+' <span style="color:'+(gew>=0?'var(--pos)':'var(--neg)')+'">('+(gew>=0?'+':'')+eur(gew)+')</span></span></div>'; };

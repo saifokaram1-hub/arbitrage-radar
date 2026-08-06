@@ -1,4 +1,4 @@
-// Supabase-Verbindung (öffentliche Werte — die Sicherheit macht Row Level Security, nicht Geheimhaltung)
+﻿// Supabase-Verbindung (öffentliche Werte — die Sicherheit macht Row Level Security, nicht Geheimhaltung)
 window.AR_SUPABASE_URL = "https://noexklrgtqveiclijdwp.supabase.co";
 window.AR_SUPABASE_KEY = "sb_publishable_NrgVUoZhe-uN8U8j41P17Q_9cZgUd6M";
 
@@ -10,7 +10,7 @@ window.arClient = function(){
   return window.__arc;
 };
 
-window.AR_VERSION = 34;   // zum Prüfen, welche Fassung geladen ist
+window.AR_VERSION = 35;   // zum Prüfen, welche Fassung geladen ist
 
 // Speicher sicher benutzen — in privaten Fenstern kann sessionStorage gesperrt sein
 window.arStore = {

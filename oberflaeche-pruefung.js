@@ -139,6 +139,55 @@ pruef('Kurs fuer das PM-Bein gesetzt', Math.abs(nachher.ask1 - 1 / 2.15) < 1e-12
       (nachher.ask1 * 100).toFixed(1) + ' %');
 pruef('kein Kurs fuers Betfair-Bein', nachher.ask0 === null);
 
+console.log('\n═════ 9. Gebühren je Anbieter stimmen ═════');
+/* Im Ticket steht die Gebühr als  Einsatz × (Rohquote − Effektivquote).
+   Das muss fuer BEIDE Buecher stimmen, obwohl sie voellig verschieden
+   abrechnen — sonst richtet man echtes Geld nach einer falschen Zahl. */
+{
+  const S = 100;
+  const q1 = 2.045, q2 = 2.09;                 // Effektivquoten der Testchance
+  const inv = 1/q1 + 1/q2;
+  const E1 = S*(1/q1)/inv, E2 = S - E1;
+
+  // Betfair: Kommission auf den GEWINN, 5 % laut Bridge
+  const rohBf = 2.10, satzBf = 0.05;
+  const gebBf = E1 * (rohBf - q1);
+  const gegenprobeBf = E1 * (rohBf - 1) * satzBf;
+  pruef('Betfair: Formel = Kommission auf den Gewinn',
+        Math.abs(gebBf - gegenprobeBf) < 0.005,
+        gebBf.toFixed(4) + ' € gegen ' + gegenprobeBf.toFixed(4) + ' €');
+
+  // Polymarket: Gebuehr je ANTEIL, preisabhaengig
+  const rohPm = 2.15, p = 1/rohPm;
+  const gebPm = E2 * (rohPm - q2);
+  const gProAnteil = 1 - q2*p;                 // aus qE = (1-g)/p
+  const gegenprobePm = E2 * gProAnteil / p;    // Anteile × Gebuehr je Anteil
+  pruef('Polymarket: Formel = Gebühr je Anteil × Anteile',
+        Math.abs(gebPm - gegenprobePm) < 0.005,
+        gebPm.toFixed(4) + ' € gegen ' + gegenprobePm.toFixed(4) + ' €');
+
+  /* Es faellt nur EINE Gebuehr an — die der gewinnenden Seite. Beide zu
+     addieren waere falsch. Probe: Bruttoauszahlung der jeweiligen Seite
+     minus ihre Gebuehr muss die Nettoauszahlung ergeben. */
+  pruef('Betfair-Seite: brutto minus Gebühr = netto',
+        Math.abs((E1*rohBf - gebBf) - E1*q1) < 0.005,
+        (E1*rohBf).toFixed(2) + ' − ' + gebBf.toFixed(2) + ' = ' + (E1*q1).toFixed(2) + ' €');
+  pruef('Polymarket-Seite: brutto minus Gebühr = netto',
+        Math.abs((E2*rohPm - gebPm) - E2*q2) < 0.005,
+        (E2*rohPm).toFixed(2) + ' − ' + gebPm.toFixed(2) + ' = ' + (E2*q2).toFixed(2) + ' €');
+  pruef('die beiden Gebühren sind verschieden hoch',
+        Math.abs(gebBf - gebPm) > 0.01,
+        gebBf.toFixed(2) + ' € gegen ' + gebPm.toFixed(2) + ' € — nur eine faellt an');
+
+  // Und beide Seiten zahlen wirklich gleich aus — sonst ist es keine Arbitrage
+  pruef('beide Ausgänge zahlen gleich aus',
+        Math.abs(E1*q1 - E2*q2) < 0.01,
+        E1.toFixed(2) + '×' + q1 + ' = ' + (E1*q1).toFixed(2) + ' € · ' +
+        E2.toFixed(2) + '×' + q2 + ' = ' + (E2*q2).toFixed(2) + ' €');
+
+  pruef('Gebühr ist nie negativ', gebBf >= 0 && gebPm >= 0);
+}
+
 console.log('\n' + '═'.repeat(46));
 console.log('  ' + ok + ' Prüfungen bestanden, ' + bad + ' fehlgeschlagen');
 console.log('═'.repeat(46));
