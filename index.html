@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=31"></script>
+<script src="config.js?v=32"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -380,7 +380,16 @@
   .upd .ubtn.grau{border-color:var(--line3);background:#181b12;color:var(--txt)}
 
   /* --- Fertig gerechnete Chancen aus der Bridge --- */
-  #oppWrap{border:1px solid var(--line3);background:linear-gradient(180deg,#12150e,#15180f);margin:0 0 14px}
+  /* Erklärender Zusatz in der leeren Liste */
+  .empty .ehint{display:block;margin:8px auto 0;font-family:var(--sans);font-size:12px;
+    color:var(--muted);line-height:1.6;max-width:60ch}
+  .empty .ehint b{color:var(--txt)}
+
+  /* Sitzt jetzt INNERHALB der Live-Chancen, direkt über der Tabelle: es sind
+     ja Chancen, nur eben schon fertig durchgerechnet. Deshalb kein eigener
+     Kasten mehr, sondern ein Band, das sichtbar zur Liste gehört. */
+  #oppWrap{border:0;border-bottom:1px solid var(--line2);margin:0;
+    background:linear-gradient(180deg,rgba(199,178,76,.06),transparent)}
   .oppHead{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line2);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
   .oppHead b{color:var(--gold-b)}
   .oppHead span{color:var(--dim);font-family:var(--mono);letter-spacing:0;text-transform:none;font-size:11px}
@@ -580,18 +589,6 @@
     </div>
   </div>
 
-  <!-- Hinweis, wenn auf einem PC noch eine veraltete Bridge läuft -->
-  <div id="updBox" style="display:none"></div>
-
-  <!-- Fertig gerechnete Chancen der lokalen Bridge: beide Beine, beide Links -->
-  <div id="oppWrap" style="display:none">
-    <div class="oppHead">
-      <b>Fertig gerechnet von der Bridge</b>
-      <span id="oppSub">–</span>
-    </div>
-    <div id="oppList"></div>
-  </div>
-
   <div class="work">
     <aside class="rail">
       <section class="block">
@@ -689,6 +686,18 @@
         </div>
         <div class="cattabs" id="catTabs"></div>
       </div>
+      <!-- Hinweis, wenn auf einem PC noch eine veraltete Bridge läuft -->
+      <div id="updBox" style="display:none"></div>
+
+      <!-- Fertig gerechnete Chancen der lokalen Bridge: beide Beine, beide Links -->
+      <div id="oppWrap" style="display:none">
+        <div class="oppHead">
+          <b>◆ Sofort einsetzbar</b>
+          <span id="oppSub">–</span>
+        </div>
+        <div id="oppList"></div>
+      </div>
+
       <div class="tablewrap">
         <div class="thead">
           <div>Event</div><div>Ausgang 1 · beste Quote</div><div>Ausgang 2 · beste Quote</div>
@@ -2075,7 +2084,33 @@ function render(){
   $('#listCount').textContent=view.length;
 
   var rows=$('#rows');
-  if(!view.length){ rows.innerHTML='<div class="empty">'+(all.length? 'Keine Chance passt zu den Filtern.<br>Echte Surebets sind selten — der Scanner läuft weiter.' : (state.accounts.pm.status==='error'?'Polymarket nicht erreichbar. Prüfe die Verbindung.':'Verbinde mit Polymarket …'))+'</div>'; return; }
+  if(!view.length){
+    /* Eine leere Liste ohne Begründung sieht kaputt aus. Meistens ist sie es
+       nicht: ohne ein ZWEITES Buch kann gar keine Arbitrage entstehen, denn
+       Polymarket allein liegt immer knapp über 100 %. Das gehört gesagt. */
+    var zweites = (state.srcOn.bf && zustand('bf')==='live') || (state.srcOn.ob && zustand('ob')==='live');
+    var txt;
+    if(!all.length){
+      txt = state.accounts.pm.status==='error'
+        ? 'Polymarket nicht erreichbar.<br><span class="ehint">'+(state.pmErr||'Verbindung prüfen')+'</span>'
+        : 'Verbinde mit Polymarket …';
+    } else if(!zweites){
+      txt = '<b>Kein zweites Buch verbunden.</b>'+
+        '<br><span class="ehint">Arbitrage entsteht <b>zwischen</b> zwei Büchern. Polymarket allein liegt '+
+        'immer knapp über 100 %, dort gibt es nichts zu holen — deshalb ist die Liste leer und nicht kaputt.'+
+        '<br>Dafür muss auf einem PC <b>betfair-bridge.exe</b> laufen. Der Stand steht links unter „Betfair".</span>';
+    } else if(state.onlyOpp || state.minRoi>0 || state.cat!=='Alle' || state.search){
+      txt = 'Keine Chance passt zu den aktuellen Filtern.'+
+        '<br><span class="ehint">Mit <b>⊕ Alle Deals</b> oben werden alle Filter zurückgesetzt.</span>';
+    } else {
+      txt = 'Gerade kein offenes Fenster.'+
+        '<br><span class="ehint">'+(state.pmHandelbar||0)+' Polymarket-Märkte werden verglichen. '+
+        'Echte Surebets sind selten — der Scanner läuft weiter.</span>';
+    }
+    rows.innerHTML='<div class="empty">'+txt+'</div>';
+    zeigeRest(0);
+    return;
+  }
   /* Eine Seite der Zeile. Bei Polymarket steht der Kurs auf der Website als
      PROZENT — deshalb hier beides: die Wahrscheinlichkeit wie drüben, und
      daneben die daraus umgerechnete Dezimalquote wie bei Betfair. Sonst
