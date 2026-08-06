@@ -33,7 +33,10 @@
   .status .dot.off{background:var(--neg)}
   .status .t{flex:1}
   .status .t b{display:block;font-size:13px}
-  .status .t small{color:var(--muted);font-family:var(--mono);font-size:11px}
+  .status .t small{display:block;color:var(--muted);font-family:var(--mono);font-size:11px}
+  .status .t .fassung{margin-top:3px;font-weight:700;letter-spacing:.04em}
+  .status .t .fassung.ok{color:var(--pos)}
+  .status .t .fassung.alt{color:var(--neg)}
 
   .step{border:1px solid var(--line2);background:linear-gradient(180deg,#1a1d13,#15180f);margin-bottom:16px}
   .step > .h{display:flex;align-items:center;gap:14px;padding:15px 18px;border-bottom:1px solid var(--line)}
@@ -85,7 +88,8 @@
 
     <div class="status">
       <span class="dot" id="stDot"></span>
-      <span class="t"><b id="stTxt">Prüfe Verbindung …</b><small id="stSub">—</small></span>
+      <span class="t"><b id="stTxt">Prüfe Verbindung …</b><small id="stSub">—</small>
+        <small class="fassung" id="stFass"></small></span>
       <button class="btnlink grey" style="margin:0" onclick="checkStatus()">Neu prüfen</button>
     </div>
 
@@ -117,7 +121,7 @@
       <div class="body">
         <ol>
           <li>Auf den Knopf klicken — es lädt die Datei <b>betfair-bridge.exe</b>:
-            <br><a class="btnlink" href="https://github.com/saifokaram1-hub/orion-panel/releases/download/bridge-v1/betfair-bridge.exe">⬇ Bridge herunterladen (Windows)</a></li>
+            <br><a class="btnlink" href="https://github.com/saifokaram1-hub/orion-panel/releases/download/bridge-v1/betfair-bridge.exe">⬇ Bridge herunterladen (Windows) · Fassung <span data-neueste>…</span></a></li>
           <li>Einen neuen Ordner anlegen, z. B. <b>C:\bridge</b></li>
           <li>Die heruntergeladene <b>betfair-bridge.exe</b> in diesen Ordner verschieben</li>
         </ol>
@@ -185,7 +189,7 @@
         <p>Die Website aktualisiert sich beim Neuladen von selbst. Das Programm auf deinem PC <b>nicht</b> — es läuft weiter mit der Logik, mit der es ausgeliefert wurde. Deshalb meldet es sich, sobald es veraltet ist: oben in der App erscheint ein Hinweis, und im Bridge-Fenster steht es beim Start.</p>
         <ol>
           <li>Neue Datei herunterladen:
-            <br><a class="btnlink" href="https://github.com/saifokaram1-hub/orion-panel/releases/download/bridge-v1/betfair-bridge.exe">⬇ Aktuelle Bridge herunterladen</a></li>
+            <br><a class="btnlink" href="https://github.com/saifokaram1-hub/orion-panel/releases/download/bridge-v1/betfair-bridge.exe">⬇ Aktuelle Bridge herunterladen · Fassung <span data-neueste>…</span></a></li>
           <li>Das laufende <b>Bridge-Fenster schließen</b> (Strg+C oder einfach zumachen)</li>
           <li>Die alte <b>betfair-bridge.exe</b> in deinem Ordner durch die neue <b>ersetzen</b></li>
           <li><b>Doppelklick</b> — fertig</li>
@@ -243,7 +247,7 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=30"></script>
+<script src="config.js?v=31"></script>
 <script>
 var SB=null, TOKEN='';
 function copyBox(id){
@@ -254,15 +258,41 @@ function copyBox(id){
   });
 }
 function copyTok(){ if(TOKEN) navigator.clipboard.writeText(TOKEN).then(function(){ alert('Token kopiert!'); }); }
+// Welche Fassung wird gerade angeboten? Wird einmal geladen und überall gezeigt.
+var SOLL=null;
+fetch('version.json?t='+Date.now()).then(function(r){ return r.ok? r.json():null; })
+  .then(function(v){
+    if(!v)return; SOLL=v;
+    document.querySelectorAll('[data-neueste]').forEach(function(el){ el.textContent=v.bridgeVersion; });
+    checkStatus();
+  }).catch(function(){});
+
 function checkStatus(){
   fetch('https://noexklrgtqveiclijdwp.supabase.co/functions/v1/bf-bridge')
     .then(function(r){return r.json();})
     .then(function(j){
-      var dot=document.getElementById('stDot'), t=document.getElementById('stTxt'), s=document.getElementById('stSub');
+      var dot=document.getElementById('stDot'), t=document.getElementById('stTxt'),
+          s=document.getElementById('stSub'), f=document.getElementById('stFass');
       if(j.live){ dot.className='dot on'; t.textContent='Bridge läuft — Betfair/96ex-Quoten kommen an ✅';
         s.textContent=(j.data||[]).length+' Quoten · zuletzt vor '+j.age_seconds+' s'+(j.source?(' · '+j.source):''); }
       else { dot.className='dot off'; t.textContent='Keine Bridge aktiv — Betfair/96ex wird nicht gescannt';
-        s.textContent='Folge der Anleitung unten. Polymarket und SX Bet laufen weiter.'; }
+        s.textContent='Folge der Anleitung unten. Polymarket läuft weiter.'; }
+
+      /* Welche Fassung läuft dort, und ist sie noch aktuell? Genau das will man
+         wissen, ohne erst irgendwo nachsehen zu müssen. */
+      if(f){
+        var st=(j.stats||{});
+        var ist=(st.build!=null)? +st.build : null;
+        if(!j.live && !ist){ f.textContent=''; f.className='fassung'; }
+        else if(!SOLL){ f.textContent='Fassung '+(st.version||'?'); f.className='fassung'; }
+        else if(ist==null || ist < +SOLL.bridgeBuild){
+          f.textContent='Fassung '+(st.version||'unbekannt')+' · VERALTET · neu ist '+SOLL.bridgeVersion;
+          f.className='fassung alt';
+        } else {
+          f.textContent='Fassung '+(st.version||ist)+' · aktuell';
+          f.className='fassung ok';
+        }
+      }
     }).catch(function(){
       document.getElementById('stTxt').textContent='Status nicht abrufbar';
     });

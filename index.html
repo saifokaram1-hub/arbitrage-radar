@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=30"></script>
+<script src="config.js?v=31"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -328,6 +328,10 @@
   .srcCard .sk{display:flex;flex-direction:column;margin-top:8px}
   .srcCard .skr{display:flex;justify-content:space-between;gap:8px;padding:2.5px 0;font-size:11px;color:var(--muted)}
   .srcCard .skr b{font-family:var(--mono);color:var(--gold-b);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+  .srcCard .skr b.alt{color:var(--warn)}
+  /* Fassung in der Kopfzeile, direkt neben dem Verbindungspunkt */
+  .srcstat .fass{font-size:10px;color:var(--dim);margin-left:4px}
+  .srcstat .fass.alt{color:var(--warn)}
 
   /* --- Gegenprobe von Hand: dieselben Märkte auf beiden Büchern --- */
   #schnittWrap{margin-top:10px}
@@ -537,7 +541,7 @@
     <button id="railBtn" class="railBtn" title="Seitenleiste ein- und ausblenden">☰</button>
     <div class="srcs">
       <div class="srcstat"><span class="d" id="dPm"></span>Polymarket <b id="sPm">…</b></div>
-      <div class="srcstat"><span class="d" id="dBf"></span>Betfair <b id="sBf">…</b></div>
+      <div class="srcstat"><span class="d" id="dBf"></span>Betfair <b id="sBf">…</b><span class="fass" id="fBf"></span></div>
       <div class="srcstat" id="stOb" style="display:none"><span class="d" id="dOb"></span>SX Bet <b id="sOb">…</b></div>
     </div>
     <div class="poll" id="pollInfo">verbinde …</div>
@@ -1566,6 +1570,24 @@ function renderSchnitt(){
   if(kopf) kopf.onclick=function(){ state.schnittZu=!state.schnittZu; renderSchnitt(); };
 }
 
+/* Welche Fassung läuft auf dem PC, und ist sie noch aktuell?
+   Soll überall dort stehen, wo es um die Bridge geht — man muss nicht erst
+   suchen, um zu wissen, ob man herunterladen soll. */
+function fassungInfo(){
+  var st=state.bfStats||{};
+  if(!st.zeit && !state.bfCount) return null;          // keine Bridge, nichts zu sagen
+  var ist = (st.build!=null)? +st.build : 0;
+  var name = st.version || (ist? String(ist) : '?');
+  if(!SOLL) return { text:'Fassung '+name, alt:false, unklar:true };
+  var veraltet = ist < +SOLL.bridgeBuild;
+  return {
+    text:'Fassung '+(ist? name : 'unbekannt'),
+    stand: veraltet? 'veraltet' : 'aktuell',
+    neu: SOLL.bridgeVersion,
+    alt: veraltet
+  };
+}
+
 /* ---- Kurzfassung direkt unter dem Anbieternamen: was läuft gerade ---- */
 function kurzInfo(k){
   var st=state.bfStats||{}, a=alterVon(k), z=zustand(k);
@@ -1607,7 +1629,9 @@ function renderQuellen(){
         ['Durchlauf',            (st.sweep_s!=null? st.sweep_s+' s':'–')+' · Takt '+(st.takt_ms||'–')+' ms'],
         ['App-Key',              st.key_art==='live'?'LIVE (Echtzeit)':(st.key_art==='delayed'?'DELAYED (verzögert)':'unbekannt')],
         ['Schwelle',             (st.schwelle!=null? st.schwelle+' %':'–')+(st.schwelle_schnell&&st.schwelle_schnell!==st.schwelle? ' · schnell '+st.schwelle_schnell+' %':'')],
-        ['Daten von',            vor(state.bfAge)+' her']
+        ['Daten von',            vor(state.bfAge)+' her'],
+        ['Bridge',               (function(){ var f=fassungInfo(); if(!f)return '–';
+                                   return f.text+(f.stand? ' · '+f.stand:''); })()]
       ]},
     { k:'ob', name:'SX Bet', zeilen:[
         ['Märkte erhalten',      (state.sxCount||0)+''],
@@ -1624,7 +1648,9 @@ function renderQuellen(){
         '<span class="sst">'+(an?(s[0]==='live'?'Live':(s[0]==='err'?'Störung':'wartet')):'aus')+'</span></div>'+
       (grund? '<div class="sgrund">'+grund.replace(/[<>]/g,'')+'</div>':'')+
       '<div class="sk">'+q.zeilen.map(function(z){
-        return '<div class="skr"><span>'+z[0]+'</span><b>'+z[1]+'</b></div>';
+        // Eine veraltete Fassung soll ins Auge springen, nicht in der Liste untergehen
+        var warn=/veraltet|unbekannt/.test(String(z[1]))? ' alt':'';
+        return '<div class="skr"><span>'+z[0]+'</span><b class="'+warn.trim()+'">'+z[1]+'</b></div>';
       }).join('')+'</div>'+
     '</div>';
   }).join('');
@@ -1662,6 +1688,19 @@ function updateAccountsUI(){
   });
   // SX Bet nur zeigen, wenn es überhaupt eingeschaltet ist
   var ob=$('#stOb'); if(ob) ob.style.display = state.srcOn.ob? '' : 'none';
+
+  // Fassung der Bridge direkt in der Kopfzeile — man soll nicht suchen müssen
+  var fb=$('#fBf');
+  if(fb){
+    var f=fassungInfo();
+    if(!f){ fb.textContent=''; fb.className='fass'; }
+    else {
+      fb.textContent='· '+f.text+(f.stand? ' '+f.stand:'');
+      fb.className='fass'+(f.alt?' alt':'');
+      fb.title=f.alt? ('Auf dem PC läuft '+f.text+'. Aktuell wäre '+f.neu+' — bitte die neue Datei holen.')
+                    : ('Die Bridge ist auf dem aktuellen Stand ('+f.text+').');
+    }
+  }
 }
 
 // Quelle anklicken -> Konto-Panel (verbinden/trennen + Konto)
