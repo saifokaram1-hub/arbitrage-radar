@@ -263,6 +263,48 @@
     </section>
 
     <section>
+      <h3>Die Bestätigungsschleife — warum nichts sofort einsetzbar ist</h3>
+      <p>Die vier Prüfungen oben arbeiten auf einer <strong>Momentaufnahme</strong>. Das reicht nicht, um echtes Geld zu setzen. Drei Dinge können eine Chance vortäuschen, die es nie gab:</p>
+      <div class="flow">
+        <div class="stage"><div class="n">1</div><div class="b">
+          <span class="t">Ein Kurs reißt kurz aus</span>
+          <span class="d">Für einen Augenblick steht eine Quote falsch im Buch und ist im nächsten Moment wieder weg. Wer in diesem Augenblick setzt, setzt gegen einen Preis, den es nicht mehr gibt.</span>
+        </div></div>
+        <div class="stage"><div class="n">2</div><div class="b">
+          <span class="t">Die Zuordnung springt</span>
+          <span class="d">Beim nächsten Durchlauf passt plötzlich ein <em>anderer</em> Betfair-Markt besser zur selben Polymarket-Frage. Dann zeigen die beiden Links verschiedene Ereignisse — und aus einer Absicherung werden zwei blinde Wetten, die beide verlieren können.</span>
+        </div></div>
+        <div class="stage"><div class="n">3</div><div class="b">
+          <span class="t">Ein Buch liefert kurz veraltete Daten</span>
+          <span class="d">Die Zahlen sehen frisch aus, stammen aber von vorhin. Der Vorteil ist längst weg.</span>
+        </div></div>
+      </div>
+      <p>Deshalb wird jede Meldung über <strong>mehrere Durchläufe verfolgt</strong>, bevor sie einsetzbar ist:</p>
+      <div class="scroll">
+        <table>
+          <tr><th>Zustand</th><th>Was passiert</th><th>Setzen möglich?</th></tr>
+          <tr><td class="k">1. Sichtung</td><td>Als Kandidat vorgemerkt, Fingerabdruck der Paarung gespeichert</td><td>nein — „wird geprüft 1/2"</td></tr>
+          <tr><td class="k">2. Sichtung, gleich</td><td>Paarung unverändert, Vorteil durchgehend vorhanden</td><td><strong>ja</strong></td></tr>
+          <tr><td class="k">Zuordnung springt</td><td>Fingerabdruck weicht ab → Zählung beginnt bei null</td><td>nein — sofort wieder gesperrt</td></tr>
+          <tr><td class="k">Vorteil bricht ein</td><td>War zwischendurch bei null → gilt als unstet</td><td>nein</td></tr>
+          <tr><td class="k">3 Minuten nicht gesehen</td><td>Zählung verfällt, beginnt von vorn</td><td>nein</td></tr>
+        </table>
+      </div>
+      <p class="note">Der Fingerabdruck umfasst beide Bücher, beide Ausgänge und <strong>beide Links</strong>. Er ändert sich genau dann, wenn die Zuordnung wechselt. Preise dürfen schwanken — die Zuordnung nicht.</p>
+      <div class="call good"><b>Bewusst konservativ.</b> Lieber eine echte Chance verpassen als eine falsche setzen: eine verpasste Chance kostet nichts, eine falsche kostet den Einsatz. Solange eine Meldung nicht bestätigt ist, steht sie mit <code>◷ wird geprüft</code> in der Liste und der Setzen-Knopf im Ticket bleibt gesperrt. Der Alarm feuert ebenfalls erst nach der Bestätigung.</div>
+
+      <h4>Zwei getrennte Rechenwege müssen übereinstimmen</h4>
+      <p>Zusätzlich wird jede Meldung ein zweites Mal nachgerechnet — über eine <em>andere</em> Herleitung. Der erste Weg teilt den Einsatz über die Kehrwerte der Quoten, der zweite über die Quoten selbst:</p>
+      <pre>Weg 1:  E₁ = S × (1/q₁) / (1/q₁ + 1/q₂)
+Weg 2:  E₁ = S × q₂ / (q₁ + q₂)
+
+<span class="c">Beide müssen auf denselben Betrag kommen:</span>
+Weg 1:  1000 × 0,48900 / 0,96733 = <b>505,4414 €</b>
+Weg 2:  1000 × 2,09 / (2,045 + 2,09) = <b>505,4414 €</b></pre>
+      <p class="note">Weichen die zwei Wege um mehr als einen Cent voneinander ab, oder zahlen die beiden Ausgänge nicht denselben Betrag, wird die Meldung verworfen statt angezeigt. Ein Rechenfehler kann sich so nicht bis zum Einsatz durchschlagen — er müsste in zwei unabhängig hergeleiteten Formeln gleichzeitig auftreten.</p>
+    </section>
+
+    <section>
       <h3>Die Rechnung, Schritt für Schritt</h3>
 
       <h4>Schritt 1 — Quote und Wahrscheinlichkeit sind dasselbe in zwei Schreibweisen</h4>
@@ -425,8 +467,8 @@ node oberflaeche-pruefung.js  <span class="c">32 Prüfungen — Anzeige, Gebühr
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=36"></script>
-<script src="pdf.js?v=36"></script>
+<script src="config.js?v=37"></script>
+<script src="pdf.js?v=37"></script>
 <script>
 // PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.
 document.getElementById('pdfBtn').addEventListener('click', function(){

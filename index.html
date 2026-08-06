@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=36"></script>
+<script src="config.js?v=37"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -406,6 +406,12 @@
      Zeilen in den Live-Chancen — filterbar und sortierbar wie alles andere.
      Erkennbar sind sie am Zeichen in der Zeile; ihre volle Aufschluesselung
      erscheint im Wett-Ticket, sobald man sie anklickt. */
+  /* Chance ist gefunden, aber noch nicht über mehrere Durchläufe bestätigt */
+  .prueftag{font-size:9px;letter-spacing:.06em;padding:1px 6px;border:1px solid #5c4526;
+    color:#d98c4a;background:rgba(217,140,74,.09);white-space:nowrap}
+  .r-o.pruef{opacity:.72}
+  .r-o.pruef .roi{color:var(--muted)!important}
+
   /* Gegenprobe im Ticket: meinen beide Links dasselbe Ereignis? */
   .sameBox{border:1px solid var(--line3);background:#181b12;margin-bottom:9px}
   .sameKopf{display:flex;align-items:baseline;justify-content:space-between;gap:8px;
@@ -1525,6 +1531,102 @@ function demoTick(){
   mkMap.forEach(function(mk){ if(!mk.demo)return; mk.ask0=walkAsk(mk.ask0,mk.base.a0); mk.ask1=walkAsk(mk.ask1,mk.base.a1); });
 }
 
+/* ═══════════════ Bestätigungsschleife ═══════════════════════════════════
+   Eine einzelne Momentaufnahme reicht nicht, um echtes Geld darauf zu setzen.
+   Drei Dinge können eine Chance vortäuschen, die es nie gab:
+     · ein Kurs reißt für einen Augenblick aus und ist im nächsten Moment weg
+     · die Zuordnung springt beim nächsten Durchlauf auf einen anderen Markt
+       — dann zeigen die beiden Links plötzlich verschiedene Ereignisse
+     · ein Buch liefert kurz veraltete Daten
+   Deshalb wird jede Meldung über MEHRERE Durchläufe verfolgt. Erst wenn sie
+   sich unverändert bestätigt hat, gilt sie als einsetzbar. Vorher ist sie
+   sichtbar, aber ausdrücklich als „wird geprüft" markiert und das Ticket
+   lässt sie nicht setzen.
+
+   Das ist bewusst konservativ: lieber eine echte Chance verpassen als eine
+   falsche setzen. Eine verpasste Chance kostet nichts. */
+var BESTAETIGUNG = {
+  noetig: 2,             // so oft muss dieselbe Paarung unverändert erscheinen
+  hoechstpause: 180000   // länger als 3 Minuten nicht gesehen -> Zählung verfällt
+};
+var kandidaten = {};
+
+/* Fingerabdruck der PAARUNG, nicht des Preises. Er ändert sich genau dann,
+   wenn ein anderes Buch, ein anderer Ausgang oder ein anderer Link im Spiel
+   ist — also wenn die Zuordnung gewechselt hat. Preise dürfen schwanken,
+   die Zuordnung nicht. */
+function paarungsAbdruck(mk, v){
+  return [v.s1.src, v.s2.src,
+          String(mk.o1||''), String(mk.o2||''),
+          String(mk.linkPm||mk.slug||''), String(mk.bfLink||'')].join('|');
+}
+
+/* Zweiter, getrennt hergeleiteter Rechenweg als Gegenprobe.
+   Weg 1 (routing) teilt über die Kehrwerte:  E₁ = S·(1/q₁)/(1/q₁+1/q₂)
+   Weg 2 (hier)  teilt über die Quoten selbst: E₁ = S·q₂/(q₁+q₂)
+   Beide müssen dieselbe Auszahlung ergeben. Tun sie es nicht, stimmt etwas
+   nicht — dann wird nicht angezeigt, statt zu raten. */
+function gegenrechnung(v){
+  var q1=v.s1.oddsEff, q2=v.s2.oddsEff;
+  if(!(q1>1)||!(q2>1)) return {ok:false, grund:'Quote unbrauchbar'};
+  var S=1000;
+  var e1=S*q2/(q1+q2), e2=S*q1/(q1+q2);
+  var aus1=e1*q1, aus2=e2*q2;
+  // Beide Ausgänge müssen auf den Cent gleich auszahlen
+  if(Math.abs(aus1-aus2) > 0.01) return {ok:false, grund:'Auszahlungen weichen ab'};
+  if(!(aus1 > S)) return {ok:false, grund:'zahlt nicht mehr aus als eingesetzt'};
+  var roi2=(aus1/S-1)*100;
+  // Und dasselbe Ergebnis wie der erste Weg liefern
+  if(Math.abs(roi2 - v.roi) > 0.01) return {ok:false, grund:'zwei Rechenwege uneinig'};
+  return {ok:true, roi:roi2};
+}
+
+function bestaetige(mk, v){
+  var id=mk.id, jetzt=Date.now();
+  mk._treffer=0;
+
+  // Im Demo-Modus wird nichts zurückgehalten — dort wird geübt, nicht gesetzt
+  if(mk.demo){ mk._sicher=true; mk._grund=''; return true; }
+
+  if(!(v.ok && v.roi>0.02)){
+    delete kandidaten[id];
+    mk._sicher=false; mk._grund='kein Vorteil';
+    return false;
+  }
+  // Erst die Gegenprobe: was hier durchfällt, wird gar nicht erst gezählt
+  var g=gegenrechnung(v);
+  if(!g.ok){
+    delete kandidaten[id];
+    mk._sicher=false; mk._grund=g.grund;
+    return false;
+  }
+
+  var ab=paarungsAbdruck(mk,v), k=kandidaten[id];
+  if(!k || k.abdruck!==ab || (jetzt-k.zuletzt)>BESTAETIGUNG.hoechstpause){
+    var gewechselt = !!(k && k.abdruck!==ab);
+    kandidaten[id]={abdruck:ab, treffer:1, seit:jetzt, zuletzt:jetzt,
+                    roiMin:v.roi, roiMax:v.roi};
+    mk._sicher=false; mk._treffer=1;
+    mk._grund = gewechselt? 'Zuordnung hat gewechselt — Zählung beginnt neu'
+                          : 'wird geprüft 1/'+BESTAETIGUNG.noetig;
+    return false;
+  }
+
+  k.treffer++; k.zuletzt=jetzt;
+  if(v.roi<k.roiMin)k.roiMin=v.roi;
+  if(v.roi>k.roiMax)k.roiMax=v.roi;
+  mk._treffer=k.treffer;
+
+  // War die Chance zwischendurch ohne Vorteil, ist sie unstet — nicht setzen
+  if(!(k.roiMin>0.02)){
+    mk._sicher=false; mk._grund='war zwischendurch ohne Vorteil';
+    return false;
+  }
+  mk._sicher = k.treffer >= BESTAETIGUNG.noetig;
+  mk._grund = mk._sicher? '' : ('wird geprüft '+k.treffer+'/'+BESTAETIGUNG.noetig);
+  return mk._sicher;
+}
+
 /* ---- Signale (Chancen öffnen/schließen, Hits) ---- */
 function processSignals(){
   markets().forEach(function(mk){
@@ -1533,11 +1635,19 @@ function processSignals(){
        Edge-Function bf-bridge schreibt sie beim Hochladen bereits in die
        Historie (bridge_log_opps). Ein zweiter Eintrag von der Website wuerde
        jede dieser Chancen doppelt zaehlen. Alarm und Anzeige laufen weiter. */
+    // Bestätigungsschleife: setzt mk._sicher und mk._grund
+    var sicher=bestaetige(mk,v);
+
     if(opp){ if(!mk.since){ mk.since=Date.now(); flashBlip(); if(state.mode!=='demo' && !mk.fertig && window.__ar&&window.__ar.logOpp)window.__ar.logOpp(mk.ev,mk.cat,v.roi,v.arbPct,v.s1.src+'/'+v.s2.src); }
-      if(v.roi>=state.hitTh){ if(!mk.wasHit){mk.wasHit=true; fireHit(v);} }
+      /* Alarm nur für BESTÄTIGTE Chancen. Ein Signal für etwas, das im
+         nächsten Durchlauf verschwindet, verleitet zum voreiligen Setzen —
+         und genau das soll die Schleife verhindern. */
+      if(sicher && v.roi>=state.hitTh){ if(!mk.wasHit){mk.wasHit=true; fireHit(v);} }
       else if(v.roi<state.hitTh*0.6)mk.wasHit=false;
     } else { if(mk.since){state.closed++; mk.since=0;} mk.wasHit=false; }
   });
+  // Kandidaten aufräumen, deren Markt es nicht mehr gibt
+  Object.keys(kandidaten).forEach(function(id){ if(!mkMap.get(id)) delete kandidaten[id]; });
 }
 
 /* ---- Konten-UI ---- */
@@ -2255,10 +2365,14 @@ function renderTicket(){
   $('#tkPlace').textContent=isDemo?'⚡ 1-Klick einsetzen (Demo)':'Markt öffnen & Beträge setzen →';
   var reason='';
   if(!v.ok)reason='Fenster geschlossen — noch kein Vorteil';
+  /* Nicht setzen lassen, solange die Chance nicht bestätigt ist. Das ist der
+     Kern der Absicherung: eine Meldung, die im nächsten Durchlauf verschwindet
+     oder deren Zuordnung springt, darf gar nicht erst gesetzt werden können. */
+  else if(!m._sicher)reason=(m._grund||'wird noch geprüft')+' — noch nicht setzen';
   else if(isDemo&&max<=0)reason='Guthaben eintragen';
   else if(S<=0)reason='Betrag eingeben';
   else if(max<1e9&&S>max)reason='Guthaben reicht bis '+eur(max);
-  $('#tkPlace').disabled=(isDemo? !!reason : !v.ok);
+  $('#tkPlace').disabled=(isDemo? !!reason : (!v.ok || !m._sicher));
   $('#tkWarn').textContent=reason?('⚠ '+reason):'';
   var risk=dnpRisk(m.ev,m.cat);
   var dnpNote = risk!=='niedrig'
@@ -2455,7 +2569,10 @@ function render(){
   /* Und nur dann wirklich neu zeichnen, wenn sich etwas geändert hat.
      Eine kurze Kennung über die sichtbaren Werte genügt als Vergleich. */
   var kennung=view.map(function(v){
-    return v.m.id+':'+v.s1.odds.toFixed(3)+':'+v.s2.odds.toFixed(3)+':'+(v.ok?1:0);
+    // Der Bestätigungsstand gehört mit hinein, sonst bleibt die Markierung
+    // "wird geprüft" stehen, obwohl die Chance längst freigegeben ist
+    return v.m.id+':'+v.s1.odds.toFixed(3)+':'+v.s2.odds.toFixed(3)+':'+(v.ok?1:0)+
+           ':'+(v.m._sicher?1:0)+':'+(v.m._treffer||0);
   }).join('|')+'#'+state.ticketId+'#'+state.hitTh;
   if(kennung===state._zeilenKennung && rows.children.length){ zeigeRest(gesamt); return; }
   state._zeilenKennung=kennung;
@@ -2464,9 +2581,14 @@ function render(){
     var m=v.m, ag=ageInfo(m.since), hit=v.ok&&v.roi>=state.hitTh;
     var roiCls=!v.ok?'down':(v.roi>=state.hitTh?'big':(v.roi>0?'up':''));
     var sign=v.roi>0?'+':'';
-    return '<div class="r-o'+(hit?' hit':'')+(m.id===state.ticketId?' sel':'')+'" data-id="'+m.id+'">'+
+    var ungeprueft = v.ok && !m._sicher;
+    return '<div class="r-o'+(hit?' hit':'')+(m.id===state.ticketId?' sel':'')+
+      (ungeprueft?' pruef':'')+'" data-id="'+m.id+'">'+
       '<div class="ev"><div class="name">'+m.ev+'</div><div class="meta"><span class="cattg" style="color:'+catColor(m.cat)+';border-color:'+catColor(m.cat)+'66">'+m.cat+'</span>'+
         (m.fertig?'<span class="fertigtag" title="Von der lokalen Bridge komplett durchgerechnet: beide Beine, beide Gebühren, geprüfte Zuordnung. Anklicken zeigt die volle Aufteilung im Wett-Ticket.">◆ fertig</span>':'')+
+        (ungeprueft?'<span class="prueftag" title="'+(m._grund||'wird geprüft')+
+          ' — die Chance muss sich über mehrere Durchläufe unverändert bestätigen, bevor sie einsetzbar ist. Solange lässt das Ticket sie nicht setzen.">◷ '+
+          (m._grund||'wird geprüft')+'</span>':'')+
         (dnpRisk(m.ev,m.cat)!=='niedrig'?'<span class="dnp '+dnpRisk(m.ev,m.cat)+'" title="DNP/Void-Risiko: bei Nicht-Antreten zahlt Polymarket meist nicht zurück, Orbit voidet — Regeln prüfen">DNP?</span>':'')+
         (m.liq?'<span class="liq">Liq '+nf0.format(Math.round(m.liq))+' $</span>':'')+
         '<span class="age '+ag.cls+'"><span class="adot"></span>'+ag.txt+'</span></div></div>'+

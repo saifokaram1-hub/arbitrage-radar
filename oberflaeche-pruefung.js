@@ -29,7 +29,8 @@ function holeFunktion(name) {
   throw new Error('Ende der Funktion nicht gefunden: ' + name);
 }
 
-const quelle = ['buchKuerzel', 'syncBridgeMarkets', 'evalMarket', 'feasibleMax']
+const quelle = ['buchKuerzel', 'syncBridgeMarkets', 'evalMarket', 'feasibleMax',
+                'paarungsAbdruck', 'gegenrechnung', 'bestaetige']
   .map(holeFunktion).join('\n\n');
 
 // Umgebung wie im Browser, aber nur so viel wie diese Funktionen brauchen
@@ -41,7 +42,10 @@ const sandbox = {
            srcOn: { pm: 1, bf: 1, ob: 1 } },
   categorize: q => (/lakers|celtics|spiel/i.test(q) ? 'Basketball' : 'Politik'),
   pmEff: () => 0, effOdds: () => 0, feeOf: () => 0,
-  Array, Math, String, Number, isFinite, console
+  // fuer die Bestaetigungsschleife
+  BESTAETIGUNG: { noetig: 2, hoechstpause: 180000 },
+  kandidaten: {},
+  Array, Math, String, Number, isFinite, console, Date, Object
 };
 vm.createContext(sandbox);
 vm.runInContext(quelle, sandbox);
@@ -186,6 +190,92 @@ console.log('\n═════ 9. Gebühren je Anbieter stimmen ═════'
         E2.toFixed(2) + '×' + q2 + ' = ' + (E2*q2).toFixed(2) + ' €');
 
   pruef('Gebühr ist nie negativ', gebBf >= 0 && gebPm >= 0);
+}
+
+console.log('\n═════ 10. Bestätigungsschleife ═════');
+/* Der Kern der Absicherung: eine Chance darf erst gesetzt werden, wenn sie
+   sich über mehrere Durchlaeufe UNVERAENDERT bestaetigt hat. Hier wird
+   geprueft, dass sie das wirklich tut — und vor allem, dass sie es NICHT
+   tut, wenn die Zuordnung springt. */
+{
+  const mk = () => ({ id:'t1', o1:'Lakers', o2:'No', linkPm:'pm/a', bfLink:'bf/a' });
+  const v  = (roi, s1src, s2src) => ({
+    ok:true, roi:roi, s1:{src:s1src||'bf', odds:2.10, oddsEff:2.045},
+    s2:{src:s2src||'pm', odds:2.15, oddsEff:2.09}
+  });
+
+  sandbox.kandidaten = {};
+  const a = mk();
+  const r1 = sandbox.bestaetige(a, v(3.36));
+  pruef('erste Sichtung gilt NICHT als sicher', r1 === false && a._sicher === false,
+        a._grund);
+  const r2 = sandbox.bestaetige(a, v(3.36));
+  pruef('zweite Sichtung gibt frei', r2 === true && a._sicher === true,
+        'Treffer: ' + a._treffer);
+
+  // Zuordnung springt auf einen anderen Betfair-Markt
+  sandbox.kandidaten = {};
+  const b = mk();
+  sandbox.bestaetige(b, v(3.36));
+  sandbox.bestaetige(b, v(3.36));
+  pruef('bestätigt, bevor die Zuordnung springt', b._sicher === true);
+  b.bfLink = 'bf/GANZ-ANDERER-MARKT';
+  const r3 = sandbox.bestaetige(b, v(3.36));
+  pruef('Sprung der Zuordnung sperrt sofort wieder',
+        r3 === false && b._sicher === false, b._grund);
+
+  // Chance war zwischendurch ohne Vorteil -> unstet
+  sandbox.kandidaten = {};
+  const c = mk();
+  sandbox.bestaetige(c, v(3.36));
+  sandbox.bestaetige(c, v(0.001));      // eingebrochen
+  const r4 = sandbox.bestaetige(c, v(3.36));
+  pruef('unstete Chance bleibt gesperrt', r4 === false && c._sicher === false,
+        c._grund);
+
+  // Kein Vorteil -> gar nicht erst zaehlen
+  sandbox.kandidaten = {};
+  const d = mk();
+  const r5 = sandbox.bestaetige(d, {ok:false, roi:-1, s1:v(0).s1, s2:v(0).s2});
+  pruef('ohne Vorteil wird nicht gezählt', r5 === false && d._grund === 'kein Vorteil');
+
+  // Demo bleibt frei, damit man ueben kann
+  sandbox.kandidaten = {};
+  const e = mk(); e.demo = true;
+  pruef('Demo-Modus wird nicht zurückgehalten',
+        sandbox.bestaetige(e, v(3.36)) === true);
+}
+
+console.log('\n═════ 11. Zweiter Rechenweg als Gegenprobe ═════');
+{
+  const gut = sandbox.gegenrechnung({ roi:3.3628,
+    s1:{oddsEff:2.045}, s2:{oddsEff:2.09} });
+  pruef('echte Chance besteht die Gegenprobe', gut.ok === true,
+        '+' + gut.roi.toFixed(4) + ' %');
+
+  // Erster und zweiter Rechenweg uneinig -> verwerfen
+  const falsch = sandbox.gegenrechnung({ roi:9.99,
+    s1:{oddsEff:2.045}, s2:{oddsEff:2.09} });
+  pruef('uneinige Rechenwege werden verworfen',
+        falsch.ok === false, falsch.grund);
+
+  // Kein Vorteil
+  const kein = sandbox.gegenrechnung({ roi:-2,
+    s1:{oddsEff:1.80}, s2:{oddsEff:1.90} });
+  pruef('ohne Vorteil faellt die Gegenprobe durch', kein.ok === false, kein.grund);
+
+  // Unbrauchbare Quote
+  const mist = sandbox.gegenrechnung({ roi:5, s1:{oddsEff:0}, s2:{oddsEff:2.09} });
+  pruef('unbrauchbare Quote wird abgefangen', mist.ok === false, mist.grund);
+
+  /* Der zweite Weg teilt ueber die Quoten (q₂/(q₁+q₂)), der erste ueber die
+     Kehrwerte. Beide muessen dieselbe Aufteilung ergeben. */
+  const q1 = 2.045, q2 = 2.09, S = 1000;
+  const wegA = S * (1/q1) / (1/q1 + 1/q2);
+  const wegB = S * q2 / (q1 + q2);
+  pruef('beide Herleitungen ergeben dieselbe Aufteilung',
+        Math.abs(wegA - wegB) < 0.0001,
+        wegA.toFixed(4) + ' € gegen ' + wegB.toFixed(4) + ' €');
 }
 
 console.log('\n' + '═'.repeat(46));
