@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=33"></script>
+<script src="config.js?v=34"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -95,6 +95,23 @@
   .block .head h2{margin:0;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:700}
   .block .head .hint{font-size:9.5px;color:var(--dim);font-family:var(--mono)}
   .block .body{padding:4px 16px 16px;display:flex;flex-direction:column;gap:14px}
+  /* Jeder Block der Seitenleiste laesst sich einzeln zuklappen. Der ☰ oben
+     nimmt die ganze Leiste weg — samt Filtern und Ticket, die man meistens
+     behalten will. Hier verkleinert man sie, statt sie zu verlieren. */
+  .rail .block>.head{cursor:pointer;user-select:none;gap:8px;transition:background .14s ease}
+  .rail .block>.head:hover{background:rgba(199,178,76,.05)}
+  .rail .block>.head:hover h2{color:var(--gold-b)}
+  .rail .block>.head:focus-visible{outline:1px solid var(--gold-d);outline-offset:-1px}
+  /* Der Hinweistext bleibt rechts, der Pfeil sitzt dahinter — sonst schiebt
+     space-between den Hinweis in die Mitte, sobald ein drittes Element dazukommt */
+  .rail .block>.head .hint{margin-left:auto;text-align:right}
+  .rail .block>.head .kar{flex:none;font-size:9px;color:var(--dim);
+    transition:transform .18s ease;transform-origin:50% 50%}
+  .rail .block.zu>.head .kar{transform:rotate(-90deg)}
+  .rail .block.zu>.head{padding-bottom:11px}
+  .rail .block.zu>.body{display:none}
+  /* Zugeklappt bleibt die Überschrift lesbar, nur ruhiger */
+  .rail .block.zu>.head h2{color:var(--muted)}
   .field{display:flex;flex-direction:column;gap:6px}
   .field label{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
   .inp,.sel{width:100%;height:34px;padding:0 10px;background:#1a1d13;border:1px solid var(--line2);color:var(--txt);font-size:13px}
@@ -2262,6 +2279,48 @@ $('#railBtn').addEventListener('click',function(){
 });
 // Zustand der Seitenleiste merken
 try{ if(window.arStore.get('ar_rail')==='zu') document.querySelector('.app').classList.add('zu'); }catch(e){}
+
+/* Jeden Block der Seitenleiste einzeln zuklappen.
+   Der ☰ oben nimmt die ganze Leiste weg — dann sind aber auch Filter und
+   Ticket weg, die man beim Sichten der Chancen gerade braucht. Hier laesst
+   sich stattdessen wegraeumen, was man nicht braucht: Konten und Rechner zu,
+   Filter und Ticket offen. Der Zustand wird je Block gemerkt.
+   Rein optisch — an der Rechnung aendert sich dadurch nichts. */
+(function(){
+  var bloecke=document.querySelectorAll('.rail .block');
+  Array.prototype.forEach.call(bloecke,function(b){
+    var kopf=b.querySelector('.head'); if(!kopf)return;
+    var h2=kopf.querySelector('h2'); if(!h2)return;
+    var name='ar_blk_'+h2.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
+
+    // Pfeil anlegen, falls noch keiner da ist
+    if(!kopf.querySelector('.kar')){
+      var k=document.createElement('span');
+      k.className='kar'; k.textContent='▾'; k.setAttribute('aria-hidden','true');
+      kopf.appendChild(k);
+    }
+    kopf.setAttribute('role','button');
+    kopf.setAttribute('tabindex','0');
+
+    try{ if(window.arStore.get(name)==='zu') b.classList.add('zu'); }catch(e){}
+    var melde=function(){
+      var zu=b.classList.contains('zu');
+      kopf.setAttribute('aria-expanded', zu?'false':'true');
+      kopf.setAttribute('title', (zu?'Aufklappen: ':'Zuklappen: ')+h2.textContent.trim());
+    };
+    melde();
+
+    var um=function(){
+      b.classList.toggle('zu');
+      melde();
+      try{ window.arStore.set(name, b.classList.contains('zu')?'zu':'auf'); }catch(e){}
+    };
+    kopf.addEventListener('click',um);
+    kopf.addEventListener('keydown',function(e){
+      if(e.key==='Enter'||e.key===' '||e.key==='Spacebar'){ e.preventDefault(); um(); }
+    });
+  });
+})();
 
 /* ---- Events ---- */
 $('#catChips').addEventListener('click',function(e){var b=e.target.closest('.chip');if(b)setCat(b.dataset.cat);});
