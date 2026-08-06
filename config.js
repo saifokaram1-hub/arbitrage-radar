@@ -10,7 +10,7 @@ window.arClient = function(){
   return window.__arc;
 };
 
-window.AR_VERSION = 35;   // zum Prüfen, welche Fassung geladen ist
+window.AR_VERSION = 36;   // zum Prüfen, welche Fassung geladen ist
 
 // Speicher sicher benutzen — in privaten Fenstern kann sessionStorage gesperrt sein
 window.arStore = {

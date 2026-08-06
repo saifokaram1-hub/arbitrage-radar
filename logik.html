@@ -349,9 +349,13 @@ Gewinn in beiden Fällen: rund <b>+3,37 €</b> auf 100 € Einsatz</pre>
     <section>
       <h3>Was im Wett-Ticket steht</h3>
       <p>Klickst du eine Chance in der Liste an, erscheint links genau diese Rechnung mit deinen Zahlen — je Anbieter einzeln:</p>
+      <h4>Zuerst: meinen beide Links dasselbe Ereignis?</h4>
+      <p>Ganz oben im Ticket steht die <strong>Gegenprobe</strong> — was jedes Buch den Markt nennt, mit dem Link direkt daneben. Bei Polymarket die Frage im Freitext, bei Betfair der strukturierte Marktname.</p>
+      <div class="call bad"><b>Der teuerste Fehler bei Arbitrage ist nicht eine falsche Quote, sondern eine falsche Paarung.</b> Zwei Links, die verschiedene Ereignisse meinen — dann ist es keine Absicherung, sondern zweimal blind gesetzt, und beide können verlieren. Der Scanner prüft das vierfach, aber vor dem Einsatz gehört es einmal mit eigenen Augen geprüft. Stimmen die beiden Zeilen nicht überein: <b>nicht setzen</b>.</div>
       <div class="scroll">
         <table>
           <tr><th>Angabe</th><th>Bedeutung</th></tr>
+          <tr><td class="k">Dieselbe Wette?</td><td>Beide Marktnamen untereinander, jeder mit eigenem Link — die Gegenprobe von Hand</td></tr>
           <tr><td class="k">Hier einzahlen</td><td>Der Betrag für <em>dieses</em> Buch, in Euro und als Anteil am Gesamteinsatz</td></tr>
           <tr><td class="k">Quote</td><td>Die rohe Quote und daneben die Quote nach Abzug der Gebühr</td></tr>
           <tr><td class="k">Gebührensatz</td><td>Der Satz <b>dieses einzelnen Marktes</b> — bei Betfair Kommission auf den Gewinn, bei Polymarket Gebühr je Anteil</td></tr>
@@ -421,8 +425,8 @@ node oberflaeche-pruefung.js  <span class="c">32 Prüfungen — Anzeige, Gebühr
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=35"></script>
-<script src="pdf.js?v=35"></script>
+<script src="config.js?v=36"></script>
+<script src="pdf.js?v=36"></script>
 <script>
 // PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.
 document.getElementById('pdfBtn').addEventListener('click', function(){
