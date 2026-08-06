@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=32"></script>
+<script src="config.js?v=33"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -385,23 +385,16 @@
     color:var(--muted);line-height:1.6;max-width:60ch}
   .empty .ehint b{color:var(--txt)}
 
-  /* Sitzt jetzt INNERHALB der Live-Chancen, direkt über der Tabelle: es sind
-     ja Chancen, nur eben schon fertig durchgerechnet. Deshalb kein eigener
-     Kasten mehr, sondern ein Band, das sichtbar zur Liste gehört. */
-  #oppWrap{border:0;border-bottom:1px solid var(--line2);margin:0;
-    background:linear-gradient(180deg,rgba(199,178,76,.06),transparent)}
-  .oppHead{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line2);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
-  .oppHead b{color:var(--gold-b)}
-  .oppHead span{color:var(--dim);font-family:var(--mono);letter-spacing:0;text-transform:none;font-size:11px}
-  .opp{border-bottom:1px solid var(--line);padding:13px 14px}
-  .opp:last-child{border-bottom:0}
-  .oppTop{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:9px}
-  .oppRoi{font-family:var(--mono);font-size:19px;font-weight:700;color:var(--pos)}
-  .oppEv{flex:1;min-width:200px;font-size:13px;color:var(--txt)}
-  .oppMeta{font-family:var(--mono);font-size:10.5px;color:var(--dim)}
-  .oppRisk{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border:1px solid var(--line3);color:var(--muted)}
-  .oppRisk.hoch{color:var(--neg);border-color:#6e2c22}
-  .oppRisk.mittel{color:#d98c4a;border-color:#5c4526}
+  /* Die fertig gerechneten Chancen der Bridge stehen jetzt als ganz normale
+     Zeilen in den Live-Chancen — filterbar und sortierbar wie alles andere.
+     Erkennbar sind sie am Zeichen in der Zeile; ihre volle Aufschluesselung
+     erscheint im Wett-Ticket, sobald man sie anklickt. */
+  .fertigtag{font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:1px 6px;
+    border:1px solid var(--gold-d);color:var(--gold-b);background:rgba(199,178,76,.09);white-space:nowrap}
+  .fertigbox{border:1px solid var(--gold-d);background:linear-gradient(180deg,rgba(199,178,76,.07),transparent);padding:9px 11px;margin-bottom:9px}
+  .fertigkopf{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+  .fertigkopf b{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-b)}
+  .fertigkopf span{font-family:var(--mono);font-size:10px;color:var(--dim)}
   .oppLeg{display:grid;grid-template-columns:88px 62px 1fr auto;gap:10px;align-items:center;padding:7px 0;border-top:1px dashed var(--line)}
   .oppLeg .bk{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
   .oppLeg .amt{font-family:var(--mono);font-size:13px;color:var(--gold-b);text-align:right}
@@ -626,7 +619,7 @@
         <div class="body">
           <div class="field search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="inp" id="fSearch" placeholder="Event suchen …" autocomplete="off"></div>
           <div class="field"><label>Kategorie</label><div class="chips" id="catChips"></div></div>
-          <div class="field"><label>Quelle</label><div class="chips" id="srcChips"><button class="chip active" data-src="all">Alle</button><button class="chip" data-src="cross">Nur Cross-Book</button><button class="chip" data-src="pm">Nur Polymarket</button><button class="chip" data-src="ob">Nur SX Bet</button><button class="chip" data-src="bf">Nur Betfair</button></div></div>
+          <div class="field"><label>Quelle</label><div class="chips" id="srcChips"><button class="chip active" data-src="all">Alle</button><button class="chip" data-src="fertig" title="Von der lokalen Bridge komplett durchgerechnet — beide Beine, beide Gebühren, direkt einsetzbar">◆ Fertig gerechnet</button><button class="chip" data-src="cross">Nur Cross-Book</button><button class="chip" data-src="pm">Nur Polymarket</button><button class="chip" data-src="ob">Nur SX Bet</button><button class="chip" data-src="bf">Nur Betfair</button></div></div>
           <div class="field rangewrap"><div class="rr"><label>Min. Rendite</label><b id="minRoiVal">0,0 %</b></div><input type="range" id="fMinRoi" min="0" max="8" step="0.1" value="0"></div>
           <label class="toggle" id="tgOpp" tabindex="0" role="switch" aria-checked="false"><span>Nur echte Chancen<small>Arb-% ≥ 100 ausblenden</small></span><span class="sw"></span></label>
           <label class="toggle" id="tgLowRisk" tabindex="0" role="switch" aria-checked="false"><span>Nur risikoarm<small>DNP/Void-anfällige Märkte ausblenden</small></span><span class="sw"></span></label>
@@ -688,15 +681,6 @@
       </div>
       <!-- Hinweis, wenn auf einem PC noch eine veraltete Bridge läuft -->
       <div id="updBox" style="display:none"></div>
-
-      <!-- Fertig gerechnete Chancen der lokalen Bridge: beide Beine, beide Links -->
-      <div id="oppWrap" style="display:none">
-        <div class="oppHead">
-          <b>◆ Sofort einsetzbar</b>
-          <span id="oppSub">–</span>
-        </div>
-        <div id="oppList"></div>
-      </div>
 
       <div class="tablewrap">
         <div class="thead">
@@ -976,7 +960,9 @@ function mergeMarkets(fresh, prune){
             ex.feeSatz=f.feeSatz; ex.feeExp=f.feeExp; ex.feeTyp=f.feeTyp; }
     else { f.since=0; f.wasHit=false; f.demo=false; mkMap.set(f.id,f); }
   });
-  if(prune)Array.from(mkMap.keys()).forEach(function(id){ if(mkMap.get(id).demo)return; if(!seen[id])mkMap.delete(id); });
+  // Demo-Zeilen und die fertig gerechneten Chancen der Bridge gehoeren nicht
+  // Polymarket — sie duerfen beim Aufraeumen der Polymarket-Liste nicht mit weg
+  if(prune)Array.from(mkMap.keys()).forEach(function(id){ var mm=mkMap.get(id); if(mm.demo||mm.fertig)return; if(!seen[id])mkMap.delete(id); });
 }
 
 /* ---- Polymarket WebSocket: Echtzeit-Kurse (Bestpreis = min der asks, verifiziert) ---- */
@@ -1146,7 +1132,7 @@ function pollBF(){
       state.bfGrund = 'Daten sind '+Math.round((state.bfAge||0)/60)+' Min alt — läuft der PC noch?';
     }
     applyBF();
-    renderOpps();
+    syncBridgeMarkets();
     updateAccountsUI();
     try{ pruefeBridgeFassung(); }catch(e){}
   }).catch(function(e){
@@ -1205,95 +1191,112 @@ function pruefeBridgeFassung(){
     .catch(function(){});
 })();
 
-/* ---- Anzeige der fertig gerechneten Chancen aus der Bridge ----
-   Die Einsätze werden hier aus den EFFEKTIVQUOTEN gerechnet, nicht aus dem
-   gerundeten Prozentsatz. Nur so zahlen beide Ausgänge auf den Cent gleich. */
-function renderOpps(){
-  var wrap=document.getElementById('oppWrap'); if(!wrap)return;
-  var opps=(state.bfOpps||[]).slice();
-  // Hohe Rendite zuerst — danach wird gefiltert, was zu dünn ist
+/* ---- Fertig gerechnete Chancen der Bridge in die Live-Liste einspeisen ----
+   Früher standen sie als eigener Block ÜBER der Tabelle. Der nahm den halben
+   Bildschirm ein, war weder filterbar noch sortierbar, und dieselbe Chance
+   konnte doppelt auftauchen — einmal als Karte, einmal als Zeile. Jetzt werden
+   sie ganz normale Zeilen der Live-Chancen: dieselben Filter, dieselbe
+   Sortierung, dasselbe Wett-Ticket.
+   Die Bridge hat sie bereits mit den Gebührensätzen BEIDER Bücher je Markt
+   durchgerechnet. Diese Rechnung wird übernommen und nicht neu angestellt —
+   siehe den Kurzschluss in evalMarket(). */
+function buchKuerzel(name){
+  var s=String(name||'').toLowerCase();
+  if(s.indexOf('poly')>=0)return 'pm';
+  if(s.indexOf('betfair')>=0||s.indexOf('orbit')>=0||s.indexOf('96ex')>=0)return 'bf';
+  return 'ob';
+}
+function syncBridgeMarkets(){
   var verworfen=0;
-  opps=opps.filter(function(o){
-    if(!o || !o.legs || o.legs.length!==2) return false;
-    if(!(o.roi>=state.minRoi)) return false;
-    // Sicherheitsnetz: selbst nachrechnen. Was hier nicht wirklich unter 1 liegt,
-    // ist keine Arbitrage und wird nicht angezeigt — egal was mitgeliefert wurde.
+  var opps=(state.bfOpps||[]).filter(function(o){
+    if(!o||!o.legs||o.legs.length!==2)return false;
+    // Sicherheitsnetz: selbst nachrechnen. Was hier nicht wirklich unter 1
+    // liegt, ist keine Arbitrage — egal was mitgeliefert wurde.
     var q1=+o.legs[0].qEff, q2=+o.legs[1].qEff;
-    if(!(q1>1) || !(q2>1)) return false;
+    if(!(q1>1)||!(q2>1))return false;
     var inv=1/q1+1/q2;
-    if(!(inv<1)) return false;
-    // Und dieselbe Obergrenze wie in der Liste: zwei liquide Börsen liegen nie
+    if(!(inv<1))return false;
+    // Dieselbe Obergrenze wie in der Liste: zwei liquide Börsen liegen nie
     // zweistellig auseinander. Alles darüber ist eine Fehlpaarung, kein Fund.
-    if((1/inv-1)*100 > CONFIG.MAX_PLAUSIBEL){ verworfen++; return false; }
+    if((1/inv-1)*100>CONFIG.MAX_PLAUSIBEL){ verworfen++; return false; }
     return true;
   });
   state.oppsVerworfen=verworfen;
-  opps.sort(function(a,b){ return b.roi-a.roi; });
 
-  if(!opps.length){
-    // Wenn ALLES wegen Unplausibilität rausflog, das offen sagen statt
-    // wortlos nichts anzuzeigen — sonst wirkt es, als suche der Scanner nicht.
-    if(verworfen){
-      wrap.style.display='';
-      var s=document.getElementById('oppSub');
-      if(s) s.textContent=verworfen+' Meldung'+(verworfen===1?'':'en')+' als unplausibel verworfen';
-      document.getElementById('oppList').innerHTML=
-        '<div class="opp" style="color:var(--muted);font-size:12.5px;line-height:1.6">'+
-        '<b style="color:var(--warn)">Nichts Belastbares dabei.</b> '+verworfen+' gemeldete Chance'+(verworfen===1?'':'n')+
-        ' lag'+(verworfen===1?'':'en')+' über '+CONFIG.MAX_PLAUSIBEL+' % Rendite. '+
-        'Zwei liquide Börsen liegen nie so weit auseinander — das sind falsch zugeordnete '+
-        'oder bereits entschiedene Märkte, keine Gewinne. Sie werden deshalb nicht angezeigt.</div>';
-      return;
-    }
-    wrap.style.display='none'; return;
-  }
-  wrap.style.display='';
+  /* Der Renditefilter wird hier bewusst NICHT angewendet. Er gehört in die
+     Ansicht, nicht in den Datenbestand — sonst verschwindet eine Chance samt
+     ihrer Vorgeschichte, statt nur ausgeblendet zu werden. */
+  var gesehen={};
+  opps.forEach(function(o){
+    var l1=o.legs[0], l2=o.legs[1];
+    var id='br_'+String(o.ev||'').toLowerCase().replace(/[^a-z0-9]+/g,'_').slice(0,60)+
+           '_'+String(l1.pick||'').toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0,14);
+    gesehen[id]=1;
+    var s1=buchKuerzel(l1.book), s2=buchKuerzel(l2.book);
+    var ex=mkMap.get(id);
+    // Bestehende Zeile behalten, damit "seit wann offen" und der Hit-Status
+    // über die Aktualisierung hinweg stehen bleiben
+    var m=ex||{id:id,since:0,wasHit:false,demo:false};
+    m.fertig=true; m.opp=o;
+    m.cat=categorize(o.ev||'');
+    m.ev=o.ev||'(ohne Namen)';
+    m.o1=l1.pick||'Ausgang 1'; m.o2=l2.pick||'Ausgang 2';
+    m.liq=+o.maxStake||0;
+    m.src1=s1; m.src2=s2;
+    // Damit ein Polymarket-Bein in der Zeile auch den Prozentkurs zeigt
+    m.ask0=(s1==='pm'&&+l1.q>1)?1/(+l1.q):null;
+    m.ask1=(s2==='pm'&&+l2.q>1)?1/(+l2.q):null;
+    // Direktlinks je Buch — ohne die lässt sich eine Meldung nicht nachprüfen
+    m.linkPm=s1==='pm'?l1.link:(s2==='pm'?l2.link:'');
+    m.bfLink=s1==='bf'?l1.link:(s2==='bf'?l2.link:'');
+    m.obLink=s1==='ob'?l1.link:(s2==='ob'?l2.link:'');
+    if(!ex)mkMap.set(id,m);
+  });
 
-  var alter=state.bfAge==null?'–':(state.bfAge<90?'aktuell':(Math.round(state.bfAge/60)+' Min alt'));
-  var sub=document.getElementById('oppSub');
-  if(sub) sub.textContent=opps.length+' Chance'+(opps.length===1?'':'n')+' · Daten '+alter+
-    (state.bfStats&&state.bfStats.bf_katalog? ' · '+state.bfStats.bf_katalog+' Betfair-Märkte gelesen':'');
+  // Was die Bridge nicht mehr meldet, verschwindet auch aus der Liste
+  Array.from(mkMap.keys()).forEach(function(id){
+    var m=mkMap.get(id);
+    if(m&&m.fertig&&!gesehen[id])mkMap.delete(id);
+  });
+}
 
-  var S=Math.max(+state.stdStake||100,1);
+/* Die Aufschlüsselung einer fertig gerechneten Chance fürs Wett-Ticket:
+   je Bein die Rohquote, der Gebührensatz dieses Marktes, die daraus folgende
+   Effektivquote, die Tiefe im Buch und der Anteil. Das ist die Analyse, die
+   vorher in der Karte stand — sie gehört dorthin, wo man die Chance auch
+   tatsächlich einsetzt. */
+function bridgeAnalyse(m,S){
+  var o=m&&m.opp; if(!o||!o.legs||o.legs.length!==2)return '';
   var esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
+  var q1=+o.legs[0].qEff, q2=+o.legs[1].qEff, inv=1/q1+1/q2;
+  var e1=S*(1/q1)/inv, e2=S-e1, aus=S/inv, gew=aus-S;
+  var deckel=(+o.maxStake>0)&&(+o.maxStake<S);
 
-  document.getElementById('oppList').innerHTML=opps.slice(0,12).map(function(o){
-    var q1=+o.legs[0].qEff, q2=+o.legs[1].qEff;
-    var inv=1/q1+1/q2;
-    var s1=S*(1/q1)/inv, s2=S-s1;
-    var aus=S/inv, gew=aus-S;
-    var deckel=o.maxStake&&o.maxStake<S;
-
-    var beine=o.legs.map(function(l,i){
-      var betrag=i===0?s1:s2;
-      return '<div class="oppLeg">'+
-        '<span class="bk">'+esc(l.book)+'</span>'+
-        '<span class="amt">'+betrag.toFixed(2)+'</span>'+
-        '<span class="what">'+esc(l.pick)+
-          '<small>Quote '+l.q+' → nach '+l.fee+' % Gebühr '+l.qEff+
-          ' · max '+(l.size||0)+' · Anteil '+(+l.anteil).toFixed(2)+' %</small></span>'+
-        '<a href="'+esc(l.link)+'" target="_blank" rel="noopener">öffnen ↗</a>'+
-      '</div>';
-    }).join('');
-
-    return '<div class="opp">'+
-      '<div class="oppTop">'+
-        '<span class="oppRoi">+'+(+o.roi).toFixed(2)+' %</span>'+
-        '<span class="oppEv">'+esc(o.ev)+'</span>'+
-        '<span class="oppRisk '+esc(o.risk)+'">'+esc(o.risk)+'</span>'+
-        '<span class="oppMeta">max ~'+(o.maxStake||0)+(o.tage!=null?' · '+o.tage+' Tage':'')+'</span>'+
-      '</div>'+
-      beine+
-      '<div class="oppProof">Von <b>'+S.toFixed(0)+' €</b> Gesamteinsatz: '+
-        '<b>'+s1.toFixed(2)+' €</b> auf '+esc(o.legs[0].book)+' · '+
-        '<b>'+s2.toFixed(2)+' €</b> auf '+esc(o.legs[1].book)+
-        ' → Auszahlung <b>'+aus.toFixed(2)+' €</b> bei BEIDEN Ausgängen · '+
-        'Gewinn <b>+'+gew.toFixed(2)+' €</b> (Gebühren beider Bücher bereits abgezogen)'+
-        (deckel? ' · <span style="color:#d98c4a">Achtung: nur ~'+o.maxStake+' € im Buch verfügbar, '+
-                 'mehr lässt sich gerade nicht unterbringen</span>':'')+
-      '</div>'+
+  var beine=o.legs.map(function(l,i){
+    return '<div class="oppLeg">'+
+      '<span class="bk">'+esc(l.book)+'</span>'+
+      '<span class="amt">'+(i===0?e1:e2).toFixed(2)+'</span>'+
+      '<span class="what">'+esc(l.pick)+
+        '<small>Quote '+esc(l.q)+' → nach '+esc(l.fee)+' % Gebühr '+esc(l.qEff)+
+        ' · max '+esc(l.size||0)+(l.anteil!=null?' · Anteil '+(+l.anteil).toFixed(2)+' %':'')+'</small></span>'+
+      (l.link?'<a href="'+esc(l.link)+'" target="_blank" rel="noopener">öffnen ↗</a>':'')+
     '</div>';
   }).join('');
+
+  return '<div class="fertigbox">'+
+    '<div class="fertigkopf"><b>◆ Von der Bridge fertig gerechnet</b>'+
+      '<span>'+(o.risk?esc(o.risk)+' · ':'')+'max ~'+(+o.maxStake||0)+' €'+
+      (o.tage!=null?' · löst in '+esc(o.tage)+' Tagen auf':'')+'</span></div>'+
+    beine+
+    '<div class="oppProof">Von <b>'+S.toFixed(0)+' €</b> Gesamteinsatz: '+
+      '<b>'+e1.toFixed(2)+' €</b> auf '+esc(o.legs[0].book)+' · '+
+      '<b>'+e2.toFixed(2)+' €</b> auf '+esc(o.legs[1].book)+
+      ' → Auszahlung <b>'+aus.toFixed(2)+' €</b> bei BEIDEN Ausgängen · '+
+      'Gewinn <b>+'+gew.toFixed(2)+' €</b> (Gebühren beider Bücher bereits abgezogen)'+
+      (deckel?' · <span style="color:#d98c4a">Achtung: nur ~'+(+o.maxStake)+' € im Buch verfügbar, '+
+              'mehr lässt sich gerade nicht unterbringen</span>':'')+
+    '</div>'+
+  '</div>';
 }
 /* Welche Seite gehört zu welcher?
    Der frühere Code suchte den Teamnamen im Text des Ausgangs. Bei einer
@@ -1363,6 +1366,22 @@ function pmGebuehr(p,satz,exp){ if(!(satz>0))return 0; return satz*Math.pow(Math
 function pmEff(p,satz,exp){ if(!(p>0&&p<1))return 0; var n=1-pmGebuehr(p,satz,exp); return n>0? n/p : 0; }
 
 function evalMarket(mk){
+  /* Fertig gerechnete Chancen der Bridge: die Rechnung steht schon. Sie nutzt
+     den Gebührensatz, den JEDER Markt selbst meldet — Betfair auf den Gewinn
+     (2–7 %), Polymarket je Anteil und preisabhängig. Hier noch einmal
+     nachzurechnen würde diese Sätze durch Näherungen ersetzen und andere
+     Zahlen ergeben als die, die die Bridge protokolliert hat. */
+  if(mk.fertig && mk.opp && mk.opp.legs && mk.opp.legs.length===2){
+    var f1=mk.opp.legs[0], f2=mk.opp.legs[1];
+    var a={src:mk.src1, odds:+f1.q, oddsEff:+f1.qEff};
+    var b={src:mk.src2, odds:+f2.q, oddsEff:+f2.qEff};
+    var quer=a.src!==b.src;
+    if(!(a.oddsEff>1)||!(b.oddsEff>1))
+      return {m:mk,s1:a,s2:b,arbPct:999,roi:-100,ok:false,verdacht:false,cross:quer};
+    var ivF=1/a.oddsEff+1/b.oddsEff, roiF=(1/ivF-1)*100;
+    var vdF=ivF<1&&roiF>CONFIG.MAX_PLAUSIBEL;
+    return {m:mk,s1:a,s2:b,arbPct:ivF*100,roi:roiF,ok:ivF<1&&!vdF,verdacht:vdF,cross:quer};
+  }
   var c1=[], c2=[];
   // Polymarket: Effektivquote direkt aus Preis und Marktgebühr
   var satz = mk.feeSatz!=null? mk.feeSatz : 0, exp = mk.feeExp||1;
@@ -1430,7 +1449,11 @@ function demoTick(){
 function processSignals(){
   markets().forEach(function(mk){
     var v=evalMarket(mk); var opp=v.ok&&v.roi>0.02;
-    if(opp){ if(!mk.since){ mk.since=Date.now(); flashBlip(); if(state.mode!=='demo' && window.__ar&&window.__ar.logOpp)window.__ar.logOpp(mk.ev,mk.cat,v.roi,v.arbPct,v.s1.src+'/'+v.s2.src); }
+    /* Fertig gerechnete Chancen NICHT von hier aus protokollieren: die
+       Edge-Function bf-bridge schreibt sie beim Hochladen bereits in die
+       Historie (bridge_log_opps). Ein zweiter Eintrag von der Website wuerde
+       jede dieser Chancen doppelt zaehlen. Alarm und Anzeige laufen weiter. */
+    if(opp){ if(!mk.since){ mk.since=Date.now(); flashBlip(); if(state.mode!=='demo' && !mk.fertig && window.__ar&&window.__ar.logOpp)window.__ar.logOpp(mk.ev,mk.cat,v.roi,v.arbPct,v.s1.src+'/'+v.s2.src); }
       if(v.roi>=state.hitTh){ if(!mk.wasHit){mk.wasHit=true; fireHit(v);} }
       else if(v.roi<state.hitTh*0.6)mk.wasHit=false;
     } else { if(mk.since){state.closed++; mk.since=0;} mk.wasHit=false; }
@@ -1823,10 +1846,20 @@ function feasibleMax(v){
   var A={pm:state.balPm,ob:state.balOb,bf:1e9};
   var q1=v.s1.oddsEff,q2=v.s2.oddsEff,inv=1/q1+1/q2, f1=(1/q1)/inv, f2=(1/q2)/inv;
   var need={}; need[v.s1.src]=1; need[v.s2.src]=1;
-  var anyBal=false; Object.keys(need).forEach(function(s){ if(A[s]>0)anyBal=true; });
-  if(!anyBal)return 1e9; // kein Guthaben eingetragen -> keine Begrenzung (nur Anzeige)
-  if(v.s1.src===v.s2.src)return Math.max(0,A[v.s1.src]);
-  return Math.max(0,Math.min(A[v.s1.src]/f1||0, A[v.s2.src]/f2||0));
+  /* Nur ECHTE Guthabenfelder zaehlen hier. Betfair steht oben mit 1e9 als
+     "unbegrenzt" — wuerde es mitzaehlen, saehe jede Betfair-Chance so aus, als
+     habe der Nutzer Guthaben eingetragen. Dann greift die Regel unten nicht
+     mehr, und ein leeres Polymarket-Feld zieht den Vorschlag auf 0 herunter:
+     derselbe Nullbetrag wie frueher, nur ueber einen anderen Weg. */
+  var anyBal=false; Object.keys(need).forEach(function(s){ if(s!=='bf' && A[s]>0)anyBal=true; });
+  /* Bei fertig gerechneten Chancen kennt die Bridge die Tiefe in beiden
+     Buechern. Mehr als dort liegt, laesst sich nicht unterbringen — ein
+     Vorschlag ueber diese Grenze waere auf dem Papier richtig und in der
+     Praxis nicht ausfuehrbar. */
+  var buch = (v.m&&v.m.fertig&&+v.m.liq>0)? +v.m.liq : 1e9;
+  if(!anyBal)return buch; // kein Guthaben eingetragen -> nur die Buchtiefe begrenzt
+  if(v.s1.src===v.s2.src)return Math.max(0,Math.min(A[v.s1.src],buch));
+  return Math.max(0,Math.min(A[v.s1.src]/f1||0, A[v.s2.src]/f2||0, buch));
 }
 
 /* ---- Benachrichtigungen ---- */
@@ -1971,12 +2004,13 @@ function renderTicket(){
     : '';
   var bk=function(s){return s==='pm'?'Polymarket':(s==='bf'?'Betfair/Orbit':'SX Bet');};
   // Direktlinks zu beiden Büchern
+  var pmZiel = m.fertig ? (m.linkPm||'') : pmLink(m);
   var links='<div style="display:flex;gap:6px;margin-bottom:8px">'+
-    '<a href="'+pmLink(m)+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #7f7130;color:#e7d882;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">Polymarket öffnen ↗</a>'+
+    (pmZiel?'<a href="'+pmZiel+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #7f7130;color:#e7d882;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">Polymarket öffnen ↗</a>':'')+
     (m.obLink?'<a href="'+m.obLink+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #4e4630;color:#c9c7bd;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">SX Bet ↗</a>':'')+
     (m.bfLink?'<a href="'+m.bfLink+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:7px;border:1px solid #4e4630;color:#c9c7bd;text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase">Betfair ↗</a>':'')+
     '</div>';
-  $('#tkNote').innerHTML= links + dnpNote + (isDemo
+  $('#tkNote').innerHTML= links + bridgeAnalyse(m,S) + dnpNote + (isDemo
     ? '<b>Beide Seiten</b> simuliert auf die Konten. Empfohlen = Standard-Einsatz, begrenzt durchs Guthaben.'
     : (v.cross? '<b>Cross-Book:</b> Ausgang 1 über <b>'+bk(v.s1.src)+'</b>, Ausgang 2 über <b>'+bk(v.s2.src)+'</b>. Beide Links oben öffnen und die Beträge dort setzen.'
              : 'Beide Ausgänge über '+bk(v.s1.src)+'. Link oben öffnen und manuell setzen.'));
@@ -2070,6 +2104,7 @@ function render(){
     if(state.onlyOpp&&!(v.ok&&v.roi>0.02))return false;
     if(state.onlyLowRisk && dnpRisk(v.m.ev,v.m.cat)!=='niedrig')return false;
     if(state.cat!=='Alle'&&v.m.cat!==state.cat)return false;
+    if(state.src==='fertig'&&!v.m.fertig)return false;
     if(state.src==='cross'&&!v.cross)return false;
     if(state.src==='pm' && !(v.s1.src==='pm'||v.s2.src==='pm'))return false;
     if(state.src==='ob' && !(v.s1.src==='ob'||v.s2.src==='ob'))return false;
@@ -2103,9 +2138,18 @@ function render(){
       txt = 'Keine Chance passt zu den aktuellen Filtern.'+
         '<br><span class="ehint">Mit <b>⊕ Alle Deals</b> oben werden alle Filter zurückgesetzt.</span>';
     } else {
+      /* Wenn die Bridge zwar gemeldet hat, aber alles als unplausibel
+         aussortiert wurde, muss das hier stehen. Sonst sieht es aus, als
+         suche der Scanner nicht — dabei hat er gesucht und bewusst nichts
+         durchgelassen. */
       txt = 'Gerade kein offenes Fenster.'+
         '<br><span class="ehint">'+(state.pmHandelbar||0)+' Polymarket-Märkte werden verglichen. '+
-        'Echte Surebets sind selten — der Scanner läuft weiter.</span>';
+        'Echte Surebets sind selten — der Scanner läuft weiter.'+
+        (state.oppsVerworfen? '<br><b style="color:var(--warn)">'+state.oppsVerworfen+' gemeldete Chance'+
+          (state.oppsVerworfen===1?'':'n')+' wurde'+(state.oppsVerworfen===1?'':'n')+' verworfen:</b> über '+
+          CONFIG.MAX_PLAUSIBEL+' % Rendite. Zwei liquide Börsen liegen nie so weit auseinander — '+
+          'das sind falsch zugeordnete oder bereits entschiedene Märkte, keine Gewinne.':'')+
+        '</span>';
     }
     rows.innerHTML='<div class="empty">'+txt+'</div>';
     zeigeRest(0);
@@ -2129,7 +2173,11 @@ function render(){
   /* Direktlink je Zeile — ohne den kann man eine Meldung nicht nachprüfen. */
   function linkKnopf(m, v){
     var l=[];
-    l.push('<a class="rowlink" href="'+pmLink(m)+'" target="_blank" rel="noopener" title="Bei Polymarket öffnen" onclick="event.stopPropagation()">PM↗</a>');
+    /* Bei fertig gerechneten Chancen zeigt der Link auf genau den Markt, den
+       die Bridge verglichen hat — nicht auf den Polymarket-Slug, den es dort
+       gar nicht geben muss. Hat die Chance kein Polymarket-Bein, entfaellt er. */
+    var pl = m.fertig ? (m.linkPm||'') : pmLink(m);
+    if(pl) l.push('<a class="rowlink" href="'+pl+'" target="_blank" rel="noopener" title="Bei Polymarket öffnen" onclick="event.stopPropagation()">PM↗</a>');
     if(m.bfLink) l.push('<a class="rowlink" href="'+m.bfLink+'" target="_blank" rel="noopener" title="Bei Betfair öffnen" onclick="event.stopPropagation()">BF↗</a>');
     if(m.obLink) l.push('<a class="rowlink" href="'+m.obLink+'" target="_blank" rel="noopener" title="Bei SX Bet öffnen" onclick="event.stopPropagation()">SX↗</a>');
     return l.join('');
@@ -2156,6 +2204,7 @@ function render(){
     var sign=v.roi>0?'+':'';
     return '<div class="r-o'+(hit?' hit':'')+(m.id===state.ticketId?' sel':'')+'" data-id="'+m.id+'">'+
       '<div class="ev"><div class="name">'+m.ev+'</div><div class="meta"><span class="cattg" style="color:'+catColor(m.cat)+';border-color:'+catColor(m.cat)+'66">'+m.cat+'</span>'+
+        (m.fertig?'<span class="fertigtag" title="Von der lokalen Bridge komplett durchgerechnet: beide Beine, beide Gebühren, geprüfte Zuordnung. Anklicken zeigt die volle Aufteilung im Wett-Ticket.">◆ fertig</span>':'')+
         (dnpRisk(m.ev,m.cat)!=='niedrig'?'<span class="dnp '+dnpRisk(m.ev,m.cat)+'" title="DNP/Void-Risiko: bei Nicht-Antreten zahlt Polymarket meist nicht zurück, Orbit voidet — Regeln prüfen">DNP?</span>':'')+
         (m.liq?'<span class="liq">Liq '+nf0.format(Math.round(m.liq))+' $</span>':'')+
         '<span class="age '+ag.cls+'"><span class="adot"></span>'+ag.txt+'</span></div></div>'+
