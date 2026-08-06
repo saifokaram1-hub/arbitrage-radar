@@ -1,0 +1,51 @@
+# Veroeffentlicht die Seite auf GitHub Pages.
+#
+# Warum es diese Datei gibt: Pages hat die Seite frueher selbst gebaut
+# ("legacy"). Dieser Weg ist am 06.08.2026 viermal hintereinander mit 0 ms
+# Laufzeit fehlgeschlagen — der Bauauftrag lief gar nicht erst an, es lag
+# nicht am Code. Seitdem laeuft die Veroeffentlichung ueber diesen Workflow.
+#
+# Die Seite ist reines HTML/CSS/JS ohne Bauschritt, es wird also nur der
+# Ordner hochgeladen, so wie ihn der alte Weg auch ausgeliefert hat.
+
+name: Seite veroeffentlichen
+
+on:
+  push:
+    branches: [main]
+  # Damit sich die Veroeffentlichung auch von Hand ausloesen laesst,
+  # ohne dafuer eine Aenderung erfinden zu muessen
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Nie zwei Veroeffentlichungen gleichzeitig. Eine laufende wird zu Ende
+# gebracht, statt sie mittendrin abzubrechen.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  veroeffentlichen:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.veroeffentlichung.outputs.page_url }}
+    steps:
+      - name: Stand holen
+        uses: actions/checkout@v4
+
+      - name: Pages vorbereiten
+        uses: actions/configure-pages@v5
+
+      - name: Ordner hochladen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Veroeffentlichen
+        id: veroeffentlichung
+        uses: actions/deploy-pages@v4
