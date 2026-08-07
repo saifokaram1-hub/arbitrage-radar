@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=38"></script>
+<script src="config.js?v=39"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -2115,7 +2115,16 @@ function feasibleMax(v){
      Buechern. Mehr als dort liegt, laesst sich nicht unterbringen — ein
      Vorschlag ueber diese Grenze waere auf dem Papier richtig und in der
      Praxis nicht ausfuehrbar. */
-  var buch = (v.m&&v.m.fertig&&+v.m.liq>0)? +v.m.liq : 1e9;
+  /* Die Tiefe ZUM BESTEN PREIS begrenzt den Einsatz härter als die
+     Gesamtliquidität des Marktes: gerechnet wird mit dem besten Ask, und
+     davon liegt nur eine bestimmte Menge da. Der Anteil je Bein hängt nicht
+     am Gesamteinsatz, deshalb liefert ein Referenzbetrag denselben Deckel. */
+  var buch = 1e9;
+  try{
+    var bt = beinTiefe(v.m||{}, v, 100);
+    if(bt && bt.max!=null && bt.max>0) buch = bt.max;
+  }catch(e){}
+  if(v.m && v.m.fertig && +v.m.liq>0) buch = Math.min(buch, +v.m.liq);
   if(!anyBal)return buch; // kein Guthaben eingetragen -> nur die Buchtiefe begrenzt
   if(v.s1.src===v.s2.src)return Math.max(0,Math.min(A[v.s1.src],buch));
   return Math.max(0,Math.min(A[v.s1.src]/f1||0, A[v.s2.src]/f2||0, buch));
@@ -2222,6 +2231,66 @@ function buildTicket(){
     '<div class="tk-warn" id="tkWarn"></div>'+
     '<div class="tk-note" id="tkNote"></div>';
 }
+/* Wie viel liegt je Bein ZUM BESTEN PREIS wirklich im Buch?
+   Der Scanner rechnet mit dem besten Ask. Davon liegt aber nur eine begrenzte
+   Menge da. Wer mehr kauft, bekommt den Rest zu schlechteren Preisen — und
+   genau dieser Aufschlag frisst die wenigen Prozent, um die es hier geht.
+   Bei Polymarket ist der verfügbare Betrag = Anteile × Preis.
+   Bei Betfair meldet die Bridge den Betrag direkt mit.
+   Maßgeblich ist immer das DÜNNSTE Bein — mehr als dort liegt, geht nicht. */
+function beinTiefe(mk, v, S){
+  var beine=[];
+  if(mk.fertig && mk.opp && mk.opp.legs){
+    mk.opp.legs.forEach(function(l){
+      var s=buchKuerzel(l.book);
+      beine.push({buch:buchName(s),
+                  verfuegbar:(l.size!=null && isFinite(+l.size) && +l.size>0)? +l.size : null});
+    });
+  } else {
+    [0,1].forEach(function(i){
+      var s=(i===0?v.s1:v.s2);
+      if(s.src==='pm'){
+        var p=(i===0?mk.ask0:mk.ask1), sz=(i===0?mk.sz0:mk.sz1);
+        beine.push({buch:'Polymarket',
+                    verfuegbar:(sz>0 && p>0)? sz*p : null});
+      } else {
+        // Für Betfair liefert der Abgleich derzeit keine Tiefe mit
+        beine.push({buch:buchName(s.src), verfuegbar:null});
+      }
+    });
+  }
+  var r=routing(v, S>0?S:100), noetig=[r.E1, r.E2];
+  var unbekannt=[], zuDuenn=[], moeglich=[];
+
+  beine.forEach(function(b,i){
+    if(b.verfuegbar==null){ unbekannt.push(b.buch); return; }
+    // Welchen Gesamteinsatz trägt dieses Bein? Anteil = noetig[i]/S
+    var anteil = (S>0? noetig[i]/S : 0.5);
+    if(anteil>0) moeglich.push(b.verfuegbar/anteil);
+    if(S>0 && b.verfuegbar < noetig[i]-0.005){
+      zuDuenn.push(b.buch+': '+eur(b.verfuegbar)+' statt '+eur(noetig[i]));
+    }
+  });
+
+  var maxGesamt = moeglich.length? Math.min.apply(null,moeglich) : null;
+  if(zuDuenn.length){
+    return {reicht:false, max:maxGesamt,
+            text:'Zu wenig zum besten Preis — '+zuDuenn.join(' · ')+
+                 (maxGesamt!=null? '. Höchstens rund '+eur(maxGesamt)+' Gesamteinsatz, sonst zahlst du für den Rest mehr und der Vorteil ist weg.' : '')};
+  }
+  if(unbekannt.length===beine.length){
+    return {reicht:true, max:null,
+            text:'Tiefe wird nicht mitgeliefert — vor dem Setzen im Buch selbst nachsehen, wie viel zum genannten Preis liegt'};
+  }
+  if(unbekannt.length){
+    return {reicht:true, max:maxGesamt,
+            text:'Reicht bei '+beine.filter(function(b){return b.verfuegbar!=null;}).map(function(b){return b.buch;}).join(', ')+
+                 '; bei '+unbekannt.join(', ')+' nicht gemeldet — dort selbst nachsehen'};
+  }
+  return {reicht:true, max:maxGesamt,
+          text:'Beide Seiten tragen den Einsatz'+(maxGesamt!=null? ' (bis rund '+eur(maxGesamt)+')':'')};
+}
+
 /* ═══════════════ Sicherheitsprüfung vor dem Einsatz ═════════════════════
    Ein Fehler kostet den ganzen Einsatz, ein Treffer bringt wenige Prozent.
    Bei 3 % Rendite braucht es rund 33 Treffer, um einen Totalverlust
@@ -2300,13 +2369,15 @@ function sicherheitsPruefung(mk, v, S){
         : (l1===l2 ? 'Beide Links zeigen auf dieselbe Seite — Zuordnung unbrauchbar'
                    : 'Beide Bücher direkt erreichbar'));
 
-  // 8 — Genug Tiefe im Buch für den geplanten Einsatz
-  var tiefe = mk.fertig? (+mk.liq||0) : (+mk.liq||0);
-  var tiefeOk = !(S>0) || tiefe<=0 || tiefe>=S;
-  add('Genug im Buch', tiefeOk, false,
-      tiefe<=0 ? 'Tiefe nicht gemeldet — vor dem Setzen im Buch selbst nachsehen'
-        : (tiefeOk ? 'rund '+nf0.format(Math.round(tiefe))+' verfügbar'
-                   : 'nur rund '+nf0.format(Math.round(tiefe))+' verfügbar, Einsatz ist höher'));
+  /* 8 — Tiefe ZUM BESTEN PREIS, je Bein einzeln.
+     Der Scanner rechnet mit dem besten Ask. Von dem liegt aber nur eine
+     begrenzte Menge im Buch. Wer mehr kauft, bekommt den Rest teurer —
+     das ist Slippage, und sie frisst genau die wenigen Prozent, um die es
+     hier geht. Untersuchungen an Polymarket-Büchern zeigen, dass ein
+     Grossteil der Chancen auf sehr kleine Mengen begrenzt ist.
+     Maßgeblich ist das DÜNNSTE Bein: mehr als dort liegt, geht nicht. */
+  var tiefeInfo = beinTiefe(mk, v, S);
+  add('Tiefe zum besten Preis', tiefeInfo.reicht, true, tiefeInfo.text);
 
   // 9 — Frische der Kurse
   var alt = mk.fertig ? (state.bfAge!=null? state.bfAge : null) : null;
@@ -2321,6 +2392,20 @@ function sicherheitsPruefung(mk, v, S){
       risk==='niedrig' ? 'Kein erhöhtes DNP-Risiko erkannt'
         : 'Erhöhtes Risiko ('+risk+'): bei Nichtantreten zahlt Polymarket meist nicht zurück, Betfair schon — Marktregeln lesen');
 
+  /* 11 — Auflösungsrisiko. Zwei Bücher können dasselbe Ereignis nach
+     UNTERSCHIEDLICHEN Regeln entscheiden: eine Stichzeit in einer anderen
+     Zeitzone, eine engere Definition, eine spätere Bestätigung. Dann gewinnen
+     womöglich BEIDE Seiten nicht — die Absicherung greift nicht.
+     Polymarket entscheidet über ein Orakel (UMA), dessen Spruch angefochten
+     werden kann; bis zur endgültigen Klärung ist das Geld gebunden.
+     Automatisch prüfen lässt sich das nicht — deshalb Hinweis, keine Sperre. */
+  var pmDabei = (v.s1.src==='pm'||v.s2.src==='pm');
+  add('Auflösung beider Bücher', false, false,
+      pmDabei
+        ? 'Vor dem Setzen die Auflösungsregeln BEIDER Märkte lesen: Stichzeit samt Zeitzone, was genau als Eintritt zählt, welche Quelle entscheidet. '+
+          'Polymarket entscheidet über ein Orakel — der Spruch kann angefochten werden, bis dahin ist der Einsatz gebunden.'
+        : 'Auflösungsregeln beider Märkte vergleichen — gleiche Frage heißt nicht gleiche Regel');
+
   var kritischOffen = p.filter(function(x){ return x.kritisch && !x.ok; });
   var hinweise      = p.filter(function(x){ return !x.kritisch && !x.ok; });
   return {punkte:p, freigegeben:kritischOffen.length===0,
@@ -2334,8 +2419,14 @@ function renderSicherheit(mk, v, S){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
 
   el.innerHTML='<div class="chkBox'+(pr.freigegeben?' frei':' gesperrt')+'">'+
-    '<div class="chkKopf"><b>'+(pr.freigegeben? '✓ Alle Bedingungen erfüllt' : '✕ Noch nicht einsetzbar')+'</b>'+
-      '<span>'+pr.punkte.filter(function(x){return x.ok;}).length+' von '+pr.punkte.length+'</span></div>'+
+    /* Pflichtpunkte und Hinweise getrennt zählen. Der Punkt zur Auflösung
+       ist bewusst nie „erfüllt" — die Regeln beider Bücher soll man jedes
+       Mal lesen. Er darf die Pflichtzählung deshalb nicht trüben. */
+    '<div class="chkKopf"><b>'+(pr.freigegeben? '✓ Alle Pflichtpunkte erfüllt' : '✕ Noch nicht einsetzbar')+'</b>'+
+      '<span>'+pr.punkte.filter(function(x){return x.kritisch&&x.ok;}).length+' von '+
+      pr.punkte.filter(function(x){return x.kritisch;}).length+' Pflicht'+
+      (pr.hinweise.length? ' · '+pr.hinweise.length+' Hinweis'+(pr.hinweise.length===1?'':'e'):'')+
+      '</span></div>'+
     pr.punkte.map(function(x){
       var z = x.ok? 'ja' : (x.kritisch? 'nein' : 'hinweis');
       return '<div class="chkZeile '+z+'">'+

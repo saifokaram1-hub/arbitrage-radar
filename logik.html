@@ -391,6 +391,20 @@ Gewinn in beiden Fällen: rund <b>+3,37 €</b> auf 100 € Einsatz</pre>
     <section>
       <h3>Was im Wett-Ticket steht</h3>
       <p>Klickst du eine Chance in der Liste an, erscheint links genau diese Rechnung mit deinen Zahlen — je Anbieter einzeln:</p>
+      <h4>Zwei Fallen, die den Gewinn auffressen — auch wenn die Rechnung stimmt</h4>
+      <div class="ledger">
+        <div class="row krit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Der beste Preis gilt nur für eine kleine Menge</b><span class="tag krit">gesperrt</span></div>
+          <p class="note">Gerechnet wird mit dem besten Kaufpreis im Buch. Davon liegt aber nur eine begrenzte Menge da. Wer mehr kauft, bekommt den Rest zu schlechteren Preisen — dieser Aufschlag heißt <strong>Slippage</strong>, und er frisst genau die wenigen Prozent, um die es hier geht. Untersuchungen an Polymarket-Büchern zeigen, dass ein Großteil der Chancen auf sehr kleine Mengen begrenzt ist und ein zu großer Kauf schnell einen halben Prozentpunkt kostet.</p>
+          <p class="note">Deshalb wird die Tiefe <strong>je Bein einzeln</strong> geprüft. Das dünnste Bein bestimmt den Deckel: Liegen auf einer Seite nur 10 € zum genannten Preis, sind rund 20 € Gesamteinsatz möglich — nicht mehr. Reicht die Tiefe nicht, bleibt der Einsatz gesperrt und der mögliche Höchstbetrag steht dabei.</p>
+        </div></div>
+        <div class="row mit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Beide Bücher können dasselbe Ereignis verschieden entscheiden</b><span class="tag mit">selbst prüfen</span></div>
+          <p class="note">Gleiche Frage heißt nicht gleiche Regel. Eine Stichzeit in einer anderen Zeitzone, eine engere Definition, eine später nachgereichte Bestätigung — und plötzlich gewinnt auf der einen Seite die eine Antwort, auf der anderen die andere. Dann greift die Absicherung nicht, und beide Einsätze können verloren sein.</p>
+          <p class="note">Polymarket entscheidet über ein <strong>Orakel</strong>. Dessen Spruch kann angefochten werden; bis zur endgültigen Klärung ist das Geld gebunden und das Ergebnis kann noch kippen. Das lässt sich nicht automatisch prüfen — deshalb steht es als fester Hinweis im Ticket: <b>vor dem Setzen die Auflösungsregeln beider Märkte lesen.</b></p>
+        </div></div>
+      </div>
+
       <h4>Die Checkliste vor dem Einsatz</h4>
       <p>Statt um Vertrauen zu bitten, legt das Ticket <strong>jede einzelne Bedingung offen</strong> — mit Ergebnis und Begründung. Sieben davon sind zwingend: ist auch nur eine offen, bleibt der Setzen-Knopf gesperrt.</p>
       <div class="scroll">
@@ -403,7 +417,7 @@ Gewinn in beiden Fällen: rund <b>+3,37 €</b> auf 100 € Einsatz</pre>
           <tr><td class="k">Gebühren beider Seiten bekannt</td><td>zwingend</td><td>Ein fehlender Satz darf nie als 0 % durchgehen</td></tr>
           <tr><td class="k">Rendite plausibel</td><td>zwingend</td><td>Über 20 % ist es ein Fehler, kein Fund</td></tr>
           <tr><td class="k">Zwei echte Links</td><td>zwingend</td><td>Beide vorhanden und verschieden — sonst nicht nachprüfbar</td></tr>
-          <tr><td class="k">Genug im Buch</td><td>Hinweis</td><td>Tiefe reicht für den geplanten Einsatz</td></tr>
+          <tr><td class="k">Tiefe zum besten Preis</td><td>zwingend</td><td>Das dünnste Bein deckelt den Einsatz — Schutz vor Slippage</td></tr>
           <tr><td class="k">Kurse frisch</td><td>Hinweis</td><td>Alter der Daten</td></tr>
           <tr><td class="k">Auszahlungsregeln</td><td>Hinweis</td><td>DNP-/Void-Risiko bei Nichtantreten</td></tr>
         </table>
@@ -486,8 +500,8 @@ node oberflaeche-pruefung.js  <span class="c">32 Prüfungen — Anzeige, Gebühr
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=38"></script>
-<script src="pdf.js?v=38"></script>
+<script src="config.js?v=39"></script>
+<script src="pdf.js?v=39"></script>
 <script>
 // PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.
 document.getElementById('pdfBtn').addEventListener('click', function(){

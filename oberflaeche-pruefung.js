@@ -31,7 +31,7 @@ function holeFunktion(name) {
 
 const quelle = ['buchKuerzel', 'syncBridgeMarkets', 'evalMarket', 'feasibleMax',
                 'paarungsAbdruck', 'gegenrechnung', 'bestaetige',
-                'buchName', 'routing', 'dnpRisk', 'sicherheitsPruefung']
+                'buchName', 'routing', 'dnpRisk', 'beinTiefe', 'sicherheitsPruefung']
   .map(holeFunktion).join('\n\n');
 
 // Umgebung wie im Browser, aber nur so viel wie diese Funktionen brauchen
@@ -348,15 +348,66 @@ console.log('\n═════ 12. Sicherheitsprüfung sperrt, was sie sperren m
   // Die Liste muss vollstaendig sein
   m = guteChance(); v = guteBewertung(); v.m = m;
   pr = sandbox.sicherheitsPruefung(m, v, 100);
-  pruef('alle zehn Punkte werden geprüft', pr.punkte.length === 10,
+  pruef('alle elf Punkte werden geprüft', pr.punkte.length === 11,
         pr.punkte.length + ' Punkte');
   pruef('jeder Punkt hat eine Begründung',
         pr.punkte.every(x => typeof x.text === 'string' && x.text.length > 0));
   pruef('kritische und Hinweise sind getrennt',
-        pr.punkte.filter(x => x.kritisch).length === 7 &&
+        pr.punkte.filter(x => x.kritisch).length === 8 &&
         pr.punkte.filter(x => !x.kritisch).length === 3,
         pr.punkte.filter(x => x.kritisch).length + ' kritisch, ' +
         pr.punkte.filter(x => !x.kritisch).length + ' Hinweise');
+}
+
+console.log('\n═════ 13. Tiefe zum besten Preis (Slippage-Schutz) ═════');
+/* Der Scanner rechnet mit dem BESTEN Ask. Davon liegt nur eine begrenzte
+   Menge im Buch — wer mehr kauft, zahlt fuer den Rest mehr, und genau das
+   frisst die wenigen Prozent. Untersuchungen an Polymarket-Buechern zeigen,
+   dass ein Grossteil der Chancen auf sehr kleine Mengen begrenzt ist. */
+{
+  const v = {
+    ok:true, roi:3.3628, cross:true,
+    s1:{src:'bf', odds:2.10, oddsEff:2.045},
+    s2:{src:'pm', odds:2.15, oddsEff:2.09}
+  };
+  const chance = (sizeBf, sizePm) => ({
+    id:'d1', ev:'Test', cat:'Sport', o1:'A', o2:'B', fertig:true, liq:9999,
+    opp:{ legs:[
+      {book:'Betfair', pick:'A', q:2.10, qEff:2.045, fee:5, size:sizeBf, link:'a'},
+      {book:'Polymarket', pick:'B', q:2.15, qEff:2.09, fee:6, size:sizePm, link:'b'}
+    ]}
+  });
+
+  // Reichlich Tiefe -> traegt den Einsatz
+  let t = sandbox.beinTiefe(chance(500, 500), v, 100);
+  pruef('genug auf beiden Seiten reicht', t.reicht === true, t.text);
+
+  // Ein duennes Bein -> sperrt, und nennt den moeglichen Hoechstbetrag
+  t = sandbox.beinTiefe(chance(500, 10), v, 100);
+  pruef('ein dünnes Bein sperrt', t.reicht === false, t.text);
+  pruef('nennt einen kleineren Höchstbetrag',
+        t.max != null && t.max < 100, t.max != null ? t.max.toFixed(2) + ' €' : '—');
+
+  // Das duennste Bein bestimmt den Deckel
+  t = sandbox.beinTiefe(chance(30, 500), v, 100);
+  const erwartet = 30 / (505.4414 / 1000);   // Anteil des Betfair-Beins
+  pruef('das dünnste Bein bestimmt den Deckel',
+        t.max != null && Math.abs(t.max - erwartet) < 0.5,
+        t.max.toFixed(2) + ' € erwartet ' + erwartet.toFixed(2) + ' €');
+
+  // Unbekannte Tiefe darf nicht sperren, muss aber warnen
+  t = sandbox.beinTiefe(chance(null, null), v, 100);
+  pruef('unbekannte Tiefe sperrt nicht, warnt aber',
+        t.reicht === true && /selbst nachsehen/.test(t.text), t.text);
+
+  // Und die Sicherheitspruefung muss dasselbe Ergebnis uebernehmen
+  const vv = JSON.parse(JSON.stringify(v));
+  const mDuenn = chance(500, 10); vv.m = mDuenn;
+  mDuenn._sicher = true; mDuenn.linkPm = 'p'; mDuenn.bfLink = 'b';
+  const prD = sandbox.sicherheitsPruefung(mDuenn, vv, 100);
+  pruef('Sicherheitsprüfung sperrt bei zu dünnem Buch',
+        prD.freigegeben === false,
+        prD.kritischOffen.length ? prD.kritischOffen[0].name : 'NICHT GESPERRT');
 }
 
 console.log('\n' + '═'.repeat(46));
