@@ -32,7 +32,7 @@ function holeFunktion(name) {
 const quelle = ['buchKuerzel', 'syncBridgeMarkets', 'evalMarket', 'feasibleMax',
                 'paarungsAbdruck', 'gegenrechnung', 'bestaetige',
                 'buchName', 'routing', 'dnpRisk', 'beinTiefe', 'endeInfo',
-                'sicherheitsPruefung']
+                'fehlerErklaerung', 'linkWarnung', 'sicherheitsPruefung']
   .map(holeFunktion).join('\n\n');
 
 // Umgebung wie im Browser, aber nur so viel wie diese Funktionen brauchen
@@ -527,6 +527,66 @@ console.log('\n═════ 13. Tiefe zum besten Preis (Slippage-Schutz) ═�
   pruef('Sicherheitsprüfung sperrt bei zu dünnem Buch',
         prD.freigegeben === false,
         prD.kritischOffen.length ? prD.kritischOffen[0].name : 'NICHT GESPERRT');
+}
+
+console.log('\n═════ 16. Jeder Fehler wird erklärt ═════');
+/* Eine Meldung wie "Failed to fetch" hilft niemandem. Zu jedem Fehler muss
+   stehen: was ist passiert, warum, und was kann man tun. */
+{
+  const faelle = [
+    ['Failed to fetch',            'Keine Verbindung'],
+    ['AbortError: timeout',        'Zeitüberschreitung'],
+    ['HTTP 403 Forbidden',         'Zugang'],
+    ['HTTP 404 Not Found',         'Nicht gefunden'],
+    ['HTTP 429 Too Many Requests', 'Zu viele'],
+    ['HTTP 503',                   'Störung'],
+    ['CORS policy blocked',        'Browser blockt'],
+    ['Unexpected token < in JSON', 'Unverständliche']
+  ];
+  let alleVollstaendig = true;
+  faelle.forEach(([roh, erwartet]) => {
+    const f = sandbox.fehlerErklaerung(new Error(roh));
+    const passt = f.kurz.indexOf(erwartet) >= 0;
+    const voll = f.warum && f.warum.length > 30 && f.tun && f.tun.length > 20;
+    if (!voll) alleVollstaendig = false;
+    pruef('erklärt: ' + roh.slice(0, 26), passt && voll, f.kurz);
+  });
+  pruef('jeder Fall nennt Grund UND Abhilfe', alleVollstaendig);
+
+  const unbekannt = sandbox.fehlerErklaerung(new Error('völlig neuer Fehler xyz'));
+  pruef('auch ein unbekannter Fehler wird erklärt',
+        unbekannt.warum.length > 30 && unbekannt.tun.length > 20,
+        unbekannt.kurz);
+
+  // 404 ist der Fall "Link abgelaufen" - der muss zum Nichtsetzen raten
+  const vierNullVier = sandbox.fehlerErklaerung(new Error('HTTP 404'));
+  pruef('bei 404 wird vom Setzen abgeraten',
+        /nicht setzen|hinfällig/i.test(vierNullVier.tun), vierNullVier.tun.slice(0, 50));
+}
+
+console.log('\n═════ 17. Warnung vor Links, die ins Leere führen ═════');
+{
+  const tag = 86400000;
+  sandbox.state.bfAge = 20;
+
+  let w = sandbox.linkWarnung({ endet: Date.now() - 3*tag, _sicher: true });
+  pruef('abgelaufener Markt warnt beim Klick',
+        w && /vorbei/i.test(w.titel), w ? w.titel : 'keine Warnung');
+
+  sandbox.state.bfAge = 1800;
+  w = sandbox.linkWarnung({ endet: Date.now() + 5*tag, _sicher: true, fertig: true });
+  pruef('veraltete Kurse warnen beim Klick',
+        w && /Minuten alt/.test(w.titel), w ? w.titel : 'keine Warnung');
+
+  sandbox.state.bfAge = 20;
+  w = sandbox.linkWarnung({ endet: Date.now() + 5*tag, _sicher: false, _grund: 'wird geprüft 1/2' });
+  pruef('unbestätigte Chance warnt beim Klick',
+        w && /nicht bestätigt/i.test(w.titel), w ? w.titel : 'keine Warnung');
+
+  w = sandbox.linkWarnung({ endet: Date.now() + 5*tag, _sicher: true, fertig: true });
+  pruef('bei allem in Ordnung keine Warnung', w === null);
+
+  pruef('ohne Markt keine Warnung', sandbox.linkWarnung(null) === null);
 }
 
 console.log('\n' + '═'.repeat(46));

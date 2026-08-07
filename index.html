@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=41"></script>
+<script src="config.js?v=42"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -474,6 +474,21 @@
   .connZeile .cgrund{color:var(--txt);font-family:var(--mono);font-size:11px;flex:1;min-width:180px}
   .connZeile .cseit{color:var(--dim);font-family:var(--mono);font-size:10.5px;flex:none}
   .connZeile .cfolge{flex-basis:100%;color:var(--muted);font-size:11px;line-height:1.5;margin-top:3px}
+  .connZeile .cwarum,.connZeile .ctun{flex-basis:100%;font-size:11px;line-height:1.55;margin-top:4px;color:var(--muted)}
+  .connZeile .cwarum b,.connZeile .ctun b{color:var(--gold);font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-right:5px}
+  .connZeile .ctun{color:var(--txt)}
+
+  /* Hinweis beim Öffnen eines Links, dessen Daten nicht mehr frisch sind */
+  .linkwarn{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:120;
+    max-width:min(560px,calc(100vw - 32px));border:1px solid #6e5a22;
+    background:linear-gradient(180deg,#1f1a0c,#171207);padding:13px 16px;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);animation:lwauf .18s ease}
+  @keyframes lwauf{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+  .linkwarn b{display:block;color:var(--warn);font-size:12px;margin-bottom:5px}
+  .linkwarn p{margin:0;color:var(--muted);font-size:12px;line-height:1.55}
+  .linkwarn .zu{position:absolute;top:7px;right:9px;background:none;border:0;color:var(--dim);
+    font-size:15px;cursor:pointer;line-height:1}
+  .linkwarn .zu:hover{color:var(--txt)}
 
   /* Aufteilung und Gebühren je Anbieter im Wett-Ticket. Der Satz haengt am
      einzelnen Markt, nicht am Anbieter — deshalb steht er je Seite dabei. */
@@ -1088,20 +1103,62 @@ function pollPM(){
       else { state.accounts.pm.status='live'; state.pmErr=''; markiereOk('pm'); }
       if(!state._pmLogged){ state._pmLogged=true; if(window.__ar)window.__ar.logConn('pm','polymarket'); }
     })
-    .catch(function(e){ state.accounts.pm.status='error'; state.pmErr=grundText(e); })
+    .catch(function(e){ state.accounts.pm.status='error';
+      state.pmErr=grundText(e); state.pmErrDetail=fehlerErklaerung(e); })
     .finally(function(){ state.polling=false; });
 }
 
 /* ---- Technische Fehler in Klartext, damit dort ein Grund steht und nicht nur "Fehler" ---- */
-function grundText(e){
+/* Fehler in drei Teilen: WAS ist passiert, WARUM, und WAS TUN.
+   Eine Meldung wie „Failed to fetch" sagt niemandem etwas. Wer nicht weiss,
+   woran es liegt, kann es auch nicht beheben — und weiss vor allem nicht, ob
+   er den angezeigten Zahlen gerade trauen darf. */
+function fehlerErklaerung(e){
   var s=String((e&&e.message)||e||'');
-  if(/Failed to fetch|NetworkError|load failed/i.test(s)) return 'Keine Verbindung — Internet, VPN oder Werbeblocker prüfen';
-  if(/aborted|abort|timeout/i.test(s))                    return 'Zeitüberschreitung — Gegenstelle antwortet zu langsam';
-  if(/HTTP 4\d\d/i.test(s))                               return 'Abgewiesen ('+s+') — Anfrage wurde nicht akzeptiert';
-  if(/HTTP 5\d\d/i.test(s))                               return 'Gegenstelle hat eine Störung ('+s+')';
-  if(/CORS/i.test(s))                                     return 'Browser blockt die Anfrage (CORS)';
-  if(/JSON|Unexpected token/i.test(s))                    return 'Unerwartete Antwort — Gegenstelle liefert kein sauberes Format';
-  return s.slice(0,120)||'unbekannter Fehler';
+  if(/Failed to fetch|NetworkError|load failed/i.test(s)) return {
+    kurz:'Keine Verbindung',
+    warum:'Die Anfrage hat die Gegenstelle gar nicht erreicht. Das liegt fast nie an der Börse selbst, sondern am Weg dorthin.',
+    tun:'Internet prüfen. Häufigste Ursache: ein Werbeblocker oder eine Erweiterung blockt die Anfrage — im privaten Fenster gegenprobieren. Auch ein VPN kann dazwischenfunken.'};
+  if(/aborted|abort|timeout/i.test(s)) return {
+    kurz:'Zeitüberschreitung',
+    warum:'Die Gegenstelle hat zu lange gebraucht. Die Anfrage wurde abgebrochen, damit die Anzeige nicht ewig hängt.',
+    tun:'Meist von allein vorbei. Hält es an, ist die Börse überlastet — dann sind auch die Kurse dort unzuverlässig, also nicht setzen.'};
+  if(/HTTP 401|HTTP 403/i.test(s)) return {
+    kurz:'Zugang verweigert ('+s+')',
+    warum:'Die Gegenstelle kennt uns, weist die Anfrage aber ab. Bei Betfair heisst das meistens: der Schlüssel ist abgelaufen, falsch oder für diesen Zugriff nicht freigegeben.',
+    tun:'Bridge-Token und Betfair-Schlüssel prüfen. Betfair sperrt zusätzlich Anfragen aus Rechenzentren — deshalb muss die Bridge auf einem normalen PC laufen.'};
+  if(/HTTP 404/i.test(s)) return {
+    kurz:'Nicht gefunden (404)',
+    warum:'Die Adresse gibt es so nicht mehr. Bei Märkten heisst das in aller Regel: er wurde aufgelöst, zusammengelegt oder umbenannt.',
+    tun:'Die Chance ist damit hinfällig. Nicht setzen — beim Anbieter nach dem aktuellen Markt suchen.'};
+  if(/HTTP 429/i.test(s)) return {
+    kurz:'Zu viele Anfragen (429)',
+    warum:'Die Gegenstelle drosselt uns, weil in kurzer Zeit zu viel abgefragt wurde.',
+    tun:'Von allein vorbei. Solange sind die Kurse womöglich nicht aktuell — vor dem Setzen im Buch nachsehen.'};
+  if(/HTTP 4\d\d/i.test(s)) return {
+    kurz:'Abgewiesen ('+s+')',
+    warum:'Die Gegenstelle hat die Anfrage nicht akzeptiert. Das deutet auf ein Zugangs- oder Formatproblem hin, nicht auf eine Störung.',
+    tun:'Neu laden. Bleibt es, hat sich vermutlich etwas an der Schnittstelle geändert.'};
+  if(/HTTP 5\d\d/i.test(s)) return {
+    kurz:'Störung bei der Gegenstelle ('+s+')',
+    warum:'Der Fehler liegt beim Anbieter, nicht bei dir. Deren Server antwortet fehlerhaft.',
+    tun:'Abwarten. Solange eine Börse strauchelt, sind ihre Kurse nicht belastbar — in dieser Zeit nichts setzen.'};
+  if(/CORS/i.test(s)) return {
+    kurz:'Browser blockt die Anfrage',
+    warum:'Die Gegenstelle erlaubt den Zugriff von dieser Adresse aus nicht. Das ist eine Regel im Browser, kein Ausfall.',
+    tun:'Tritt vor allem beim lokalen Testen auf. Auf der echten Adresse ist der Zugriff freigegeben.'};
+  if(/JSON|Unexpected token/i.test(s)) return {
+    kurz:'Unverständliche Antwort',
+    warum:'Es kam etwas zurück, aber nicht in dem Format, das erwartet wird — oft eine Wartungs- oder Fehlerseite statt Daten.',
+    tun:'Meist kurzfristig. Den angezeigten Zahlen bis dahin nicht trauen.'};
+  return {kurz:(s.slice(0,90)||'Unbekannter Fehler'),
+          warum:'Dieser Fehler ist im Programm nicht hinterlegt, der Wortlaut kommt unverändert von der Gegenstelle.',
+          tun:'Neu laden. Bleibt es bestehen, den Wortlaut oben weitergeben — daraus lässt sich die Ursache bestimmen.'};
+}
+// Kurzform für die knappen Anzeigen — nutzt dieselbe Quelle
+function grundText(e){
+  var f=fehlerErklaerung(e);
+  return f.kurz + (f.tun? ' — '+f.tun.split('.')[0] : '');
 }
 function mergeMarkets(fresh, prune){
   var seen={};
@@ -1288,7 +1345,11 @@ function pollBF(){
     try{ pruefeBridgeFassung(); }catch(e){}
   }).catch(function(e){
     state.accounts.bf.status='error';
-    state.bfGrund = 'Die Website erreicht den Bridge-Dienst nicht ('+(e&&e.message||'unbekannt')+')';
+    var f=fehlerErklaerung(e);
+    state.bfGrund = 'Die Website erreicht den Bridge-Dienst nicht — '+f.kurz;
+    state.bfGrundDetail = {kurz:f.kurz,
+      warum:'Nicht die Bridge auf dem PC ist das Problem, sondern die Verbindung von hier zum Zwischenspeicher. '+f.warum,
+      tun:f.tun};
   });
 }
 
@@ -1725,6 +1786,55 @@ function processSignals(){
   Object.keys(kandidaten).forEach(function(id){ if(!mkMap.get(id)) delete kandidaten[id]; });
 }
 
+/* ---- Wenn ein Link ins Leere führen könnte ---------------------------
+   Klickt jemand auf einen Markt-Link, dessen Daten nicht mehr frisch sind,
+   landet er drüben auf einer 404 oder auf ganz anderen Quoten — ohne zu
+   wissen, warum. Der Link wird trotzdem geöffnet (hinsehen ist immer
+   richtig), aber dazu steht, was ihn erwartet und woran es liegt. */
+function linkWarnung(mk){
+  if(!mk) return null;
+  var e=endeInfo(mk.endet);
+  if(e && e.vorbei) return {
+    titel:'Dieser Markt ist laut Datum schon vorbei',
+    text:'Die Auflösung war am '+e.datum+'. Wahrscheinlich zeigt die Seite drüben '+
+         '„nicht gefunden" oder einen bereits entschiedenen Markt. Die Zahlen hier '+
+         'stammen dann aus einer alten Abfrage — nicht danach setzen.'};
+  if(mk.fertig && state.bfAge!=null && state.bfAge>600) return {
+    titel:'Die Kurse sind '+Math.round(state.bfAge/60)+' Minuten alt',
+    text:'So lange hat sich die Bridge nicht gemeldet. In der Zwischenzeit kann sich '+
+         'alles bewegt haben. Was drüben steht, ist massgeblich — nicht das hier.'};
+  if(!mk._sicher) return {
+    titel:'Diese Chance ist noch nicht bestätigt',
+    text:(mk._grund||'Sie wird gerade geprüft.')+' Bis sie sich über mehrere Durchläufe '+
+         'unverändert bestätigt hat, kann die Zuordnung noch wechseln. Ansehen ist in '+
+         'Ordnung, setzen noch nicht.'};
+  return null;
+}
+function zeigeLinkWarnung(w){
+  var alt=document.getElementById('linkWarn'); if(alt)alt.remove();
+  var el=document.createElement('div');
+  el.className='linkwarn'; el.id='linkWarn';
+  var schutz=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  el.innerHTML='<button class="zu" aria-label="Schliessen">✕</button>'+
+    '<b>'+schutz(w.titel)+'</b><p>'+schutz(w.text)+'</p>';
+  el.querySelector('.zu').onclick=function(){ el.remove(); };
+  document.body.appendChild(el);
+  setTimeout(function(){ if(el.isConnected) el.remove(); }, 14000);
+}
+/* Ein Handler für alle Markt-Links, egal ob Zeile, Ticket oder Gegenprobe */
+document.addEventListener('click', function(ev){
+  var a=ev.target.closest && ev.target.closest('a[target="_blank"]');
+  if(!a) return;
+  var zeile=a.closest('.r-o');
+  var id = zeile? zeile.getAttribute('data-id')
+                : (a.closest('#tkBody')? state.ticketId : null);
+  if(!id) return;
+  var mk=mkMap.get(id); if(!mk) return;
+  var w=linkWarnung(mk);
+  if(w) zeigeLinkWarnung(w);
+}, true);
+
 /* ---- Konten-UI ---- */
 var ACC=[['pm','Polymarket','PM'],['ob','SX Bet','SX'],['bf','Betfair / Orbit','BF']];
 
@@ -1973,8 +2083,12 @@ function renderVerbindung(){
     if(z==='live'||z==='demo'||z==='verbindet') return;
     var grund=grundVon(k)||'';
     var seit=alterVon(k);
+    // Die ausführliche Erklärung, sofern zu diesem Fehler eine hinterlegt ist
+    var detail = k==='pm'? state.pmErrDetail
+               : k==='bf'? state.bfGrundDetail
+               : state.sxGrundDetail;
     meldungen.push({
-      buch:t[1], k:k, z:z, grund:grund,
+      buch:t[1], k:k, z:z, grund:grund, detail:detail||null,
       seit: seit==null? 'seit dem Start nie verbunden' : ('zuletzt Daten '+alterText(seit))
     });
   });
@@ -1989,8 +2103,12 @@ function renderVerbindung(){
       '<span class="cwas">'+(wort[m.z]||m.z)+'</span>'+
       '<span class="cgrund">'+schutz(m.grund||'kein Grund gemeldet')+'</span>'+
       '<span class="cseit">'+schutz(m.seit)+'</span>'+
+      /* Warum es hakt und was zu tun ist — nicht nur, DASS es hakt */
+      (m.detail? '<span class="cwarum"><b>Warum:</b> '+schutz(m.detail.warum)+'</span>'+
+                 '<span class="ctun"><b>Was tun:</b> '+schutz(m.detail.tun)+'</span>' : '')+
       (schwer? '<span class="cfolge">Ohne Polymarket gibt es nichts zu vergleichen — '+
-               'die Liste bleibt leer, bis die Verbindung wieder steht.</span>':'')+
+               'die Liste bleibt leer, bis die Verbindung wieder steht. Angezeigte Zahlen '+
+               'stammen dann aus der letzten geglückten Abfrage und können veraltet sein.</span>':'')+
     '</div>';
   }).join('');
 }
