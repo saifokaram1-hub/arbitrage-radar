@@ -237,6 +237,24 @@
     </section>
 
     <section>
+      <h3>Wie oft gescannt wird — und warum schneller nicht besser ist</h3>
+      <p>Der <strong>verzögerte App-Key</strong> von Betfair liefert Kurse mit rund <strong>einer Minute Verzögerung</strong>. Wer damit alle 20 Sekunden fragt, bekommt zweimal von drei Malen exakt dieselben Zahlen — die Anfragen sind verschenkt.</p>
+      <div class="call good"><b>Deshalb nicht schneller, sondern breiter.</b> Derselbe Aufwand, über mehr Märkte verteilt. Mehr geprüfte Märkte heißt mehr Überschneidung mit Polymarket — und genau daraus entstehen Funde. Ein höherer Takt auf denselben paar Märkten bringt keinen einzigen zusätzlichen Treffer.</div>
+      <div class="scroll">
+        <table>
+          <tr><th>&nbsp;</th><th>Verzögerter Key</th><th>Live-Key</th></tr>
+          <tr><td class="k">Betfair-Takt</td><td class="num">alle 60 s</td><td class="num">alle 20 s</td></tr>
+          <tr><td class="k">ganzer Bestand</td><td class="num">alle 120 s</td><td class="num">alle 150 s</td></tr>
+          <tr><td class="k">Märkte je Durchlauf</td><td class="num">bis 12 000</td><td class="num">bis 6 000</td></tr>
+          <tr><td class="k">Polymarket</td><td class="num">alle 20 s</td><td class="num">alle 20 s</td></tr>
+        </table>
+      </div>
+      <p class="note">Polymarket läuft in einem <strong>eigenen, schnelleren Takt</strong>. Diese Kurse sind echt live, unabhängig davon, welchen Betfair-Schlüssel man hat — sie an den verzögerten Takt zu koppeln hieße, die frischere Quelle künstlich auszubremsen.</p>
+      <p class="note">Bleibt in einem Durchlauf Kapazität übrig, wird sie mit <em>weiteren</em> Märkten aufgefüllt statt dieselben erneut zu fragen. Das Profil für den Live-Key ist bereits hinterlegt und greift automatisch, sobald ein Live-Schlüssel erkannt wird — dort zählt jede Sekunde, weil die Kurse dann wirklich aktuell sind.</p>
+      <div class="call warn"><b>Was das nicht ändert.</b> Die Überschneidung zwischen Polymarket (überwiegend Politik) und Betfair (fast nur Sport) bleibt strukturell klein. Breiteres Scannen holt heraus, was da ist — es erzeugt keine Chancen, die es nicht gibt. Realistisch bleiben wenige Treffer am Tag bei 0,5 bis 5 % Rendite.</div>
+    </section>
+
+    <section>
       <h3>Vier Prüfungen, bevor überhaupt gerechnet wird</h3>
       <p>Eine Paarung muss <strong>alle vier</strong> bestehen. Fällt eine durch, wird die Chance verworfen und gar nicht erst angezeigt.</p>
       <div class="flow">
@@ -518,8 +536,8 @@ node oberflaeche-pruefung.js  <span class="c">32 Prüfungen — Anzeige, Gebühr
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=42"></script>
-<script src="pdf.js?v=42"></script>
+<script src="config.js?v=43"></script>
+<script src="pdf.js?v=43"></script>
 <script>
 // PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.
 document.getElementById('pdfBtn').addEventListener('click', function(){

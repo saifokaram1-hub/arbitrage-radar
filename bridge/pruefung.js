@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Prüfung der Arbitrage-Logik — zum Selbernachrechnen.
  * Start:  node pruefung.js
  *
@@ -721,6 +721,43 @@ console.log('\n══════════ 20. Gegenprobe: fauler Markt darf 
               { id: 22, st: 'ACTIVE', b: 1.94, bs: 900, l: 1.96, ls: 5 }]
   });
   pruefe('normaler Markt liefert korrekt keine Chance', B.crossBookChancen().length === 0);
+}
+
+
+console.log('\n══════════ 21. Takt richtet sich nach dem Schluessel ══════════\n');
+{
+  /* Der DELAYED-Schluessel liefert Kurse mit rund einer Minute Verzoegerung.
+     Oefter zu fragen bringt dieselben Zahlen — die Kapazitaet gehoert in
+     BREITE. Der LIVE-Schluessel darf dagegen schnell fragen. */
+  const alt = B.getKeyArt();
+
+  B.setKeyArt('delayed');
+  const d = B.takt();
+  pruefe('verzoegert: Takt nicht schneller als die Verzoegerung', d.heiss >= 45,
+         d.heiss + ' s');
+  pruefe('verzoegert: mehr Maerkte je Durchlauf', d.sweep >= 12000,
+         d.sweep + ' Maerkte');
+  pruefe('verzoegert: alles wird oefter durchgegangen', d.breit <= 120,
+         'alle ' + d.breit + ' s');
+
+  B.setKeyArt('live');
+  const l = B.takt();
+  pruefe('live: darf schnell fragen', l.heiss <= 20, l.heiss + ' s');
+  pruefe('live: Profil ist vorbereitet', l.sweep > 0 && l.voll > 0,
+         l.sweep + ' Maerkte, voll alle ' + l.voll + ' s');
+
+  pruefe('live fragt oefter als verzoegert', l.heiss < d.heiss,
+         l.heiss + ' s gegen ' + d.heiss + ' s');
+  pruefe('verzoegert prueft dafuer mehr Maerkte', d.sweep > l.sweep,
+         d.sweep + ' gegen ' + l.sweep);
+
+  B.setKeyArt('unbekannt');
+  const u = B.takt();
+  pruefe('unbekannter Schluessel wird vorsichtig behandelt',
+         u.heiss === d.heiss && u.sweep === d.sweep,
+         'wie verzoegert');
+
+  B.setKeyArt(alt);
 }
 
 console.log('\n══════════════════════════════════════════');

@@ -137,6 +137,36 @@ if (ALS_PROGRAMM && !/^brg_/.test(String(CFG.bridgeToken)) && String(CFG.bridgeT
 }
 
 const zahl = (v, d) => { const n = +v; return isFinite(n) && n >= 0 ? n : d; };
+
+/* ═══════════ Takt: was der Schluessel wirklich hergibt ═══════════════════
+   Der DELAYED-Schluessel liefert Kurse mit rund einer Minute Verzoegerung.
+   Wer damit alle 20 Sekunden fragt, bekommt zweimal von drei Malen exakt
+   dieselben Zahlen zurueck — die Anfragen sind verschenkt.
+
+   Also nicht schneller, sondern BREITER: derselbe Aufwand, aber ueber mehr
+   Maerkte verteilt. Mehr geprueft heisst mehr Ueberschneidung mit Polymarket
+   und damit mehr echte Funde. Genau das bringt Treffer, nicht ein hoeherer
+   Takt auf denselben paar Maerkten.
+
+   Beim LIVE-Schluessel ist es umgekehrt: dort zaehlt jede Sekunde, weil die
+   Kurse wirklich aktuell sind. Deshalb stehen beide Profile hier nebeneinander
+   und werden nach der erkannten Schluesselart gewaehlt — der Live-Teil ist
+   bereits fertig hinterlegt und greift, sobald ein Live-Key erkannt wird. */
+const TAKT = {
+  delayed: {
+    heiss:  zahl(CFG.delayedHotSeconds,   60),   // so alt sind die Daten ohnehin
+    breit:  zahl(CFG.delayedWarmSeconds, 120),   // alles durchgehen, doppelt so oft wie zuvor
+    voll:   zahl(CFG.delayedColdSeconds, 900),   // Bestand neu entdecken
+    sweep:  zahl(CFG.delayedMaxBookPerSweep, 12000)  // deutlich mehr Maerkte je Durchlauf
+  },
+  live: {
+    heiss:  zahl(CFG.liveHotSeconds,   20),
+    breit:  zahl(CFG.liveWarmSeconds, 150),
+    voll:   zahl(CFG.liveColdSeconds, 900),
+    sweep:  zahl(CFG.liveMaxBookPerSweep, 6000)
+  }
+};
+
 const O = {
   hotSeconds:   zahl(CFG.hotIntervalSeconds,  zahl(CFG.intervalSeconds, 20)),
   warmSeconds:  zahl(CFG.warmIntervalSeconds, 150),
@@ -169,8 +199,8 @@ const O = {
    erkennt, ob auf einem PC noch eine veraltete Bridge läuft, und den Nutzer
    auffordern kann, die neue Datei zu holen. BEI JEDER inhaltlichen Änderung
    an der Suchlogik hochzählen — sonst merkt niemand, dass er alt ist. */
-const BRIDGE_BUILD = 9;
-const BRIDGE_VERSION = "2.9";
+const BRIDGE_BUILD = 10;
+const BRIDGE_VERSION = "3.0";
 
 const BF_LOGIN = 'https://identitysso.betfair.com/api/login';
 const BF_KEEP  = 'https://identitysso.betfair.com/api/keepAlive';
@@ -292,6 +322,29 @@ async function schluesselArtErkennen() {
 }
 
 const istVerzoegert = () => KEY_ART !== 'live';   // unbekannt wird wie verzögert behandelt
+
+/* Der aktive Takt, passend zur erkannten Schluesselart.
+   Steht in der Konfiguration ein ausdruecklicher Wert, hat der Vorrang —
+   sonst wird das Profil aus TAKT genommen. Solange die Art noch unbekannt
+   ist, gilt das vorsichtigere Delayed-Profil. */
+function takt() {
+  const p = istVerzoegert() ? TAKT.delayed : TAKT.live;
+  const gesetzt = (a, b) => (a != null || b != null);
+  let heiss = gesetzt(CFG.hotIntervalSeconds, CFG.intervalSeconds) ? O.hotSeconds : p.heiss;
+  let sweep = CFG.maxBookPerSweep != null ? O.maxBookPerSweep : p.sweep;
+
+  /* Untergrenze beim verzoegerten Schluessel.
+     Betfair liefert damit Kurse mit rund einer Minute Verzoegerung. Ein
+     kuerzerer Takt holt nachweislich DIESELBEN Zahlen und verbraucht nur
+     Anfragen, die dann bei der Breite fehlen. Deshalb wird auch eine
+     aeltere Konfiguration mit intervalSeconds:20 hier angehoben — das ist
+     keine Bevormundung, sondern die physikalische Grenze des Schluessels. */
+  if (istVerzoegert() && heiss < 45) heiss = 45;
+
+  return { heiss, breit: CFG.warmIntervalSeconds != null ? O.warmSeconds : p.breit,
+           voll: CFG.coldIntervalSeconds != null ? O.coldSeconds : p.voll,
+           sweep };
+}
 
 // Mit verzögerten Kursen braucht ein schneller Markt mehr Luft: was man sieht,
 // ist bereits Vergangenheit. Langsame Märkte sind davon kaum betroffen.
@@ -1320,27 +1373,44 @@ async function durchlauf() {
     if (Date.now() - lastLogin > 15 * 60e3) await keepAlive();
 
     const jetzt = Date.now();
+    const T = takt();
     let stufe = 'heiss', ids;
 
-    if (jetzt - letzteEntdeckung > O.coldSeconds * 1000) {
+    if (jetzt - letzteEntdeckung > T.voll * 1000) {
       await entdecken();
       letzteEntdeckung = jetzt; letzteWarm = jetzt;
       stufe = 'vollstaendig'; ids = Array.from(KATALOG.keys());
-    } else if (jetzt - letzteWarm > O.warmSeconds * 1000) {
+    } else if (jetzt - letzteWarm > T.breit * 1000) {
       letzteWarm = jetzt; stufe = 'breit'; ids = Array.from(KATALOG.keys());
     } else {
       ids = heisseIds();
-      if (!ids.length) ids = Array.from(KATALOG.keys()).slice(0, 800);
+      /* Bleibt Zeit uebrig, wird sie in BREITE gesteckt statt in Wiederholung.
+         Beim verzoegerten Schluessel bringt es nichts, dieselben Maerkte
+         oefter zu fragen — die Zahlen aendern sich ohnehin nur einmal pro
+         Minute. Mehr geprueft heisst mehr Ueberschneidung und mehr Funde. */
+      const rest = T.sweep - ids.length;
+      if (rest > 0) {
+        const dabei = new Set(ids);
+        for (const mid of KATALOG.keys()) {
+          if (dabei.has(mid)) continue;
+          ids.push(mid);
+          if (ids.length >= T.sweep) break;
+        }
+      }
     }
-    if (ids.length > O.maxBookPerSweep) ids = ids.slice(0, O.maxBookPerSweep);
+    if (ids.length > T.sweep) ids = ids.slice(0, T.sweep);
 
     const t0 = Date.now();
     const gelesen = await buecherHolen(ids);
     bfFehler = gelesen ? '' : 'Betfair lieferte in diesem Durchlauf keine Kurse';
 
-    // Polymarket eigenständig, im eigenen Takt (die API ist schnell und offen)
+    /* Polymarket in EIGENEM Takt. Diese Kurse sind echt live, unabhaengig
+       davon, welchen Betfair-Schluessel wir haben. Sie an den verzoegerten
+       Betfair-Takt zu koppeln hiesse, die frischere Quelle kuenstlich
+       auszubremsen — und die Ueberschneidung entsteht auf beiden Seiten. */
     let pmAnzahl = PM.size;
-    if (O.scanPolymarket && jetzt - letztePM > Math.max(O.hotSeconds, 15) * 1000) {
+    const pmTakt = zahl(CFG.polymarketIntervalSeconds, 20);
+    if (O.scanPolymarket && jetzt - letztePM > pmTakt * 1000) {
       try {
         pmAnzahl = await polymarketScan();
         letztePM = jetzt;
@@ -1374,6 +1444,9 @@ async function durchlauf() {
       unplausibel: opps.unplausibel || 0,
       build: BRIDGE_BUILD, version: BRIDGE_VERSION,
       key_art: KEY_ART, key_name: KEY_NAME,
+      // Takt mitschicken, damit auf der Website sichtbar ist, wie intensiv
+      // gescannt wird — und dass er sich nach der Schluesselart richtet
+      takt_heiss: takt().heiss, takt_breit: takt().breit, takt_sweep: takt().sweep,
       schwelle: O.minRoi, schwelle_schnell: istVerzoegert() ? O.minRoiSchnell : O.minRoi,
       takt_ms: minGap, takt_hot: O.hotSeconds, takt_warm: O.warmSeconds, takt_cold: O.coldSeconds,
       // Zustand je Quelle, damit die Website den Grund nennen kann statt nur "Fehler"
@@ -1446,6 +1519,7 @@ module.exports = {
   crossBookChancen, schnittmengeIds, bewerte, bestaetigtRueckwaerts,
   betfairIntern, polymarketIntern,
   pmListe, pmKurse, polymarketScan, kategorie,
+  takt, TAKT,
   PM, KATALOG, BUCH, O
 };
 
@@ -1523,5 +1597,15 @@ if (!ALS_PROGRAMM) return;
   }
 
   durchlauf();
-  setInterval(durchlauf, Math.max(O.hotSeconds, 10) * 1000);
+  /* Der Weckruf laeuft bewusst haeufiger als der Betfair-Takt: durchlauf()
+     entscheidet selbst anhand der Schluesselart, was in diesem Moment faellig
+     ist. So kann Polymarket in seinem schnelleren Takt laufen, ohne dass
+     Betfair unnoetig oft gefragt wird. */
+  const weckruf = Math.max(10, Math.min(
+    zahl(CFG.polymarketIntervalSeconds, 20),
+    takt().heiss
+  ));
+  log('⏱  Weckruf alle ' + weckruf + ' s · Betfair-Takt ' + takt().heiss + ' s · '
+      + 'bis zu ' + takt().sweep + ' Maerkte je Durchlauf');
+  setInterval(durchlauf, weckruf * 1000);
 })();

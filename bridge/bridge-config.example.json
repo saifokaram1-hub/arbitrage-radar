@@ -1,14 +1,32 @@
 {
-  "_hinweis": "Kopiere diese Datei zu 'bridge-config.json' und trage deine Daten ein. NIEMALS hochladen oder weitergeben!",
+  "_ANLEITUNG": "Ersetze NUR die Felder mit HIER_ ... Der Rest ist fertig eingestellt. Diese Datei bleibt auf deinem PC und wird nie hochgeladen.",
 
-  "betfairUsername": "DEIN_BETFAIR_BENUTZERNAME",
-  "betfairPassword": "DEIN_BETFAIR_PASSWORT",
-  "betfairAppKey": "DEIN_16_ZEICHEN_APP_KEY",
+  "betfairUsername": "HIER_DEIN_BETFAIR_BENUTZERNAME",
+  "betfairPassword": "HIER_DEIN_BETFAIR_PASSWORT",
+  "betfairAppKey": "HIER_DEIN_BETFAIR_APP_KEY",
+  "bridgeToken": "HIER_DEIN_BRIDGE_TOKEN",
 
   "bridgeUrl": "https://noexklrgtqveiclijdwp.supabase.co/functions/v1/bf-bridge",
-  "bridgeToken": "SELBST_AUSGEDACHTES_LANGES_PASSWORT",
 
-  "intervalSeconds": 20,
-  "maxMarkets": 100,
-  "eventTypeIds": ["1", "2", "7522", "6423"]
+  "_TAKT": "Ab Fassung 3.0 stellt sich der Takt selbst ein: Mit dem verzoegerten App-Key sind die Kurse rund eine Minute alt, haeufigeres Fragen liefert dieselben Zahlen. Deshalb wird dort seltener, dafuer ueber deutlich mehr Maerkte gescannt. Mit einem Live-Key wird automatisch auf den schnellen Takt umgestellt. Die folgenden Felder braucht man normalerweise NICHT — sie sind nur da, wenn man bewusst abweichen will.",
+
+  "_delayedHotSeconds": 60,
+  "_delayedWarmSeconds": 120,
+  "_delayedMaxBookPerSweep": 12000,
+  "_liveHotSeconds": 20,
+  "_liveWarmSeconds": 150,
+  "_liveMaxBookPerSweep": 6000,
+  "_polymarketIntervalSeconds": 20,
+
+  "_SCHWELLEN": "Ab welcher Rendite eine Chance gemeldet wird. minRoiSchnellPercent gilt fuer laufende und bald startende Spiele, solange der Key verzoegert ist — dort muss mehr Luft sein, weil die gesehene Quote schon Vergangenheit ist.",
+  "minRoiPercent": 0.5,
+  "minRoiSchnellPercent": 2.5,
+  "minStake": 20,
+
+  "_GEBUEHREN": "Nur Rueckfallwerte. Im Normalfall wird der ECHTE Satz JE MARKT verwendet: Betfair meldet marketBaseRate, Polymarket feeSchedule.rate. Ein unbekannter Satz wird NIE als 0 gerechnet, sondern mit pmFallbackFeePercent angenommen — sonst entstehen Chancen, die es nicht gibt.",
+  "feeBetfairPercent": 5,
+  "pmFallbackFeePercent": 7,
+
+  "_AUSGESCHLOSSEN": "Pferde- und Windhundrennen (7 und 4339). Alles andere wird gescannt, auch Politik und Wirtschaft — dort liegt die groesste Ueberschneidung mit Polymarket.",
+  "excludeEventTypeIds": ["7", "4339"]
 }
