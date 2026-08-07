@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=44"></script>
+<script src="config.js?v=45"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -181,10 +181,16 @@
   .cattab .c{font-family:var(--mono);font-size:10px;opacity:.55;margin-left:5px}
 
   .tablewrap{padding:0 20px 40px}
-  .thead{display:grid;grid-template-columns:1.9fr 1.1fr 1.1fr 80px 92px 78px;gap:12px;padding:11px 14px;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--line2)}
+  /* Die Aktionsspalte hatte 78 px, musste aber bis zu vier Dinge tragen:
+     Hit-Marke, zwei Direktlinks und den Rechner-Knopf. Zusammen ueber 130 px —
+     deshalb quollen sie heraus und legten sich ueber die Rendite. Jetzt hat
+     die Spalte den Platz, den ihr Inhalt wirklich braucht. */
+  .thead{display:grid;grid-template-columns:1.9fr 1.05fr 1.05fr 74px 88px 136px;gap:10px;padding:11px 14px;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--line2)}
   .thead .r{text-align:right}
   .rows{display:flex;flex-direction:column}
-  .r-o{display:grid;grid-template-columns:1.9fr 1.1fr 1.1fr 80px 92px 78px;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer;position:relative;transition:background .1s}
+  .r-o{display:grid;grid-template-columns:1.9fr 1.05fr 1.05fr 74px 88px 136px;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer;position:relative;transition:background .1s}
+  /* Keine Spalte darf in die naechste laufen — auch nicht bei langem Inhalt */
+  .r-o > *{min-width:0}
   .r-o::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:transparent}
   .r-o:hover{background:#0c0d07}
   .r-o:hover::before{background:var(--gold-d)}
@@ -228,11 +234,24 @@
   .arb.good{color:var(--txt)}
   .roi{text-align:right;font-family:var(--mono);font-weight:600;font-size:16px}
   .roi.up{color:var(--pos)}.roi.big{color:var(--gold-b)}.roi.down{color:var(--neg)}
-  .act{display:flex;justify-content:flex-end;align-items:center;gap:8px}
+  .act{display:flex;justify-content:flex-end;align-items:center;gap:5px;overflow:hidden}
   .hitbadge{font-size:8.5px;letter-spacing:.1em;font-weight:800;padding:3px 6px;background:var(--gold);color:var(--void);animation:hb 1s infinite}
   @keyframes hb{0%,100%{box-shadow:0 0 0 rgba(199,178,76,.5)}50%{box-shadow:0 0 12px rgba(199,178,76,.8)}}
-  .rowcalc{border:1px solid var(--line3);background:#181b12;padding:2px 6px;font-size:15px;color:var(--gold);line-height:1}
+  .rowcalc{border:1px solid var(--line3);background:#181b12;padding:2px 6px;font-size:15px;color:var(--gold);
+    line-height:1;cursor:pointer;flex:none}
   .rowcalc:hover{color:var(--gold-b);border-color:var(--gold-d)}
+  .rowcalc:active{transform:translateY(1px)}
+
+  /* ── Alles, was man anklicken kann, zeigt auch den Finger ──────────────
+     Vorher war das an vielen Stellen einzeln gesetzt und an ebenso vielen
+     vergessen worden. Eine Regel fuer alle ist verlaesslicher als zwanzig
+     verstreute. Abgeschaltete Knoepfe bekommen ausdruecklich KEINEN Finger,
+     sonst verspricht der Zeiger etwas, das nicht passiert. */
+  button, a[href], .chip, .qchip, .cattab, .acct, .toggle, .sortseg button,
+  [role="button"], summary, label.toggle{cursor:pointer}
+  button:disabled, .placebtn:disabled, [aria-disabled="true"]{cursor:not-allowed}
+  /* Ein kurzer Druckpunkt macht spuerbar, dass der Klick angekommen ist */
+  button:not(:disabled):active, .chip:active, .qchip:active{transform:translateY(1px)}
   .empty{padding:54px 20px;text-align:center;color:var(--dim);font-family:var(--mono);font-size:12px;line-height:1.7}
 
   .tk-empty{padding:8px 0;color:var(--dim);font-size:11px;font-family:var(--mono);line-height:1.6}
@@ -330,8 +349,10 @@
   .odds .pmpc{font-family:var(--mono);font-size:10px;color:var(--dim);margin-left:5px;white-space:nowrap}
   /* Direktlinks je Zeile, damit sich jede Meldung nachprüfen lässt */
   .act .rowlink{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:var(--gold);
-    border:1px solid var(--line3);padding:3px 5px;text-decoration:none;background:#181b12;margin-right:4px}
+    border:1px solid var(--line3);padding:3px 5px;text-decoration:none;background:#181b12;
+    cursor:pointer;white-space:nowrap;flex:none}
   .act .rowlink:hover{color:var(--gold-b);border-color:var(--gold-d);background:#141206}
+  .act .rowlink:active{transform:translateY(1px)}
   .roi .verd{display:inline-block;margin-left:5px;width:13px;height:13px;line-height:12px;text-align:center;
     border:1px solid var(--neg);color:var(--neg);font-size:9px;font-family:var(--mono);cursor:help}
 
@@ -579,6 +600,20 @@
     .kpis{grid-template-columns:repeat(2,1fr)}.kpi:nth-child(5){grid-column:1/3}
   }
   @media(prefers-reduced-motion:reduce){*{animation:none!important}}
+
+  /* ── Ruhezustand: nichts laeuft, was niemand sieht ─────────────────────
+     Der Scanner darf stundenlang offen bleiben, ohne den Rechner zu heizen.
+     Die Zeilen werden schon nur bei echter Aenderung neu gebaut — die
+     Daueranimationen (pulsierende Punkte, blinkende Hit-Marken, der
+     Scan-Balken) liefen aber weiter, auch wenn der Tab im Hintergrund lag.
+     Bei vielen Treffern sind das dutzende gleichzeitig. */
+  body.ruht *, body.ruht *::before, body.ruht *::after{
+    animation-play-state:paused!important;
+    transition:none!important}
+
+  /* Zeilen ausserhalb des Sichtbereichs muss der Browser nicht zeichnen.
+     Die Hoehenangabe verhindert, dass der Balken beim Scrollen springt. */
+  .rows .r-o{content-visibility:auto;contain-intrinsic-size:auto 58px}
 </style>
 </head>
 <body>
@@ -966,7 +1001,11 @@ function endeInfo(ts){
   var d=new Date(ts), ms=d.getTime()-Date.now();
   var datum=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
   var uhr=d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-  var tage=Math.floor(ms/86400000), std=Math.floor(ms/3600000);
+  /* Tage RUNDEN, nicht abrunden. Mit Abrunden wurden aus 47 Stunden
+     „morgen" — obwohl es fast zwei Tage sind. Wer danach plant, verschätzt
+     sich um einen ganzen Tag. Die Stundenanzeige darunter bleibt beim
+     Abrunden, dort ist „in 3 Std" bei 3,9 Stunden das ehrlichere Wort. */
+  var tage=Math.round(ms/86400000), std=Math.floor(ms/3600000);
   var nah;
   if(ms<0)            nah='vorbei';
   else if(std<1)      nah='in unter 1 Std';
@@ -1785,6 +1824,19 @@ function processSignals(){
   // Kandidaten aufräumen, deren Markt es nicht mehr gibt
   Object.keys(kandidaten).forEach(function(id){ if(!mkMap.get(id)) delete kandidaten[id]; });
 }
+
+/* ── Ruhezustand, sobald niemand hinsieht ──────────────────────────────
+   Liegt der Tab im Hintergrund, werden alle Daueranimationen angehalten.
+   Das Rechnen und Hochladen laeuft weiter — nur das Zeichnen ruht, denn
+   dafuer gibt es in dem Moment keinen Zuschauer. Auf einem Laptop macht
+   das ueber Stunden den Unterschied zwischen warm und heiss. */
+(function(){
+  var setzeRuhe=function(){
+    try{ document.body.classList.toggle('ruht', document.hidden); }catch(e){}
+  };
+  document.addEventListener('visibilitychange', setzeRuhe);
+  setzeRuhe();
+})();
 
 /* ---- Wenn ein Link ins Leere führen könnte ---------------------------
    Klickt jemand auf einen Markt-Link, dessen Daten nicht mehr frisch sind,
