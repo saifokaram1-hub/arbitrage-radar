@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Orion Panel — Scanner-Bridge (läuft LOKAL auf deinem PC)
  * ========================================================
  * Liest BEIDE Seiten und rechnet die Arbitrage selbst aus:
@@ -172,7 +172,7 @@ const O = {
   warmSeconds:  zahl(CFG.warmIntervalSeconds, 150),
   coldSeconds:  zahl(CFG.coldIntervalSeconds, 900),
   excludeEventTypeIds: CFG.excludeEventTypeIds || ['7', '4339'],   // Pferde, Windhunde
-  reqPerSecond: zahl(CFG.maxRequestsPerSecond, 4),
+  reqPerSecond: zahl(CFG.maxRequestsPerSecond, 10),
   minSize:      zahl(CFG.minSize, 10),
   // Rückfallwerte. Im Normalfall werden die ECHTEN Sätze je Markt verwendet:
   // Betfair liefert marketBaseRate, Polymarket feeSchedule.rate.
@@ -199,8 +199,8 @@ const O = {
    erkennt, ob auf einem PC noch eine veraltete Bridge läuft, und den Nutzer
    auffordern kann, die neue Datei zu holen. BEI JEDER inhaltlichen Änderung
    an der Suchlogik hochzählen — sonst merkt niemand, dass er alt ist. */
-const BRIDGE_BUILD = 10;
-const BRIDGE_VERSION = "3.0";
+const BRIDGE_BUILD = 11;
+const BRIDGE_VERSION = "3.1";
 
 const BF_LOGIN = 'https://identitysso.betfair.com/api/login';
 const BF_KEEP  = 'https://identitysso.betfair.com/api/keepAlive';
@@ -216,12 +216,41 @@ const schlaf = ms => new Promise(r => setTimeout(r, ms));
 
 /* ═══════════════ Betfair: Drosselung, Login, Aufrufe ═══════════════ */
 
-let minGap = Math.round(1000 / Math.max(O.reqPerSecond, 1));
+/* ── Anfragerate ────────────────────────────────────────────────────────
+   Betfairs dokumentierte Grenze von 5 Anfragen je Sekunde gilt fuer EINEN
+   EINZELNEN Markt. Wir fragen jeden Markt nur einmal je Durchlauf, also
+   hoechstens einmal pro Minute — davon sind wir weit entfernt. Fuer die
+   Gesamtrate ueber VERSCHIEDENE Maerkte nennt Betfair keine harte Grenze;
+   begrenzend ist das Gewicht: 200 Punkte je Anfrage, ein Kursabruf wiegt 5,
+   macht 40 Maerkte pro Anfrage.
+
+   Deshalb 10 Anfragen je Sekunde als Ziel. Das halbiert die Dauer eines
+   Durchlaufs gegenueber den bisherigen 4 — und ein kuerzerer Durchlauf ist
+   auch mit verzoegertem Schluessel besser: zwischen dem ersten und dem
+   letzten gelesenen Markt liegen dann 11 statt 27 Sekunden, die beiden
+   Buecher werden also naeher am selben Augenblick verglichen.
+
+   Meldet Betfair trotzdem TOO_MANY_REQUESTS, wird sofort entschaerft und
+   danach in kleinen Schritten wieder herangetastet — ohne diese Erholung
+   bliebe die Bridge nach einer einzigen Drosselung bis zum Neustart lahm. */
+const zielGap = Math.round(1000 / Math.max(O.reqPerSecond, 1));
+let minGap = zielGap;
 let letzterCall = 0;
+let seitDrossel = 0;          // erfolgreiche Aufrufe seit der letzten Drosselung
+
 async function bremse() {
   const w = letzterCall + minGap - Date.now();
   if (w > 0) await schlaf(w);
   letzterCall = Date.now();
+}
+// Nach einer Drosselung vorsichtig wieder beschleunigen
+function rateErholen() {
+  if (minGap <= zielGap) return;
+  if (++seitDrossel < 40) return;      // erst nach 40 stoerungsfreien Aufrufen
+  seitDrossel = 0;
+  minGap = Math.max(zielGap, Math.round(minGap * 0.85));
+  log('⏱ wieder etwas schneller — Takt ' + minGap + ' ms (' +
+      (1000 / minGap).toFixed(1) + ' Anfragen/s)');
 }
 
 let sessionToken = null, lastLogin = 0, loginFehler = 0, pauseBis = 0;
@@ -374,12 +403,14 @@ async function rpc(method, params, versuch) {
     const s = JSON.stringify(first.error);
     if (/TOO_MANY_REQUESTS|DSC-0018/i.test(s) && versuch < 4) {
       minGap = Math.min(2000, Math.round(minGap * 1.7));
+      seitDrossel = 0;   // Erholung beginnt von vorn
       log('⏱ Betfair drosselt — Takt auf ' + minGap + 'ms entschaerft');
       await schlaf(1200 * (versuch + 1));
       return rpc(method, params, versuch + 1);
     }
     throw new Error(s.slice(0, 220));
   }
+  rateErholen();   // stoerungsfrei durchgekommen -> ggf. wieder beschleunigen
   return first.result;
 }
 
@@ -1520,6 +1551,11 @@ module.exports = {
   betfairIntern, polymarketIntern,
   pmListe, pmKurse, polymarketScan, kategorie,
   takt, TAKT,
+  // Nur zum Nachpruefen der Drossel- und Erholungslogik
+  rateErholen,
+  rateStand: () => ({ minGap, zielGap, seitDrossel }),
+  rateDrosseln: () => { minGap = Math.min(2000, Math.round(minGap * 1.7)); seitDrossel = 0; },
+  rateZuruecksetzen: () => { minGap = zielGap; seitDrossel = 0; },
   PM, KATALOG, BUCH, O
 };
 

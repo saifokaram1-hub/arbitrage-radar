@@ -243,7 +243,7 @@
       <div class="scroll">
         <table>
           <tr><th>&nbsp;</th><th>Verzögerter Key</th><th>Live-Key</th></tr>
-          <tr><td class="k">Betfair-Takt</td><td class="num">alle 60 s</td><td class="num">alle 20 s</td></tr>
+          <tr><td class="k">Betfair-Takt</td><td class="num">alle 60 s</td><td class="num">alle 20 s</td></tr><tr><td class="k">Dauer je Durchlauf</td><td class="num">rund 11 s</td><td class="num">rund 11 s</td></tr>
           <tr><td class="k">ganzer Bestand</td><td class="num">alle 120 s</td><td class="num">alle 150 s</td></tr>
           <tr><td class="k">Märkte je Durchlauf</td><td class="num">bis 12 000</td><td class="num">bis 6 000</td></tr>
           <tr><td class="k">Polymarket</td><td class="num">alle 20 s</td><td class="num">alle 20 s</td></tr>
@@ -251,6 +251,17 @@
       </div>
       <p class="note">Polymarket läuft in einem <strong>eigenen, schnelleren Takt</strong>. Diese Kurse sind echt live, unabhängig davon, welchen Betfair-Schlüssel man hat — sie an den verzögerten Takt zu koppeln hieße, die frischere Quelle künstlich auszubremsen.</p>
       <p class="note">Bleibt in einem Durchlauf Kapazität übrig, wird sie mit <em>weiteren</em> Märkten aufgefüllt statt dieselben erneut zu fragen. Das Profil für den Live-Key ist bereits hinterlegt und greift automatisch, sobald ein Live-Schlüssel erkannt wird — dort zählt jede Sekunde, weil die Kurse dann wirklich aktuell sind.</p>
+
+      <h4>Wie lange ein Durchlauf dauert</h4>
+      <p>Betfair erlaubt <strong>200 Punkte je Anfrage</strong>, ein Kursabruf wiegt 5 Punkte — macht <strong>40 Märkte pro Anfrage</strong>. Das ist fest und lässt sich nicht umgehen. Der gemessene Bestand liegt bei rund <strong>4 250 Märkten</strong>, das sind 107 Anfragen für alles.</p>
+      <pre>4 250 Märkte ÷ 40 je Anfrage  =  107 Anfragen
+
+bei  4 Anfragen/s  →  26,8 s   <span class="c">bis Fassung 3.0</span>
+bei 10 Anfragen/s  →  <b>10,7 s</b>   <span class="c">ab Fassung 3.1</span></pre>
+      <p class="note">Betfairs dokumentierte Grenze von <strong>5 Anfragen je Sekunde gilt für einen einzelnen Markt</strong>, nicht für die Summe. Jeder Markt wird hier höchstens einmal pro Durchlauf gefragt, also etwa einmal pro Minute — davon sind wir um den Faktor 300 entfernt.</p>
+      <div class="call good"><b>Der kürzere Durchlauf hilft auch mit verzögertem Schlüssel.</b> Zwischen dem ersten und dem letzten gelesenen Markt liegen jetzt 11 statt 27 Sekunden. Beide Bücher werden also näher am selben Augenblick verglichen — und genau das entscheidet, ob eine gemeldete Chance beim Klicken noch da ist.</div>
+      <p class="note">Meldet Betfair dennoch eine Überlastung, wird der Takt sofort entschärft und danach in kleinen Schritten wieder herangetastet. Ohne diese Erholung bliebe die Bridge nach einer einzigen Drosselung bis zum Neustart langsam.</p>
+      <div class="call warn"><b>Zwei Sekunden je Durchlauf gehen nicht.</b> Dafür wären 54 Anfragen pro Sekunde nötig. Das ist der Bereich, in dem Betfair Zugänge sperrt — und ein gesperrter Schlüssel kostet alles, nicht nur Geschwindigkeit. Für echte Echtzeit gibt es einen anderen Weg: die Stream-Schnittstelle, bei der Betfair Änderungen von sich aus schickt, statt dass man fragt. Das lohnt sich erst mit einem Live-Key.</div>
       <div class="call warn"><b>Was das nicht ändert.</b> Die Überschneidung zwischen Polymarket (überwiegend Politik) und Betfair (fast nur Sport) bleibt strukturell klein. Breiteres Scannen holt heraus, was da ist — es erzeugt keine Chancen, die es nicht gibt. Realistisch bleiben wenige Treffer am Tag bei 0,5 bis 5 % Rendite.</div>
     </section>
 
@@ -536,8 +547,8 @@ node oberflaeche-pruefung.js  <span class="c">32 Prüfungen — Anzeige, Gebühr
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=43"></script>
-<script src="pdf.js?v=43"></script>
+<script src="config.js?v=44"></script>
+<script src="pdf.js?v=44"></script>
 <script>
 // PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.
 document.getElementById('pdfBtn').addEventListener('click', function(){

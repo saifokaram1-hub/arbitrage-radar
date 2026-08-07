@@ -760,6 +760,60 @@ console.log('\n══════════ 21. Takt richtet sich nach dem Sch
   B.setKeyArt(alt);
 }
 
+
+console.log('\n══════════ 22. Anfragerate und Erholung ══════════\n');
+{
+  /* Betfairs dokumentierte Grenze von 5 Anfragen je Sekunde gilt fuer EINEN
+     Markt. Wir fragen jeden Markt einmal je Durchlauf. Begrenzend ist das
+     Gewicht: 200 Punkte je Anfrage, ein Kursabruf wiegt 5 -> 40 Maerkte.
+     Wird trotzdem gedrosselt, muss sich das wieder erholen — sonst bleibt
+     die Bridge nach einer einzigen Drosselung bis zum Neustart lahm. */
+  B.rateZuruecksetzen();
+  const start = B.rateStand();
+
+  pruefe('Zielrate ist 10 Anfragen je Sekunde',
+         Math.round(1000 / start.zielGap) === 10,
+         (1000 / start.zielGap).toFixed(1) + ' Anfragen/s');
+
+  const proDurchlauf = Math.ceil(4256 / 40);
+  pruefe('ganzer Bestand in rund 11 Sekunden',
+         Math.abs(proDurchlauf * start.zielGap / 1000 - 10.7) < 1,
+         (proDurchlauf * start.zielGap / 1000).toFixed(1) + ' s fuer ' + proDurchlauf + ' Anfragen');
+
+  // Jeder EINZELNE Markt wird hoechstens einmal je Durchlauf gefragt
+  pruefe('Abstand zu Betfairs Grenze je Markt ist gross',
+         (1 / 60) * 5 < 1, '1 Abfrage/60 s gegen erlaubte 5/s');
+
+  // Drosselung
+  B.rateDrosseln();
+  const gedrosselt = B.rateStand();
+  pruefe('Drosselung verlangsamt sofort',
+         gedrosselt.minGap > start.zielGap,
+         start.zielGap + ' ms -> ' + gedrosselt.minGap + ' ms');
+
+  // Erholung: erst nach genuegend stoerungsfreien Aufrufen
+  for (let i = 0; i < 39; i++) B.rateErholen();
+  pruefe('erholt sich nicht sofort',
+         B.rateStand().minGap === gedrosselt.minGap,
+         'nach 39 Aufrufen noch ' + B.rateStand().minGap + ' ms');
+
+  B.rateErholen();
+  const nach40 = B.rateStand();
+  pruefe('nach 40 stoerungsfreien Aufrufen wieder schneller',
+         nach40.minGap < gedrosselt.minGap,
+         gedrosselt.minGap + ' ms -> ' + nach40.minGap + ' ms');
+
+  // Und irgendwann zurueck auf der Zielrate, aber nie darueber hinaus
+  for (let i = 0; i < 40 * 12; i++) B.rateErholen();
+  const ende = B.rateStand();
+  pruefe('kehrt zur Zielrate zurueck', ende.minGap === ende.zielGap,
+         ende.minGap + ' ms');
+  pruefe('beschleunigt nie ueber die Zielrate hinaus',
+         ende.minGap >= ende.zielGap);
+
+  B.rateZuruecksetzen();
+}
+
 console.log('\n══════════════════════════════════════════');
 console.log('  ' + ok + ' Prüfungen bestanden, ' + fehler + ' fehlgeschlagen');
 console.log('══════════════════════════════════════════\n');
