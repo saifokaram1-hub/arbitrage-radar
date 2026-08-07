@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=40"></script>
+<script src="config.js?v=41"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -206,6 +206,14 @@
   .dnp.hoch{color:#d98c4a;border-color:#7a5220}
   .dnp.mittel{color:#c9c060;border-color:#5f5a20}
   .liq{font-size:9.5px;color:var(--dim);font-family:var(--mono)}
+  /* Wann die Wette vorbei ist. Lange Laufzeiten binden das Geld — das soll
+     man sehen, bevor man setzt, nicht erst hinterher. */
+  .endet{font-size:9.5px;font-family:var(--mono);color:var(--muted);white-space:nowrap;
+    border-left:1px solid var(--line2);padding-left:7px}
+  .endet.kurz{color:var(--gold-b)}
+  .endet.lang{color:#d98c4a}
+  .endet.vorbei{color:var(--neg)}
+  .endet.unbekannt{color:var(--dim);font-style:italic}
   .age{font-size:10px;color:var(--dim);font-family:var(--mono)}
   .age .adot{display:inline-block;width:6px;height:6px;background:var(--pos);margin-right:4px;vertical-align:middle}
   .age.stale .adot{background:var(--gold-d)}
@@ -488,6 +496,15 @@
   .gsatz{font-size:10px;color:var(--dim)}
   .gminus{color:#d98c4a}
   .gplus{color:var(--pos)}
+  .gebEnde{padding:7px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--muted);line-height:1.5}
+  .gebEnde b{color:var(--txt)}
+  .gebEnde .gk{color:var(--dim)}
+  .gebEnde.lang{background:rgba(217,140,74,.07);border-left:2px solid #6e5a22}
+  .gebEnde.vorbei{background:rgba(190,74,60,.09);border-left:2px solid var(--neg)}
+  .gebEnde.unbekannt{color:var(--dim);font-style:italic}
+  .gebEnde .glang{color:#d98c4a;font-size:10px}
+  .gebEnde.vorbei .glang{color:var(--neg)}
+  .gebEnde .gungefaehr{color:var(--dim);font-size:10px}
   .gebSumme{padding:8px 10px;border-bottom:1px solid var(--line);background:rgba(159,191,59,.05)}
   .gebHinweis{padding:7px 10px;color:var(--dim);font-size:10px;line-height:1.55}
   .gebHinweis b{color:var(--muted)}
@@ -914,10 +931,37 @@ function pmSlug(m){
 }
 function mkObj(p,a0,a1,s0,s1){
   var f=pmFee(p.m);
+  /* Auflösungsdatum mitnehmen. Es steht in den Marktdaten, wurde aber bisher
+     verworfen — dabei ist es für die Entscheidung wesentlich: bis dahin ist
+     das Geld gebunden, und bei einer Wette in acht Monaten sind auch 3 %
+     kein gutes Geschäft. */
+  var ende = p.m.endDate ? Date.parse(p.m.endDate) : null;
   return {id:'pm_'+p.m.id, cat:categorize(p.m.question), ev:p.m.question, o1:p.outs[0], o2:p.outs[1],
     ask0:a0, ask1:a1, sz0:s0||0, sz1:s1||0,
     feeSatz:f.satz, feeExp:f.exp, feeTyp:f.typ,
+    endet:(ende&&isFinite(ende))?ende:null,
     liq:parseFloat(p.m.liquidity||0), vol:parseFloat(p.m.volume||0), slug:pmSlug(p.m)};
+}
+
+/* Wann ist die Wette vorbei? Datum und Abstand in Klartext.
+   Ohne Datum weiss man nicht, wie lange der Einsatz gebunden ist — und das
+   entscheidet mit darueber, ob sich eine Chance ueberhaupt lohnt. */
+function endeInfo(ts){
+  if(!ts || !isFinite(ts)) return null;
+  var d=new Date(ts), ms=d.getTime()-Date.now();
+  var datum=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+  var uhr=d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  var tage=Math.floor(ms/86400000), std=Math.floor(ms/3600000);
+  var nah;
+  if(ms<0)            nah='vorbei';
+  else if(std<1)      nah='in unter 1 Std';
+  else if(std<24)     nah='in '+std+' Std';
+  else if(tage===1)   nah='morgen';
+  else if(tage<31)    nah='in '+tage+' Tagen';
+  else if(tage<365)   nah='in '+Math.round(tage/30.4)+' Monaten';
+  else                nah='in '+(tage/365).toFixed(1).replace('.',',')+' Jahren';
+  return {datum:datum, uhr:uhr, tage:tage, nah:nah, vorbei:ms<0,
+          lang:tage>60, kurz:(ms>=0&&std<24)};
 }
 
 // Gamma liefert HÖCHSTENS 100 Einträge pro Aufruf — egal welches limit man setzt.
@@ -1064,7 +1108,7 @@ function mergeMarkets(fresh, prune){
   fresh.forEach(function(f){
     seen[f.id]=1; var ex=mkMap.get(f.id);
     if(ex){ ex.ask0=f.ask0; ex.ask1=f.ask1; ex.sz0=f.sz0; ex.sz1=f.sz1; ex.liq=f.liq; ex.vol=f.vol; ex.cat=f.cat; ex.ev=f.ev; ex.o1=f.o1; ex.o2=f.o2; ex.slug=f.slug;
-            ex.feeSatz=f.feeSatz; ex.feeExp=f.feeExp; ex.feeTyp=f.feeTyp; }
+            ex.feeSatz=f.feeSatz; ex.feeExp=f.feeExp; ex.feeTyp=f.feeTyp; ex.endet=f.endet; }
     else { f.since=0; f.wasHit=false; f.demo=false; mkMap.set(f.id,f); }
   });
   // Demo-Zeilen und die fertig gerechneten Chancen der Bridge gehoeren nicht
@@ -1347,6 +1391,12 @@ function syncBridgeMarkets(){
     m.fertig=true; m.opp=o;
     m.cat=categorize(o.ev||'');
     m.ev=o.ev||'(ohne Namen)';
+    /* Wann die Wette vorbei ist. Die Bridge schickt entweder das Datum selbst
+       (neuere Fassungen) oder nur die Tage bis dahin — dann wird daraus ein
+       Datum gerechnet und als ungefähr gekennzeichnet. */
+    if(o.endet && isFinite(Date.parse(o.endet))) { m.endet=Date.parse(o.endet); m.endetUngefaehr=false; }
+    else if(o.tage!=null && isFinite(+o.tage))   { m.endet=Date.now()+(+o.tage)*86400000; m.endetUngefaehr=true; }
+    else                                          { m.endet=null; m.endetUngefaehr=false; }
     m.o1=l1.pick||'Ausgang 1'; m.o2=l2.pick||'Ausgang 2';
     m.liq=+o.maxStake||0;
     m.src1=s1; m.src2=s2;
@@ -2400,6 +2450,21 @@ function sicherheitsPruefung(mk, v, S){
   var tiefeInfo = beinTiefe(mk, v, S);
   add('Tiefe zum besten Preis', tiefeInfo.reicht, true, tiefeInfo.text);
 
+  /* 8b — Laufzeit. Ein Markt, der laut Datum schon vorbei ist, darf nicht
+     gesetzt werden: entweder ist er bereits entschieden, oder die Daten sind
+     alt. Beides macht die Meldung wertlos. Eine sehr lange Laufzeit sperrt
+     nicht, muss aber sichtbar sein — bis dahin ist das Geld gebunden. */
+  var eInfo=endeInfo(mk.endet);
+  add('Wette noch offen', !(eInfo && eInfo.vorbei), true,
+      !eInfo ? 'Auflösungsdatum nicht gemeldet — im Markt selbst nachsehen'
+        : (eInfo.vorbei ? 'Laut Datum am '+eInfo.datum+' vorbei — bereits entschieden oder veraltete Daten'
+                        : 'Läuft bis '+eInfo.datum+' ('+eInfo.nah+')'));
+  if(eInfo && !eInfo.vorbei){
+    add('Laufzeit', !eInfo.lang, false,
+        eInfo.lang ? 'Erst '+eInfo.nah+' — der Einsatz ist bis dahin gebunden'
+                   : 'Endet '+eInfo.nah+' — überschaubare Bindung');
+  }
+
   // 9 — Frische der Kurse
   var alt = mk.fertig ? (state.bfAge!=null? state.bfAge : null) : null;
   var frisch = alt==null || alt<180;
@@ -2604,6 +2669,20 @@ function renderFees(m, v, S){
     '<div class="gebBox">'+
       '<div class="gebKopf"><b>Aufteilung &amp; Gebühren</b>'+
         '<span>Gesamteinsatz '+eur(S)+'</span></div>'+
+      /* Wann die Wette vorbei ist, direkt über den Beträgen: bis dahin ist
+         das Geld gebunden und steht für nichts anderes zur Verfügung. */
+      (function(){
+        var e=endeInfo(m.endet);
+        if(!e) return '<div class="gebEnde unbekannt">Auflösungsdatum nicht gemeldet — '+
+                      'im Markt selbst nachsehen, wie lange der Einsatz gebunden wäre</div>';
+        return '<div class="gebEnde'+(e.vorbei?' vorbei':(e.lang?' lang':''))+'">'+
+          '<span class="gk">Wette vorbei am</span> <b>'+e.datum+'</b> um '+e.uhr+' Uhr · '+e.nah+
+          (m.endetUngefaehr? ' <span class="gungefaehr">(ungefähr)</span>':'')+
+          (e.lang? '<br><span class="glang">Der Einsatz ist bis dahin gebunden — bei dieser Laufzeit '+
+                   'ist auch eine gute Rendite wenig wert, wenn das Geld anderswo gebraucht wird.</span>':'')+
+          (e.vorbei? '<br><span class="glang">Dieser Markt sollte bereits aufgelöst sein — nicht mehr setzen.</span>':'')+
+        '</div>';
+      })()+
       zeile(0)+zeile(1)+
       '<div class="gebSumme">'+
         '<div class="gz2"><span class="gk">Tatsächliche Gebühr</span>'+
@@ -2889,6 +2968,15 @@ function render(){
           (m._grund||'wird geprüft')+'</span>':'')+
         (dnpRisk(m.ev,m.cat)!=='niedrig'?'<span class="dnp '+dnpRisk(m.ev,m.cat)+'" title="DNP/Void-Risiko: bei Nicht-Antreten zahlt Polymarket meist nicht zurück, Orbit voidet — Regeln prüfen">DNP?</span>':'')+
         (m.liq?'<span class="liq">Liq '+nf0.format(Math.round(m.liq))+' $</span>':'')+
+        /* Wann die Wette vorbei ist — bis dahin ist das Geld gebunden */
+        (function(){
+          var e=endeInfo(m.endet);
+          if(!e) return '<span class="endet unbekannt" title="Kein Auflösungsdatum gemeldet — im Markt selbst nachsehen">Ende ?</span>';
+          return '<span class="endet'+(e.vorbei?' vorbei':(e.lang?' lang':(e.kurz?' kurz':'')))+'" '+
+            'title="Auflösung am '+e.datum+' um '+e.uhr+' Uhr'+(m.endetUngefaehr?' (ungefähr, aus den gemeldeten Tagen gerechnet)':'')+
+            '. Bis dahin ist der Einsatz gebunden.">'+
+            e.datum+' · '+e.nah+(m.endetUngefaehr?' ~':'')+'</span>';
+        })()+
         '<span class="age '+ag.cls+'"><span class="adot"></span>'+ag.txt+'</span></div></div>'+
       seite(m.o1, v.s1, m, 0)+
       seite(m.o2, v.s2, m, 1)+

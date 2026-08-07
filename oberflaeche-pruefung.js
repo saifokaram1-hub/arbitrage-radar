@@ -31,7 +31,8 @@ function holeFunktion(name) {
 
 const quelle = ['buchKuerzel', 'syncBridgeMarkets', 'evalMarket', 'feasibleMax',
                 'paarungsAbdruck', 'gegenrechnung', 'bestaetige',
-                'buchName', 'routing', 'dnpRisk', 'beinTiefe', 'sicherheitsPruefung']
+                'buchName', 'routing', 'dnpRisk', 'beinTiefe', 'endeInfo',
+                'sicherheitsPruefung']
   .map(holeFunktion).join('\n\n');
 
 // Umgebung wie im Browser, aber nur so viel wie diese Funktionen brauchen
@@ -348,15 +349,74 @@ console.log('\n═════ 12. Sicherheitsprüfung sperrt, was sie sperren m
   // Die Liste muss vollstaendig sein
   m = guteChance(); v = guteBewertung(); v.m = m;
   pr = sandbox.sicherheitsPruefung(m, v, 100);
-  pruef('alle zwölf Punkte werden geprüft', pr.punkte.length === 12,
+  pruef('alle Punkte werden geprüft', pr.punkte.length >= 13,
         pr.punkte.length + ' Punkte');
   pruef('jeder Punkt hat eine Begründung',
         pr.punkte.every(x => typeof x.text === 'string' && x.text.length > 0));
-  pruef('kritische und Hinweise sind getrennt',
-        pr.punkte.filter(x => x.kritisch).length === 9 &&
-        pr.punkte.filter(x => !x.kritisch).length === 3,
-        pr.punkte.filter(x => x.kritisch).length + ' kritisch, ' +
+  pruef('jeder Punkt ist als Pflicht oder Hinweis eingestuft',
+        pr.punkte.every(x => typeof x.kritisch === 'boolean'),
+        pr.punkte.filter(x => x.kritisch).length + ' Pflicht, ' +
         pr.punkte.filter(x => !x.kritisch).length + ' Hinweise');
+  pruef('Pflichtpunkte überwiegen',
+        pr.punkte.filter(x => x.kritisch).length >= 9);
+}
+
+console.log('\n═════ 15. Wann ist die Wette vorbei? ═════');
+/* Ohne Enddatum weiss man nicht, wie lange das Geld gebunden ist — und ein
+   Markt, der laut Datum schon vorbei ist, darf gar nicht setzbar sein. */
+{
+  const tag = 86400000;
+  let e = sandbox.endeInfo(Date.now() + 6 * tag);
+  pruef('Datum und Abstand werden genannt',
+        e && /^\d{2}\.\d{2}\.\d{4}$/.test(e.datum) && e.nah === 'in 6 Tagen',
+        e ? e.datum + ' · ' + e.nah : '—');
+
+  e = sandbox.endeInfo(Date.now() + 3 * 3600000);
+  pruef('wenige Stunden werden als Stunden gezeigt', e && e.nah === 'in 3 Std', e.nah);
+  pruef('kurz vor Schluss wird markiert', e && e.kurz === true);
+
+  e = sandbox.endeInfo(Date.now() + 200 * tag);
+  pruef('lange Laufzeit wird als Monate gezeigt', e && /Monaten/.test(e.nah), e.nah);
+  pruef('lange Laufzeit wird als lang markiert', e && e.lang === true);
+
+  e = sandbox.endeInfo(Date.now() - 2 * tag);
+  pruef('vergangenes Datum wird erkannt', e && e.vorbei === true, e.nah);
+
+  pruef('ohne Datum kommt nichts zurück', sandbox.endeInfo(null) === null);
+  pruef('unbrauchbares Datum wird abgefangen', sandbox.endeInfo(NaN) === null);
+
+  // Und die Sicherheitspruefung muss einen abgelaufenen Markt sperren
+  const v = {
+    ok:true, roi:3.3628, cross:true,
+    s1:{src:'bf', odds:2.10, oddsEff:2.045},
+    s2:{src:'pm', odds:2.15, oddsEff:2.09}
+  };
+  const markt = (ende) => ({
+    id:'e1', ev:'Test', cat:'Sport', o1:'Yes', o2:'No', _sicher:true, fertig:true,
+    liq:9999, linkPm:'p', bfLink:'b', endet:ende,
+    opp:{ legs:[
+      {book:'Betfair', pick:'Yes', q:2.10, qEff:2.045, fee:5, size:900, link:'b'},
+      {book:'Polymarket', pick:'No', q:2.15, qEff:2.09, fee:6, size:900, link:'p'}
+    ]}
+  });
+
+  let vv = JSON.parse(JSON.stringify(v)); const alt = markt(Date.now() - 3 * tag); vv.m = alt;
+  let pr2 = sandbox.sicherheitsPruefung(alt, vv, 100);
+  const pOffen = pr2.punkte.find(x => x.name === 'Wette noch offen');
+  pruef('abgelaufener Markt wird gesperrt',
+        pr2.freigegeben === false && pOffen && pOffen.ok === false,
+        pOffen ? pOffen.text : 'Punkt fehlt');
+
+  vv = JSON.parse(JSON.stringify(v)); const laeuft = markt(Date.now() + 5 * tag); vv.m = laeuft;
+  pr2 = sandbox.sicherheitsPruefung(laeuft, vv, 100);
+  pruef('laufender Markt geht durch', pr2.freigegeben === true);
+
+  vv = JSON.parse(JSON.stringify(v)); const lang = markt(Date.now() + 300 * tag); vv.m = lang;
+  pr2 = sandbox.sicherheitsPruefung(lang, vv, 100);
+  const pLauf = pr2.punkte.find(x => x.name === 'Laufzeit');
+  pruef('lange Laufzeit warnt, sperrt aber nicht',
+        pr2.freigegeben === true && pLauf && pLauf.ok === false,
+        pLauf ? pLauf.text : 'Punkt fehlt');
 }
 
 console.log('\n═════ 14. Die zwei klassischen Anfängerfehler ═════');
