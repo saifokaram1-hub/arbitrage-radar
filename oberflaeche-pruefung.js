@@ -348,15 +348,74 @@ console.log('\n═════ 12. Sicherheitsprüfung sperrt, was sie sperren m
   // Die Liste muss vollstaendig sein
   m = guteChance(); v = guteBewertung(); v.m = m;
   pr = sandbox.sicherheitsPruefung(m, v, 100);
-  pruef('alle elf Punkte werden geprüft', pr.punkte.length === 11,
+  pruef('alle zwölf Punkte werden geprüft', pr.punkte.length === 12,
         pr.punkte.length + ' Punkte');
   pruef('jeder Punkt hat eine Begründung',
         pr.punkte.every(x => typeof x.text === 'string' && x.text.length > 0));
   pruef('kritische und Hinweise sind getrennt',
-        pr.punkte.filter(x => x.kritisch).length === 8 &&
+        pr.punkte.filter(x => x.kritisch).length === 9 &&
         pr.punkte.filter(x => !x.kritisch).length === 3,
         pr.punkte.filter(x => x.kritisch).length + ' kritisch, ' +
         pr.punkte.filter(x => !x.kritisch).length + ' Hinweise');
+}
+
+console.log('\n═════ 14. Die zwei klassischen Anfängerfehler ═════');
+/* Aus der Praxis bekannt und teuer:
+   (1) gleich viel GELD je Seite statt auf gleiche Auszahlung rechnen
+   (2) zwei Buecher fragen umgekehrt — dann kauft man zweimal dieselbe Seite */
+{
+  const v = () => ({
+    ok:true, roi:3.3628, cross:true,
+    s1:{src:'bf', odds:2.10, oddsEff:2.045},
+    s2:{src:'pm', odds:2.15, oddsEff:2.09}
+  });
+  const basis = (p1, p2) => ({
+    id:'f1', ev:'Test', cat:'Sport', o1:p1, o2:p2, _sicher:true, fertig:true, liq:9999,
+    linkPm:'p', bfLink:'b',
+    opp:{ legs:[
+      {book:'Betfair', pick:p1, q:2.10, qEff:2.045, fee:5, size:900, link:'b'},
+      {book:'Polymarket', pick:p2, q:2.15, qEff:2.09, fee:6, size:900, link:'p'}
+    ]}
+  });
+
+  // Fehler 1: gleich viel Geld je Seite waere KEINE Absicherung
+  const S = 100, q1 = 2.045, q2 = 2.09;
+  const haelfte = S/2;
+  pruef('gleich viel Geld je Seite zahlt UNGLEICH aus',
+        Math.abs(haelfte*q1 - haelfte*q2) > 1,
+        (haelfte*q1).toFixed(2) + ' € gegen ' + (haelfte*q2).toFixed(2) + ' € — das waere eine Wette');
+  const r = sandbox.routing(v(), S);
+  pruef('unsere Aufteilung zahlt GLEICH aus',
+        Math.abs(r.E1*q1 - r.E2*q2) < 0.01,
+        r.E1.toFixed(2) + ' € + ' + r.E2.toFixed(2) + ' € → beide ' + (r.E1*q1).toFixed(2) + ' €');
+
+  // Fehler 2: identische Ausgaenge auf beiden Beinen muessen sperren
+  let vv = v(); const gleich = basis('Yes', 'Yes'); vv.m = gleich;
+  let pr2 = sandbox.sicherheitsPruefung(gleich, vv, 100);
+  const punktGleich = pr2.punkte.find(x => x.name === 'Gegensätzliche Ausgänge');
+  pruef('zweimal dieselbe Seite wird gesperrt',
+        pr2.freigegeben === false && punktGleich && punktGleich.ok === false,
+        punktGleich ? punktGleich.text : 'Punkt fehlt');
+
+  // Auch bei abweichender Schreibweise erkennen
+  vv = v(); const fastGleich = basis('Yes', 'yes '); vv.m = fastGleich;
+  pr2 = sandbox.sicherheitsPruefung(fastGleich, vv, 100);
+  pruef('erkennt es auch bei anderer Schreibweise',
+        pr2.freigegeben === false,
+        'Yes gegen "yes " — trotzdem dieselbe Seite');
+
+  // Echte Gegensaetze muessen durchgehen
+  vv = v(); const echt = basis('Yes', 'No'); vv.m = echt;
+  pr2 = sandbox.sicherheitsPruefung(echt, vv, 100);
+  const punktEcht = pr2.punkte.find(x => x.name === 'Gegensätzliche Ausgänge');
+  pruef('echte Gegensätze gehen durch',
+        punktEcht && punktEcht.ok === true, punktEcht ? punktEcht.text : '—');
+
+  // Nicht benannte Ausgaenge: nicht pruefbar, also sperren statt annehmen
+  vv = v(); const leer = basis('', ''); vv.m = leer;
+  pr2 = sandbox.sicherheitsPruefung(leer, vv, 100);
+  pruef('unbenannte Ausgänge werden nicht durchgewunken',
+        pr2.freigegeben === false);
 }
 
 console.log('\n═════ 13. Tiefe zum besten Preis (Slippage-Schutz) ═════');

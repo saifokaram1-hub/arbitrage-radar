@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=39"></script>
+<script src="config.js?v=40"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -2319,13 +2319,34 @@ function sicherheitsPruefung(mk, v, S){
       g.ok ? 'Kehrwert-Weg und Quoten-Weg ergeben denselben Betrag'
            : (g.grund||'Rechenwege uneinig'));
 
-  // 3 — Beide Ausgänge müssen auf den Cent gleich auszahlen
-  var r=routing(v,S>0?S:100), S2=(S>0?S:100);
+  /* 3 — Beide Seiten müssen dieselbe Auszahlung ergeben. Das ist der
+     häufigste Anfängerfehler: gleich viel GELD auf beide Seiten zu setzen
+     statt auf gleiche Auszahlung zu rechnen. Bei 18 gegen 83 Cent bekäme
+     man für denselben Betrag ganz verschiedene Stückzahlen — und damit
+     keine Absicherung, sondern eine gewöhnliche Wette. */
+  var r=routing(v,S>0?S:100);
   var pay1=r.E1*v.s1.oddsEff, pay2=r.E2*v.s2.oddsEff;
   var gleich=Math.abs(pay1-pay2)<0.02;
   add('Beide Ausgänge zahlen gleich', gleich, true,
-      gleich ? eur(pay1)+' — egal wie es ausgeht'
+      gleich ? eur(pay1)+' — egal wie es ausgeht, nicht gleich viel Geld je Seite'
              : 'Abweichung '+eur(Math.abs(pay1-pay2))+' — keine echte Absicherung');
+
+  /* 3b — Die Ausgänge müssen GEGENSÄTZLICH sein. Zwei Bücher stellen
+     dieselbe Sache oft umgekehrt: „wird X gewinnen" gegen „wird X
+     verlieren". Wer dann auf beiden Seiten dasselbe kauft, setzt zweimal
+     auf dieselbe Seite — volles Risiko statt Absicherung. Identische
+     Bezeichnungen auf beiden Beinen sind das deutlichste Warnzeichen. */
+  var pick1, pick2;
+  if(mk.fertig && mk.opp && mk.opp.legs){
+    pick1=String(mk.opp.legs[0].pick||''); pick2=String(mk.opp.legs[1].pick||'');
+  } else { pick1=String(mk.o1||''); pick2=String(mk.o2||''); }
+  var nrmP=function(s){ return s.toLowerCase().replace(/[^a-z0-9äöüß]+/g,''); };
+  var verschieden = nrmP(pick1)!=='' && nrmP(pick2)!=='' && nrmP(pick1)!==nrmP(pick2);
+  add('Gegensätzliche Ausgänge', verschieden, true,
+      verschieden ? '„'+pick1+'" gegen „'+pick2+'" — zwei verschiedene Seiten'
+        : (nrmP(pick1)===nrmP(pick2) && nrmP(pick1)!==''
+            ? 'Beide Beine lauten „'+pick1+'" — das wäre zweimal dieselbe Wette, keine Absicherung'
+            : 'Ausgänge nicht benannt — nicht prüfbar, im Buch selbst nachsehen'));
 
   // 4 — Zwei verschiedene Bücher. Innerhalb eines Buches gibt es keine Arbitrage
   add('Zwei verschiedene Börsen', !!v.cross, true,
@@ -2464,11 +2485,19 @@ function renderGegenprobe(m, v){
       seiten.push({src:s, name:m.ev, pick:l.pick, link:l.link});
     });
   } else {
-    // Polymarket ist die Frage im Freitext, Betfair der strukturierte Markt
-    seiten.push({src:'pm', name:m.ev, pick:null, link:(m.linkPm||pmLink(m))});
-    if(m.bf) seiten.push({src:'bf', name:m.bfKey||'(Name nicht mitgeliefert)',
-                          pick:null, link:m.bfLink||''});
-    if(m.ob) seiten.push({src:'ob', name:m.obKey||m.ev, pick:null, link:m.obLink||''});
+    /* Der Ausgang MUSS je Seite dabeistehen. Zwei Bücher stellen dieselbe
+       Sache oft gegensätzlich: „Wird X gewinnen?" gegen „Wird X verlieren?".
+       Wer dann auf beiden Seiten JA kauft, setzt zweimal auf dasselbe —
+       volles Risiko, null Absicherung. Ohne den Ausgang neben dem Buch
+       lässt sich das nicht erkennen. */
+    seiten.push({src:v.s1.src, name:(v.s1.src==='bf'? (m.bfKey||m.ev) : m.ev),
+                 pick:m.o1, link:(v.s1.src==='bf'? (m.bfLink||'')
+                                 : v.s1.src==='ob'? (m.obLink||'')
+                                 : (m.linkPm||pmLink(m)))});
+    seiten.push({src:v.s2.src, name:(v.s2.src==='bf'? (m.bfKey||m.ev) : m.ev),
+                 pick:m.o2, link:(v.s2.src==='bf'? (m.bfLink||'')
+                                 : v.s2.src==='ob'? (m.obLink||'')
+                                 : (m.linkPm||pmLink(m)))});
   }
   if(seiten.length<2){ el.innerHTML=''; return; }
 
@@ -2484,9 +2513,15 @@ function renderGegenprobe(m, v){
                : '<span class="sameKein">kein Link</span>')+
       '</div>';
     }).join('')+
-    '<div class="sameWarn">Beide Zeilen müssen <b>dasselbe Ereignis</b> meinen. '+
-      'Wenn nicht: nicht setzen — dann ist es keine Absicherung, sondern zwei '+
-      'getrennte Wetten.</div>'+
+    '<div class="sameWarn">Zwei Dinge selbst prüfen, beides sind die häufigsten '+
+      'Fehler:<br>'+
+      '<b>1. Dasselbe Ereignis?</b> Wenn die Zeilen verschiedene Ereignisse meinen, '+
+      'ist es keine Absicherung, sondern zwei getrennte Wetten.<br>'+
+      '<b>2. Gegensätzliche Ausgänge?</b> Zwei Bücher fragen dieselbe Sache oft '+
+      'umgekehrt — „wird X gewinnen" gegen „wird X verlieren". Dann ist JA bei dem '+
+      'einen dasselbe wie NEIN bei dem anderen. Wer auf beiden Seiten dasselbe kauft, '+
+      'setzt <b>zweimal auf dieselbe Seite</b>: volles Risiko, null Absicherung.'+
+      '</div>'+
   '</div>';
 }
 
@@ -2542,6 +2577,15 @@ function renderFees(m, v, S){
         '<span class="gv"><b>'+eur(E)+'</b> · '+anteil.toFixed(1).replace('.',',')+' %</span></div>'+
       '<div class="gz2"><span class="gk">Quote</span>'+
         '<span class="gv">'+nf.format(s.odds)+' → <b>'+nf.format(s.oddsEff)+'</b> nach Gebühr</span></div>'+
+      /* Bei Polymarket kauft man ANTEILE, nicht Euro. Gleich viel Geld auf
+         beide Seiten zu setzen ergäbe bei verschiedenen Preisen verschiedene
+         Stückzahlen — und damit keine Absicherung. Deshalb die Stückzahl
+         dazuschreiben: sie ist es, die am Ende ausgezahlt wird. */
+      (s.src==='pm' && s.odds>1
+        ? '<div class="gz2"><span class="gk">Anteile kaufen</span>'+
+          '<span class="gv"><b>'+(E*s.odds).toFixed(1).replace('.',',')+'</b> Stück '+
+          'zu je '+(100/s.odds).toFixed(1).replace('.',',')+' ¢</span></div>'
+        : '')+
       '<div class="gz2"><span class="gk">Gebührensatz</span>'+
         '<span class="gv gsatz">'+satzText(m,v,idx)+'</span></div>'+
       '<div class="gz2"><span class="gk">Gebühr, wenn diese Seite gewinnt</span>'+

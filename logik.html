@@ -391,6 +391,24 @@ Gewinn in beiden Fällen: rund <b>+3,37 €</b> auf 100 € Einsatz</pre>
     <section>
       <h3>Was im Wett-Ticket steht</h3>
       <p>Klickst du eine Chance in der Liste an, erscheint links genau diese Rechnung mit deinen Zahlen — je Anbieter einzeln:</p>
+      <h4>Die zwei Fehler, die fast jeder beim ersten Mal macht</h4>
+      <div class="ledger">
+        <div class="row krit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Fehler 1: gleich viel Geld auf beide Seiten</b><span class="tag krit">verhindert</span></div>
+          <p class="note">Klingt logisch, ist aber falsch. Steht JA bei 18 Cent und NEIN bei 83 Cent, bekommt man für denselben Betrag ganz <strong>verschiedene Stückzahlen</strong> — und ausgezahlt werden die Stücke, nicht das eingesetzte Geld. Das Ergebnis ist keine Absicherung, sondern eine gewöhnliche Wette: geht sie auf, gewinnt man viel, geht sie schief, ist alles weg.</p>
+          <pre>50 € auf Quote 2,045  →  102,25 €
+50 € auf Quote 2,090  →  104,50 €   <span class="c">ungleich — das ist eine Wette</span>
+
+50,54 € und 49,46 €   →  beide 103,36 €   <span class="c">gleich — das ist Arbitrage</span></pre>
+          <p class="note">Das Ticket rechnet die Aufteilung immer so, dass <strong>beide Ausgänge denselben Betrag</strong> zurückzahlen, und prüft es anschließend nach. Bei Polymarket steht zusätzlich die <strong>Stückzahl</strong> dabei — dort kauft man Anteile, nicht Euro.</p>
+        </div></div>
+        <div class="row krit"><div class="stripe"></div><div class="body">
+          <div class="ttl"><b>Fehler 2: zweimal auf dieselbe Seite gesetzt</b><span class="tag krit">verhindert</span></div>
+          <p class="note">Zwei Bücher stellen dieselbe Sache oft <strong>umgekehrt</strong>: das eine fragt „wird X gewinnen", das andere „wird X verlieren". Dann ist JA beim einen dasselbe wie NEIN beim anderen. Wer im Eifer auf beiden Seiten JA kauft, wettet zweimal auf dasselbe — <strong>volles Risiko, null Absicherung</strong>, und beide Einsätze können verloren gehen.</p>
+          <p class="note">Deshalb steht im Ticket über allem die Gegenprobe: je Buch der Marktname <em>und der gewählte Ausgang</em>, jeder mit eigenem Link. Zusätzlich prüft das Programm, ob die beiden Ausgänge überhaupt verschieden lauten — stehen auf beiden Beinen dieselben Worte, bleibt der Einsatz gesperrt.</p>
+        </div></div>
+      </div>
+
       <h4>Zwei Fallen, die den Gewinn auffressen — auch wenn die Rechnung stimmt</h4>
       <div class="ledger">
         <div class="row krit"><div class="stripe"></div><div class="body">
@@ -412,7 +430,7 @@ Gewinn in beiden Fällen: rund <b>+3,37 €</b> auf 100 € Einsatz</pre>
           <tr><th>Bedingung</th><th>Art</th><th>Wofür sie schützt</th></tr>
           <tr><td class="k">Zuordnung bestätigt</td><td>zwingend</td><td>Paarung war über mehrere Durchläufe unverändert</td></tr>
           <tr><td class="k">Zwei Rechenwege einig</td><td>zwingend</td><td>Ein Rechenfehler müsste in zwei Formeln gleichzeitig auftreten</td></tr>
-          <tr><td class="k">Beide Ausgänge zahlen gleich</td><td>zwingend</td><td>Sonst ist es keine Absicherung, sondern eine Wette</td></tr>
+          <tr><td class="k">Beide Ausgänge zahlen gleich</td><td>zwingend</td><td>Nicht gleich viel Geld je Seite — gleiche Auszahlung</td><tr><td class="k">Gegensätzliche Ausgänge</td><td>zwingend</td><td>Nicht zweimal dieselbe Seite kaufen</td></tr></tr>
           <tr><td class="k">Zwei verschiedene Börsen</td><td>zwingend</td><td>Innerhalb eines Buches gibt es keine Arbitrage</td></tr>
           <tr><td class="k">Gebühren beider Seiten bekannt</td><td>zwingend</td><td>Ein fehlender Satz darf nie als 0 % durchgehen</td></tr>
           <tr><td class="k">Rendite plausibel</td><td>zwingend</td><td>Über 20 % ist es ein Fehler, kein Fund</td></tr>
@@ -500,8 +518,8 @@ node oberflaeche-pruefung.js  <span class="c">32 Prüfungen — Anzeige, Gebühr
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=39"></script>
-<script src="pdf.js?v=39"></script>
+<script src="config.js?v=40"></script>
+<script src="pdf.js?v=40"></script>
 <script>
 // PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.
 document.getElementById('pdfBtn').addEventListener('click', function(){
