@@ -1,17 +1,16 @@
 {
   "_hinweis": "Zentrale Fassungsangabe. Bei jeder inhaltlichen Aenderung an der Bridge bridgeBuild hochzaehlen — Website und Bridge pruefen sich beide dagegen.",
-  "bridgeBuild": 11,
-  "bridgeVersion": "3.1",
+  "bridgeBuild": 12,
+  "bridgeVersion": "3.2",
   "exe": "https://github.com/saifokaram1-hub/orion-panel/releases/download/bridge-v1/betfair-bridge.exe",
   "anleitung": "https://saifokaram1-hub.github.io/orion-panel/bridge-setup.html",
   "aenderungen": [
-    "Anfragerate von 4 auf 10 je Sekunde: ein Durchlauf ueber den ganzen Betfair-Bestand dauert jetzt rund 11 statt 27 Sekunden",
-    "Kuerzerer Durchlauf heisst auch genauere Vergleiche — zwischen dem ersten und letzten gelesenen Markt liegen 11 statt 27 Sekunden",
-    "Drosselt Betfair, wird sofort entschaerft und danach in kleinen Schritten wieder herangetastet (vorher blieb es bis zum Neustart langsam)",
-    "Takt richtet sich nach dem Schluessel: mit dem verzoegerten Key wird nicht mehr alle 20 Sekunden gefragt, sondern breiter gescannt",
-    "Bis zu 12 000 statt 6 000 Betfair-Maerkte je Durchlauf",
-    "Der ganze Bestand wird alle 120 statt alle 150 Sekunden durchgegangen",
-    "Polymarket laeuft im eigenen, schnelleren Takt (20 s) — diese Kurse sind live und wurden bisher ausgebremst",
-    "Profil fuer den Live-Key ist fertig hinterlegt und greift automatisch, sobald ein Live-Schluessel erkannt wird"
+    "FEHLPAARUNG BEHOBEN: reine Zahlen galten als Namensmerkmal — dadurch wurde \"Bitcoin $200,000\" mit dem Betfair-Ausgang \"200 - 250m\" gepaart, weil beide \"200\" enthielten",
+    "FEHLPAARUNG BEHOBEN: extreme Aussenseiter werden aussortiert (Quote ueber 20 = unter 5 % Wahrscheinlichkeit). Dort steht fast nichts im Buch, die Rendite war ein Rundungsartefakt",
+    "Anfragerate 10 je Sekunde: ein Durchlauf ueber den ganzen Betfair-Bestand dauert rund 11 statt 27 Sekunden",
+    "Drosselt Betfair, wird entschaerft und danach wieder herangetastet",
+    "Takt richtet sich nach dem Schluessel, Live-Profil ist hinterlegt",
+    "Bis zu 12 000 Betfair-Maerkte je Durchlauf, ganzer Bestand alle 120 Sekunden",
+    "Polymarket im eigenen, schnelleren Takt (20 s)"
   ]
 }

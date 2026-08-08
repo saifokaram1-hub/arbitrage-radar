@@ -814,6 +814,41 @@ console.log('\n══════════ 22. Anfragerate und Erholung ═�
   B.rateZuruecksetzen();
 }
 
+
+console.log('\n══════════ 23. Echte Fehlmeldungen aus dem Betrieb ══════════\n');
+{
+  /* Beide Faelle sind am 08.08.2026 wirklich als "Arbitrage" gemeldet worden.
+     Beide waren falsch. Sie stehen hier, damit sie nicht wiederkommen. */
+
+  // FALL 1: "Will Bitcoin reach $200,000 by December 31, 2026?"
+  //         wurde mit dem Betfair-Ausgang "200 - 250m" gepaart.
+  //         Grund: "200" galt als Namensmerkmal und stand in beiden Texten.
+  pruefe('reine Zahlen sind kein Namensmerkmal',
+         B.merkmale('200 - 250m').length === 0,
+         JSON.stringify(B.merkmale('200 - 250m')));
+  pruefe('auch Zahlen mit Einheit zaehlen nicht',
+         B.merkmale('250m').length === 0 && B.merkmale('1.5m').length === 0);
+  pruefe('Namen mit Ziffer behalten ihren Wortteil',
+         JSON.stringify(B.merkmale('Man Utd 2')) === '["man","utd"]',
+         JSON.stringify(B.merkmale('Man Utd 2')));
+  pruefe('gewoehnliche Namen bleiben unveraendert',
+         JSON.stringify(B.merkmale('Real Madrid')) === '["real","madrid"]');
+
+  // FALL 2: "Poilievre out as leader of Conservatives" wurde mit
+  //         "BACK: Conservatives @ 24" gepaart — Quote 24 = 4 % Chance.
+  //         Dort steht fast nichts im Buch; die Rendite war ein Artefakt.
+  pruefe('Quotengrenze ist gesetzt', B.O.maxQuote === 20, String(B.O.maxQuote));
+  pruefe('Quote 24 liegt ueber der Grenze', 24 > B.O.maxQuote);
+  pruefe('Quote 250 liegt weit ueber der Grenze', 250 > B.O.maxQuote);
+  pruefe('uebliche Quoten bleiben erlaubt',
+         2.1 <= B.O.maxQuote && 7 <= B.O.maxQuote && 15 <= B.O.maxQuote);
+
+  // Die Grenze in Wahrscheinlichkeit ausgedrueckt
+  const wk = (100 / B.O.maxQuote).toFixed(1);
+  pruefe('Grenze entspricht rund 5 % Wahrscheinlichkeit',
+         Math.abs(+wk - 5) < 0.6, wk + ' %');
+}
+
 console.log('\n══════════════════════════════════════════');
 console.log('  ' + ok + ' Prüfungen bestanden, ' + fehler + ' fehlgeschlagen');
 console.log('══════════════════════════════════════════\n');

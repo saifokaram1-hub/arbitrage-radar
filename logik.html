@@ -266,8 +266,8 @@ bei 10 Anfragen/s  →  <b>10,7 s</b>   <span class="c">ab Fassung 3.1</span></p
     </section>
 
     <section>
-      <h3>Vier Prüfungen, bevor überhaupt gerechnet wird</h3>
-      <p>Eine Paarung muss <strong>alle vier</strong> bestehen. Fällt eine durch, wird die Chance verworfen und gar nicht erst angezeigt.</p>
+      <h3>Sechs Prüfungen, bevor überhaupt gerechnet wird</h3>
+      <p>Eine Paarung muss <strong>alle sechs</strong> bestehen. Fällt eine durch, wird die Chance verworfen und gar nicht erst angezeigt.</p>
       <div class="flow">
         <div class="stage"><div class="n">1</div><div class="b">
           <span class="t">Jeder Teilnehmer über ein eigenes Wort getroffen</span>
@@ -282,6 +282,16 @@ bei 10 Anfragen/s  →  <b>10,7 s</b>   <span class="c">ab Fassung 3.1</span></p
         <div class="stage"><div class="n">3</div><div class="b">
           <span class="t">Gegenprobe rückwärts</span>
           <span class="d">Es wird geprüft, ob unter allen anderen Polymarket-Fragen eine <em>besser</em> zum Betfair-Markt passt. Wenn ja, gilt die Paarung nicht. Der beste Treffer muss eindeutig der beste sein.</span>
+        </div></div>
+        <div class="stage"><div class="n">5</div><div class="b">
+          <span class="t">Zahlen belegen nichts</span>
+          <span class="d">Ein Betfair-Ausgang <code>200 - 250m</code> lieferte die Merkmale „200" und „250m". Das Wort „200" steht auch in <em>Will Bitcoin reach $200,000</em> — und schon galt ein Preisspannen-Markt als dieselbe Wette. Reine Zahlen zählen deshalb nicht mehr als Beleg; ein Name wird durch Buchstaben unterscheidbar, nicht durch Ziffern.</span>
+          <span class="m">Am 08.08.2026 im Betrieb aufgetreten. Namen wie „Man Utd 2" behalten ihren Wortteil.</span>
+        </div></div>
+        <div class="stage"><div class="n">6</div><div class="b">
+          <span class="t">Extreme Außenseiter aussortieren</span>
+          <span class="d">Eine Betfair-Quote über <strong>20</strong> bedeutet unter 5 % Wahrscheinlichkeit. Dort steht fast nichts im Buch, der Abstand zwischen Kauf- und Verkaufskurs ist groß, und eine rechnerische Rendite entsteht schon durch die Rundung des letzten Cents.</span>
+          <span class="m">„Conservatives @ 24" und „200 - 250m @ 250" waren genau solche Fälle — beide wurden als Chance gemeldet, beide waren keine.</span>
         </div></div>
         <div class="stage"><div class="n">4</div><div class="b">
           <span class="t">Zeitabgleich</span>
@@ -547,8 +557,8 @@ node oberflaeche-pruefung.js  <span class="c">32 Prüfungen — Anzeige, Gebühr
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=45"></script>
-<script src="pdf.js?v=45"></script>
+<script src="config.js?v=46"></script>
+<script src="pdf.js?v=46"></script>
 <script>
 // PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.
 document.getElementById('pdfBtn').addEventListener('click', function(){

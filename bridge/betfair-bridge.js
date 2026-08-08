@@ -187,6 +187,9 @@ const O = {
   minStake:     zahl(CFG.minStake, 20),
   // Obergrenze fuer eine glaubwuerdige Rendite zwischen zwei Boersen
   maxPlausibel: zahl(CFG.maxPlausibelPercent, 20),
+  // Hoechste Betfair-Quote, die noch als handelbar gilt. 20 entspricht 5 %
+  // Wahrscheinlichkeit — darunter ist das Buch zu duenn fuer eine Absicherung.
+  maxQuote:     zahl(CFG.maxQuote, 20),
   minInternalRoi: zahl(CFG.minInternalRoiPercent, 0.3),
   maxDataAge:   zahl(CFG.maxDataAgeSeconds, 0),   // 0 = automatisch nach Marktgeschwindigkeit
   scanPolymarket: CFG.scanPolymarket !== false,
@@ -199,8 +202,8 @@ const O = {
    erkennt, ob auf einem PC noch eine veraltete Bridge läuft, und den Nutzer
    auffordern kann, die neue Datei zu holen. BEI JEDER inhaltlichen Änderung
    an der Suchlogik hochzählen — sonst merkt niemand, dass er alt ist. */
-const BRIDGE_BUILD = 11;
-const BRIDGE_VERSION = "3.1";
+const BRIDGE_BUILD = 12;
+const BRIDGE_VERSION = "3.2";
 
 const BF_LOGIN = 'https://identitysso.betfair.com/api/login';
 const BF_KEEP  = 'https://identitysso.betfair.com/api/keepAlive';
@@ -659,9 +662,18 @@ const STOPP = new Set([
   'total','over','under','first','next','new','national','world','championship'
 ]);
 
+/* Zahlen sind KEIN Namensmerkmal.
+   Ein Betfair-Ausgang "200 - 250m" lieferte die Merkmale "200" und "250m".
+   Das Wort "200" steht aber auch in "Will Bitcoin reach $200,000" — und schon
+   galt ein Preisspannen-Markt als dieselbe Wette wie eine Bitcoin-Frage.
+   Bisher waren nur vierstellige Jahreszahlen ausgeschlossen; alle anderen
+   Zahlen zaehlten als vollwertiger Beleg. Ein Name wird durch Buchstaben
+   unterscheidbar, nicht durch Ziffern. */
+const istNurZahl = w => /^\d+(?:[.,]\d+)?[a-z]{0,2}$/.test(w);
 // Alle unterscheidungskräftigen Wörter eines Namens, nicht nur das letzte
 function merkmale(name) {
-  return nrm(name).split(' ').filter(x => x.length > 2 && !STOPP.has(x));
+  return nrm(name).split(' ')
+    .filter(x => x.length > 2 && !STOPP.has(x) && !istNurZahl(x));
 }
 // Nur für Anzeigezwecke: ein einzelnes Wort, das den Namen grob kennzeichnet
 function schluessel(name) {
@@ -1166,6 +1178,15 @@ function crossBookChancen() {
       // Was darüber liegt, ist keine Chance, sondern eine falsche Zuordnung,
       // eine vertauschte Seite oder ein längst entschiedener Markt.
       if (r.roi > O.maxPlausibel) { unplausibel++; continue; }
+      /* Extreme Aussenseiter aussortieren.
+         Eine Betfair-Quote von 24 heisst 4 % Wahrscheinlichkeit, 250 heisst
+         0,4 %. Dort steht fast nichts im Buch, der Abstand zwischen Kauf- und
+         Verkaufskurs ist riesig, und eine rechnerische "Arbitrage" entsteht
+         schon durch die Rundung des letzten Cents. Beide Fehlmeldungen, die
+         aufgefallen sind — "Conservatives @ 24" und "200 - 250m @ 250" —
+         waren genau solche Faelle. Wer auf einen 0,4-%-Ausgang setzt,
+         betreibt keine Absicherung. */
+      if (v.bf && +v.bf.q > O.maxQuote) { unplausibel++; continue; }
       if (r.maxStake < O.minStake) continue;
       if (!best || r.roi > best.r.roi) best = { v, r, pmBein, bfBein: v.bf, preis };
     }
