@@ -1,15 +1,14 @@
 {
   "_hinweis": "Zentrale Fassungsangabe. Bei jeder inhaltlichen Aenderung an der Bridge bridgeBuild hochzaehlen — Website und Bridge pruefen sich beide dagegen.",
-  "bridgeBuild": 14,
-  "bridgeVersion": "3.4",
+  "bridgeBuild": 15,
+  "bridgeVersion": "3.5",
   "exe": "https://github.com/saifokaram1-hub/orion-panel/releases/download/bridge-v1/betfair-bridge.exe",
   "anleitung": "https://saifokaram1-hub.github.io/orion-panel/bridge-setup.html",
   "aenderungen": [
-    "NEU: Arbitrage INNERHALB Polymarkets — bei Entweder-oder-Events mit mehreren Ausgaengen (negRisk) wird geprueft, ob alle JA-Preise zusammen unter 1 $ liegen. Alle kaufen, genau einer zahlt 1 $. Kein zweites Buch, keine Zuordnung, keine Fehlpaarung moeglich",
-    "NEU: Telegram-Meldung aufs Handy (optional, telegramBotToken + telegramChatId in der Konfiguration) — die Bridge laeuft auch, wenn kein Browser offen ist",
-    "SX Bet aus der Website entfernt — fast nur NFL, keine nutzbare Ueberschneidung",
-    "LINKS TREFFEN: /event/<event>/<markt> fuehrt direkt zum gemeinten Markt statt zur Uebersicht",
-    "Fehlpaarungen behoben: Zahlen zaehlen nicht als Namensmerkmal, Quoten ueber 20 werden verworfen",
+    "WICHTIG: die Quotengrenze griff nie — sie las ein Feld, das es nicht gibt (NaN>20 ist immer falsch). Deshalb stand \"Conservatives @ 30\" tagelang in der Liste. Jetzt wird die hoechste wirklich beteiligte Quote geprueft",
+    "Fehlpaarung behoben: \"will\", \"does\", \"did\" zaehlen nicht mehr als Namenstreffer — \"Will the Republican Party win\" paarte sich mit dem Cricketspieler \"Will Jacks\"",
+    "Arbitrage INNERHALB Polymarkets (Mehrfach-Events, negRisk) und Telegram-Meldung aufs Handy",
+    "Links treffen den einzelnen Markt statt der Uebersicht",
     "Anfragerate 10 je Sekunde, Erholung nach Drosselung, Takt je Schluesselart"
   ]
 }

@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=50"></script>
+<script src="config.js?v=51"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -1501,6 +1501,13 @@ function syncBridgeMarkets(){
     // Dieselbe Obergrenze wie in der Liste: zwei liquide Börsen liegen nie
     // zweistellig auseinander. Alles darüber ist eine Fehlpaarung, kein Fund.
     if((1/inv-1)*100>CONFIG.MAX_PLAUSIBEL){ verworfen++; return false; }
+    /* Eigene Verteidigung der Website, unabhaengig von der Bridge-Fassung:
+       Rohquote ueber 20 heisst unter 5 % Wahrscheinlichkeit — dort ist das
+       Buch zu duenn, die Rendite ein Rundungsartefakt. Solche Meldungen
+       standen tagelang in der Liste ("Conservatives @ 30"), weil die
+       Pruefung in der Bridge an einem falschen Feldnamen scheiterte. Die
+       Website verlaesst sich nicht mehr allein darauf. */
+    if(o.legs.some(function(l){ return +l.q > 20; })){ verworfen++; return false; }
     return true;
   });
   state.oppsVerworfen=verworfen;
@@ -1518,7 +1525,9 @@ function syncBridgeMarkets(){
     var ex=mkMap.get(id);
     // Bestehende Zeile behalten, damit "seit wann offen" und der Hit-Status
     // über die Aktualisierung hinweg stehen bleiben
-    var m=ex||{id:id,since:0,wasHit:false,demo:false};
+    var m=ex||{id:id,since:0,wasHit:false,demo:false,erstMals:Date.now()};
+    if(!m.erstMals) m.erstMals=Date.now();
+    m.zuletztGesehen=Date.now();
     m.fertig=true; m.opp=o;
     m.cat=categorize(o.ev||'');
     m.ev=o.ev||'(ohne Namen)';
@@ -1549,15 +1558,26 @@ function syncBridgeMarkets(){
      ueberlebt keine zwei Tage. Der Grund (Bridge laeuft nicht) steht ohnehin
      im Klartext ueber der Liste. */
   var zuAlt = state.bfAge!=null && state.bfAge>900;
+  var jetzt=Date.now();
 
-  // Was die Bridge nicht mehr meldet oder was zu alt/abgelaufen ist,
-  // verschwindet aus der Liste — und wandert in den Verlauf (Glocke)
+  /* Eine Chance darf hoechstens 2 STUNDEN in der Liste stehen — auch dann,
+     wenn die Bridge sie immer wieder mitschickt und die Daten frisch sind.
+     Genau das war der Fall: dieselben drei Vorschlaege seit Tagen, weil sie
+     bei jedem Durchlauf erneut gemeldet wurden. Echte Arbitrage lebt Minuten
+     bis Stunden, nicht Tage. Was sich so lange haelt, ist mit hoher
+     Wahrscheinlichkeit eine Fehlpaarung, die sich nur nicht aufloest.
+     Danach raus in den Verlauf; taucht sie im naechsten Durchlauf mit neuer
+     Kennung wieder auf, ist das ein frischer Eintrag. */
+  var MAX_STAND = 2*3600*1000;
+
   Array.from(mkMap.keys()).forEach(function(id){
     var m=mkMap.get(id);
     if(!m||!m.fertig)return;
-    var abgelaufen = m.endet && m.endet < Date.now();
-    if(!gesehen[id] || zuAlt || abgelaufen){
-      merkeVergangen(m, abgelaufen?'aufgelöst':(zuAlt?'Daten veraltet':'nicht mehr gemeldet'));
+    var abgelaufen = m.endet && m.endet < jetzt;
+    var uralt = m.erstMals && (jetzt-m.erstMals) > MAX_STAND;
+    if(!gesehen[id] || zuAlt || abgelaufen || uralt){
+      merkeVergangen(m, abgelaufen?'aufgelöst':(zuAlt?'Daten veraltet':
+                        (uralt?'zu lange offen — verworfen':'nicht mehr gemeldet')));
       mkMap.delete(id);
     }
   });
@@ -3573,18 +3593,20 @@ setInterval(function(){ if(document.hidden) cycle(); }, 60000);
 
 /* Anzeige auffrischen. Im Vordergrund jede Sekunde, im Hintergrund gar nicht —
    render() bewertet sonst 1200 Märkte und baut die Tabelle neu, für niemanden. */
-setInterval(function(){ if(!document.hidden) render(); }, 1000);
-
-/* Überwachung: läuft unabhängig vom Abrufzyklus. Selbst wenn gar nichts mehr
-   antwortet oder der Browser den Tab einfriert, altert die Anzeige weiter und
-   schlägt um, statt auf einem alten "Live" stehenzubleiben. */
+/* Die Sekundenuhr baute frueher zweimal je Sekunde die halbe Seite neu:
+   render() UND updateAccountsUI(), Letzteres samt Konten, Quellen und
+   Gegenprobe. Das war der eigentliche Grund fuer das zaehe Gefuehl beim
+   Klicken. Beide zeichnen ohnehin nur bei ECHTER Aenderung neu (jeweils ueber
+   eine Kennung), aber schon der Vergleich lief 2x/s durch die ganze Liste.
+   Einmal pro Sekunde genuegt vollkommen — die Kurse selbst kommen im
+   Poll-Takt, nicht sekuendlich. */
 setInterval(function(){
   if(document.hidden) return;
-  try{
-    // Hängt ein Abruf fest? Dann läuft die Zeit trotzdem weiter und
-    // zustand() stuft die Quelle von selbst herab.
-    updateAccountsUI();
-  }catch(e){}
+  try{ render(); }catch(e){}
+  // Hängt ein Abruf fest? Dann altert die Anzeige hier weiter und
+  // zustand() stuft die Quelle von selbst herab — auf einem alten "Live"
+  // bleibt nichts stehen.
+  try{ updateAccountsUI(); }catch(e){}
 }, 1000);
 
 // Kommt der Tab aus dem Hintergrund zurück, sofort neu prüfen statt zu warten

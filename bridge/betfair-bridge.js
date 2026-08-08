@@ -202,8 +202,8 @@ const O = {
    erkennt, ob auf einem PC noch eine veraltete Bridge läuft, und den Nutzer
    auffordern kann, die neue Datei zu holen. BEI JEDER inhaltlichen Änderung
    an der Suchlogik hochzählen — sonst merkt niemand, dass er alt ist. */
-const BRIDGE_BUILD = 14;
-const BRIDGE_VERSION = "3.4";
+const BRIDGE_BUILD = 15;
+const BRIDGE_VERSION = "3.5";
 
 const BF_LOGIN = 'https://identitysso.betfair.com/api/login';
 const BF_KEEP  = 'https://identitysso.betfair.com/api/keepAlive';
@@ -677,6 +677,12 @@ const nrm = s => (s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s
    irgendwo das Wort Party stand. Jeder US-Wahlmarkt passte dadurch auf jeden
    anderen, und heraus kamen Renditen von mehreren hundert Prozent. */
 const STOPP = new Set([
+  /* 'will' und 'does' sind Hilfsverben, die in fast jeder Polymarket-Frage
+     stehen ("Will X win...?"). Als Namenstreffer gezaehlt, paarte "Will the
+     Republican Party win the MI-03 seat?" mit dem Cricketspieler "Will
+     Jacks" — ueber das Wort 'will'. Namen mit Will als Vornamen bleiben
+     unterscheidbar: "Will Jacks" hat weiterhin das Merkmal "jacks". */
+  'will','does','did','would','shall',
   'the','and','for','with','from','not','win','wins','won','beat','beats','vs','versus',
   'yes','no','ja','nein','draw','tie','unentschieden',
   'party','team','club','city','united','fc','sc','afc','cf','sv','tsv','bsc',
@@ -1152,6 +1158,18 @@ function crossBookChancen() {
     const subjekt = zu.subjekt;
     const andere = m.runners.filter(r => r !== subjekt);
 
+    /* Hoechste am Bein beteiligte Rohquote — je nach Art des Beins:
+       back = Rueckquote q, lay = Gegenhalte-Kurs l, Buendel = jeder Teil. */
+    function hoechsteQuote(bein) {
+      if (!bein || !Array.isArray(bein.runners)) return Infinity;  // unbekannt = nicht handeln
+      let h = 0;
+      for (const r of bein.runners) {
+        const roh = bein.art === 'lay' ? (+r.l || +r.q || 0) : (+r.q || 0);
+        if (roh > h) h = roh;
+      }
+      return h > 0 ? h : Infinity;
+    }
+
     // Betfair-Bein für "Subjekt gewinnt": schlicht zurückwetten
     // Kommissionssatz dieses konkreten Betfair-Marktes, nicht irgendein Mittelwert
     const satzBf = m.satz != null ? m.satz : O.feeBf;
@@ -1203,13 +1221,15 @@ function crossBookChancen() {
       if (r.roi > O.maxPlausibel) { unplausibel++; continue; }
       /* Extreme Aussenseiter aussortieren.
          Eine Betfair-Quote von 24 heisst 4 % Wahrscheinlichkeit, 250 heisst
-         0,4 %. Dort steht fast nichts im Buch, der Abstand zwischen Kauf- und
-         Verkaufskurs ist riesig, und eine rechnerische "Arbitrage" entsteht
-         schon durch die Rundung des letzten Cents. Beide Fehlmeldungen, die
-         aufgefallen sind — "Conservatives @ 24" und "200 - 250m @ 250" —
-         waren genau solche Faelle. Wer auf einen 0,4-%-Ausgang setzt,
-         betreibt keine Absicherung. */
-      if (v.bf && +v.bf.q > O.maxQuote) { unplausibel++; continue; }
+         0,4 %. Dort steht fast nichts im Buch, und die rechnerische Rendite
+         entsteht schon durch die Rundung des letzten Cents.
+         KORRIGIERT: die erste Fassung dieser Pruefung las v.bf.q — dieses
+         Feld gibt es am Bein gar nicht (die Rohquote steckt in den runners).
+         NaN > 20 ist immer falsch, die Grenze griff also NIE. Deshalb stand
+         "Conservatives @ 30" weiter in der Liste. Jetzt wird die hoechste
+         wirklich beteiligte Quote geprueft — beim Dagegenhalten der
+         Lay-Kurs, beim Buendeln jeder einzelne Teil. */
+      if (hoechsteQuote(v.bf) > O.maxQuote) { unplausibel++; continue; }
       if (r.maxStake < O.minStake) continue;
       if (!best || r.roi > best.r.roi) best = { v, r, pmBein, bfBein: v.bf, preis };
     }

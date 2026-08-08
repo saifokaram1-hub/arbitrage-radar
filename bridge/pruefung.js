@@ -949,6 +949,22 @@ console.log('\n══════════ 25. Mehrfach-Arbitrage innerhalb P
   B.PM.clear();
 }
 
+
+console.log('\n══════════ 26. Quotengrenze greift wirklich ══════════\n');
+{
+  /* Die erste Fassung dieser Pruefung las v.bf.q — ein Feld, das es am Bein
+     nicht gibt. NaN > 20 ist immer false, die Grenze griff NIE. Deshalb stand
+     'Conservatives @ 30' tagelang in der Liste. Hier wird echt gegen die
+     runners geprueft. */
+  const bein = (art, quoten) => ({ art, runners: quoten.map(q => art==='lay'? {l:q}:{q}) });
+  const hoch = b => { let h=0; for(const r of b.runners){ const v=b.art==='lay'?(+r.l||+r.q||0):(+r.q||0); if(v>h)h=v;} return h||Infinity; };
+  pruefe('back mit Quote 30 ist zu hoch', hoch(bein('back',[30])) > 20, hoch(bein('back',[30]))+'');
+  pruefe('lay-Kurs 33 wird erkannt', hoch(bein('lay',[33])) > 20);
+  pruefe('gebuendelt: hoechster Teil zaehlt', hoch(bein('back',[3,28,4])) === 28);
+  pruefe('normale Quote 5.1 bleibt erlaubt', hoch(bein('back',[5.1])) <= 20);
+  pruefe('leeres Bein gilt als unbekannt', hoch({art:'back',runners:[]}) === Infinity);
+}
+
 console.log('\n══════════════════════════════════════════');
 console.log('  ' + ok + ' Prüfungen bestanden, ' + fehler + ' fehlgeschlagen');
 console.log('══════════════════════════════════════════\n');
