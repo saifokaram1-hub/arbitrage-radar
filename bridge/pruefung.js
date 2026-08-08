@@ -849,6 +849,46 @@ console.log('\n══════════ 23. Echte Fehlmeldungen aus dem Be
          Math.abs(+wk - 5) < 0.6, wk + ' %');
 }
 
+
+console.log('\n══════════ 24. Links treffen den gemeinten Markt ══════════\n');
+{
+  /* Ein Polymarket-Event buendelt oft zwanzig Maerkte — bei einer Wahl einen
+     je Kandidat. Der blosse Event-Link fuehrt dann auf die Uebersicht, und
+     man muss den gemeinten Markt selbst heraussuchen. Das wirkte im Betrieb
+     wie ein zufaelliger Link.
+     Geprueft am 08.08.2026 gegen die echten Adressen:
+       /event/<event>            -> 200, aber nur die Uebersicht
+       /event/<event>/<markt>    -> 200, genau der richtige Markt
+       /event/<markt>            -> 404  (deshalb NIE der Markt-Slug allein) */
+
+  const mehrfach = { slug:'democratic-presidential-nominee-2028',
+                     marktSlug:'will-gavin-newsom-win-the-2028-democratic-presidential-nomination-568' };
+  const a = B.pmAdresse(mehrfach);
+  pruefe('Mehrfach-Event fuehrt zum einzelnen Markt',
+         a === 'https://polymarket.com/event/' + mehrfach.slug + '/' + mehrfach.marktSlug,
+         a.slice(0, 78));
+  pruefe('Event-Slug steht dabei vorn',
+         a.indexOf('/event/' + mehrfach.slug + '/') > 0);
+
+  // Ja/Nein-Frage: Event und Markt heissen gleich -> kein doppelter Pfad
+  const einzeln = { slug:'xi-jinping-out-before-2027', marktSlug:'xi-jinping-out-before-2027' };
+  pruefe('gleicher Slug wird nicht verdoppelt',
+         B.pmAdresse(einzeln) === 'https://polymarket.com/event/xi-jinping-out-before-2027',
+         B.pmAdresse(einzeln));
+
+  pruefe('ohne Markt-Slug bleibt der Event-Link',
+         B.pmAdresse({slug:'lakers-celtics', marktSlug:''}) ===
+         'https://polymarket.com/event/lakers-celtics');
+  pruefe('ohne jeden Slug die Uebersicht',
+         B.pmAdresse({slug:'', marktSlug:''}) === 'https://polymarket.com/markets');
+  pruefe('ohne Angaben kein Absturz',
+         B.pmAdresse(null) === 'https://polymarket.com/markets');
+
+  // Der Markt-Slug darf NIE allein hinter /event/ stehen — das ergibt 404
+  pruefe('Markt-Slug steht nie allein hinter /event/',
+         B.pmAdresse(mehrfach).indexOf('/event/' + mehrfach.marktSlug) < 0);
+}
+
 console.log('\n══════════════════════════════════════════');
 console.log('  ' + ok + ' Prüfungen bestanden, ' + fehler + ' fehlgeschlagen');
 console.log('══════════════════════════════════════════\n');

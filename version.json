@@ -1,16 +1,16 @@
 {
   "_hinweis": "Zentrale Fassungsangabe. Bei jeder inhaltlichen Aenderung an der Bridge bridgeBuild hochzaehlen — Website und Bridge pruefen sich beide dagegen.",
-  "bridgeBuild": 12,
-  "bridgeVersion": "3.2",
+  "bridgeBuild": 13,
+  "bridgeVersion": "3.3",
   "exe": "https://github.com/saifokaram1-hub/orion-panel/releases/download/bridge-v1/betfair-bridge.exe",
   "anleitung": "https://saifokaram1-hub.github.io/orion-panel/bridge-setup.html",
   "aenderungen": [
-    "FEHLPAARUNG BEHOBEN: reine Zahlen galten als Namensmerkmal — dadurch wurde \"Bitcoin $200,000\" mit dem Betfair-Ausgang \"200 - 250m\" gepaart, weil beide \"200\" enthielten",
-    "FEHLPAARUNG BEHOBEN: extreme Aussenseiter werden aussortiert (Quote ueber 20 = unter 5 % Wahrscheinlichkeit). Dort steht fast nichts im Buch, die Rendite war ein Rundungsartefakt",
-    "Anfragerate 10 je Sekunde: ein Durchlauf ueber den ganzen Betfair-Bestand dauert rund 11 statt 27 Sekunden",
+    "LINKS TREFFEN JETZT: ein Polymarket-Event buendelt oft zwanzig Maerkte (bei einer Wahl einen je Kandidat). Der Link fuehrte nur auf die Uebersicht — jetzt direkt zum gemeinten Markt",
+    "FEHLPAARUNG BEHOBEN: reine Zahlen galten als Namensmerkmal — \"Bitcoin $200,000\" wurde mit dem Betfair-Ausgang \"200 - 250m\" gepaart, weil beide \"200\" enthielten",
+    "FEHLPAARUNG BEHOBEN: extreme Aussenseiter werden aussortiert (Quote ueber 20 = unter 5 % Wahrscheinlichkeit) — dort ist die Rendite ein Rundungsartefakt",
+    "Anfragerate 10 je Sekunde: ganzer Betfair-Bestand in rund 11 statt 27 Sekunden",
     "Drosselt Betfair, wird entschaerft und danach wieder herangetastet",
     "Takt richtet sich nach dem Schluessel, Live-Profil ist hinterlegt",
-    "Bis zu 12 000 Betfair-Maerkte je Durchlauf, ganzer Bestand alle 120 Sekunden",
-    "Polymarket im eigenen, schnelleren Takt (20 s)"
+    "Bis zu 12 000 Betfair-Maerkte je Durchlauf, Polymarket im eigenen 20-Sekunden-Takt"
   ]
 }

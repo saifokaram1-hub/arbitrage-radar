@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=46"></script>
+<script src="config.js?v=47"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -979,6 +979,13 @@ function pmSlug(m){
   var e = Array.isArray(m.events) && m.events[0] ? m.events[0] : null;
   return (e && e.slug) || m.slug || '';
 }
+/* Der Markt-Slug ZUSAETZLICH zum Event-Slug.
+   Ein Event buendelt oft zwanzig Maerkte — etwa alle Kandidaten einer Wahl.
+   Der blosse Event-Link fuehrt dann auf die Uebersicht, und man muss den
+   richtigen Markt selbst heraussuchen. Genau das wirkte wie ein zufaelliger
+   Link. Der Pfad /event/<event>/<markt> fuehrt direkt zum gemeinten Markt;
+   /event/<markt> allein ergibt dagegen 404 — deshalb immer beide Teile. */
+function pmMarktSlug(m){ return m.marktSlug || m.slug || ''; }
 function mkObj(p,a0,a1,s0,s1){
   var f=pmFee(p.m);
   /* Auflösungsdatum mitnehmen. Es steht in den Marktdaten, wurde aber bisher
@@ -990,7 +997,8 @@ function mkObj(p,a0,a1,s0,s1){
     ask0:a0, ask1:a1, sz0:s0||0, sz1:s1||0,
     feeSatz:f.satz, feeExp:f.exp, feeTyp:f.typ,
     endet:(ende&&isFinite(ende))?ende:null,
-    liq:parseFloat(p.m.liquidity||0), vol:parseFloat(p.m.volume||0), slug:pmSlug(p.m)};
+    liq:parseFloat(p.m.liquidity||0), vol:parseFloat(p.m.volume||0),
+    slug:pmSlug(p.m), marktSlug:pmMarktSlug(p.m)};
 }
 
 /* Wann ist die Wette vorbei? Datum und Abstand in Klartext.
@@ -1204,7 +1212,8 @@ function mergeMarkets(fresh, prune){
   fresh.forEach(function(f){
     seen[f.id]=1; var ex=mkMap.get(f.id);
     if(ex){ ex.ask0=f.ask0; ex.ask1=f.ask1; ex.sz0=f.sz0; ex.sz1=f.sz1; ex.liq=f.liq; ex.vol=f.vol; ex.cat=f.cat; ex.ev=f.ev; ex.o1=f.o1; ex.o2=f.o2; ex.slug=f.slug;
-            ex.feeSatz=f.feeSatz; ex.feeExp=f.feeExp; ex.feeTyp=f.feeTyp; ex.endet=f.endet; }
+            ex.feeSatz=f.feeSatz; ex.feeExp=f.feeExp; ex.feeTyp=f.feeTyp; ex.endet=f.endet;
+            ex.marktSlug=f.marktSlug; }
     else { f.since=0; f.wasHit=false; f.demo=false; mkMap.set(f.id,f); }
   });
   // Demo-Zeilen und die fertig gerechneten Chancen der Bridge gehoeren nicht
@@ -2422,7 +2431,13 @@ function placeDemo(v,S,auto){
   if(window.__ar)window.__ar.logAct('secured',v.m.ev,r.profit,v.roi,S,(v.cross?'cross':v.s1.src),feeAmount(v,S),v.m.cat);
   updateAccountsUI();
 }
-function pmLink(mk){ return mk.slug? ('https://polymarket.com/event/'+mk.slug) : 'https://polymarket.com/markets'; }
+function pmLink(mk){
+  if(!mk || !mk.slug) return 'https://polymarket.com/markets';
+  var basis='https://polymarket.com/event/'+mk.slug;
+  // Mit Markt-Slug direkt zum gemeinten Markt, sonst nur zur Uebersicht
+  var ms=mk.marktSlug;
+  return (ms && ms!==mk.slug) ? (basis+'/'+ms) : basis;
+}
 function openMarket(mk){
   // Alle beteiligten Bücher gleichzeitig öffnen -> nebeneinander setzen
   window.open(pmLink(mk),'_blank','noopener');

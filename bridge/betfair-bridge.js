@@ -202,8 +202,8 @@ const O = {
    erkennt, ob auf einem PC noch eine veraltete Bridge läuft, und den Nutzer
    auffordern kann, die neue Datei zu holen. BEI JEDER inhaltlichen Änderung
    an der Suchlogik hochzählen — sonst merkt niemand, dass er alt ist. */
-const BRIDGE_BUILD = 12;
-const BRIDGE_VERSION = "3.2";
+const BRIDGE_BUILD = 13;
+const BRIDGE_VERSION = "3.3";
 
 const BF_LOGIN = 'https://identitysso.betfair.com/api/login';
 const BF_KEEP  = 'https://identitysso.betfair.com/api/keepAlive';
@@ -421,6 +421,17 @@ async function rpc(method, params, versuch) {
 
 const KATALOG = new Map();   // marketId -> {ev, mn, mt, start, runners[], etId}
 
+/* Adresse eines Polymarket-Marktes: Event-Slug UND Markt-Slug.
+   Nur mit beiden landet man beim gemeinten Markt statt auf der Uebersicht
+   aller Maerkte des Events — ein Event wie "democratic-presidential-nominee-2028"
+   buendelt zwanzig davon, einen je Kandidat. Fehlt der Markt-Slug oder ist er
+   mit dem Event identisch, bleibt es beim Event-Link. */
+function pmAdresse(pm) {
+  if (!pm || !pm.slug) return 'https://polymarket.com/markets';
+  const basis = 'https://polymarket.com/event/' + pm.slug;
+  return (pm.marktSlug && pm.marktSlug !== pm.slug) ? basis + '/' + pm.marktSlug : basis;
+}
+
 async function katalogFenster(etId, vonMs, bisMs, tiefe) {
   let res;
   try {
@@ -568,13 +579,18 @@ async function pmListe() {
       const fs = m.feeSchedule || {};
       const anAus = m.feesEnabled !== false;
       const satz = anAus ? (isFinite(+fs.rate) && +fs.rate >= 0 ? +fs.rate : O.pmFallbackFee) : 0;
-      // ACHTUNG: für die Adresse zählt der EVENT-Slug, nicht der Markt-Slug.
-      // polymarket.com/event/<markt-slug> liefert durchweg 404, weil ein Event
-      // mehrere Märkte bündelt und die Seite unter dem Event läuft.
+      /* Fuer die Adresse zaehlt der EVENT-Slug — /event/<markt-slug> allein
+         liefert 404, weil ein Event mehrere Maerkte buendelt.
+         Der Markt-Slug wird aber MITGENOMMEN: ein Event wie
+         "democratic-presidential-nominee-2028" enthaelt zwanzig Maerkte, einen
+         je Kandidat. Nur der Event-Link fuehrt auf die Uebersicht, und man
+         muss den gemeinten Markt selbst heraussuchen — das wirkte wie ein
+         zufaelliger Link. Der Pfad /event/<event>/<markt> trifft genau. */
       const ereignis = Array.isArray(m.events) && m.events[0] ? m.events[0] : null;
       const adresse = (ereignis && ereignis.slug) || m.slug || '';
+      const marktSlug = m.slug || '';
       gefunden.set(String(m.id), {
-        q: m.question || '', outs, toks, slug: adresse,
+        q: m.question || '', outs, toks, slug: adresse, marktSlug: marktSlug,
         liq: parseFloat(m.liquidity || 0), vol: parseFloat(m.volume || 0),
         cat: kategorie(m.question),
         // Zeitpunkte: gameStartTime steht bei konkreten Spielen, endDate ist
@@ -1193,7 +1209,7 @@ function crossBookChancen() {
     if (!best) return;
 
     const { v, r, bfBein, preis } = best;
-    const pmLink = pm.slug ? 'https://polymarket.com/event/' + pm.slug : 'https://polymarket.com/markets';
+    const pmLink = pmAdresse(pm);
     const bfLink = 'https://www.betfair.com/exchange/plus/market/' + m.mid;
 
     // Risiko ehrlich benennen: laufende Spiele sind mit verzögertem Key gefährlich,
@@ -1316,7 +1332,7 @@ function polymarketIntern() {
       typ: 'polymarket-intern', mid: id, ev: m.q.slice(0, 120), mn: 'beide Seiten kaufen', mt: m.cat,
       roi: +roi.toFixed(3), inv: +summe.toFixed(5), max, inplay: false,
       fee: +(m.feeSatz * 100).toFixed(2), feeTyp: m.feeTyp,
-      link: m.slug ? 'https://polymarket.com/event/' + m.slug : 'https://polymarket.com/markets',
+      link: pmAdresse(m),
       legs: [
         { n: m.outs[0], q: +(1 / m.ask[0]).toFixed(4), size: Math.floor(m.size[0]), anteil: +(m.ask[0] / summe * 100).toFixed(2) },
         { n: m.outs[1], q: +(1 / m.ask[1]).toFixed(4), size: Math.floor(m.size[1]), anteil: +(m.ask[1] / summe * 100).toFixed(2) }
@@ -1570,7 +1586,7 @@ module.exports = {
   setKeyArt: (a) => { KEY_ART = a; }, getKeyArt: () => KEY_ART, istVerzoegert,
   crossBookChancen, schnittmengeIds, bewerte, bestaetigtRueckwaerts,
   betfairIntern, polymarketIntern,
-  pmListe, pmKurse, polymarketScan, kategorie,
+  pmListe, pmKurse, polymarketScan, kategorie, pmAdresse,
   takt, TAKT,
   // Nur zum Nachpruefen der Drossel- und Erholungslogik
   rateErholen,
