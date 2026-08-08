@@ -186,6 +186,7 @@
         <a href="#bridge"><i style="background:var(--warn)"></i>Bridge</a>
         <a href="#seiten"><i style="background:var(--info)"></i>Weitere Seiten</a>
         <a href="#farben"><i style="background:var(--gold)"></i>Farbschlüssel</a>
+        <a href="#reflexion"><i style="background:var(--warn)"></i>Reflexion</a>
       </div>
     </section>
 
@@ -366,6 +367,33 @@
       </div>
     </section>
 
+    <section id="reflexion">
+      <h3>Reflexion — was ich über das Gebaute selbst sagen muss</h3>
+      <p class="note">Dieser Abschnitt ist ausdrücklich gewünscht: keine Werbung fürs eigene
+         Programm, sondern der Blick auf die Schwächen. Was hier steht, ist der Stand nach
+         der dritten Überarbeitung am 8. August 2026.</p>
+      <div class="kasten warn">
+        <b>Was ich selbst getestet habe — und was nicht</b>
+        <ul>
+          <li><b>Live getestet:</b> Polymarket-Vollbestand (2070 Märkte in 2,4 s gelistet, 1871 bepreist in 3,6 s), die Mehrfach-Arbitrage-Rechnung (16 echte Funde), und der Link-Prüfer gegen die echte Gamma-API: 12 von 12 richtig, die absichtliche Falschprobe wurde mit exaktem Grund abgewiesen. Dazu 261 automatische Prüfungen, alle grün.</li>
+          <li><b>Nicht getestet:</b> die Betfair-Anmeldung. In der bridge-config.json auf diesem PC stehen Platzhalter statt Zugangsdaten — Passwörter trage ich grundsätzlich nirgends ein. Alles hinter der Betfair-Anmeldung (Katalog, Kursabruf, Cross-Book im Echtbetrieb) ist deshalb aus dem Code belegt und über die Prüfprogramme gerechnet, aber von mir nicht live gefahren.</li>
+          <li><b>Nicht geklickt:</b> alles hinter dem Login der Website. Ich melde mich nicht mit fremden Konten an.</li>
+        </ul>
+      </div>
+      <div class="kasten">
+        <b>Ehrliche Schwachstellen, Stand heute</b>
+        <ul>
+          <li><b>Links vor Build 17 waren ungeprüft.</b> Die Beobachtung "manchmal führt derselbe Klick woandershin" war berechtigt: die alte Bridge meldete Links, ohne zu beweisen, dass sie auf den gerechneten Markt zeigen — Fehlpaarungen konnten durchrutschen. Ab Build 17 wird jeder Link vor der Meldung verifiziert und Falsches verworfen. <b>Das greift erst, wenn die Build-17-exe wirklich läuft.</b></li>
+          <li><b>Die Trägheit war selbstverschuldet.</b> Die Seite bewertete jede Sekunde ~1200 Märkte neu, nur um festzustellen, dass sich nichts geändert hat, und lud bei jedem Abruf die volle Nutzlast, auch unverändert. Beides ist seit v55 abgestellt (Sekundenuhr aktualisiert nur noch Alterstexte; Volldaten nur bei echter Änderung). Ob es sich auf deinem Rechner flüssig anfühlt, kann nur dein Rechner beantworten — meine Messung ist nicht dein Erlebnis.</li>
+          <li><b>Design ist Geschmack.</b> Drei Runden in einem Tag: dunkel → hell bunt → wärmer und größer. Ich kann Kontraste messen (alles ≥ 4,4 für Kleintext), aber nicht, ob es gefällt. Wenn es wieder nicht passt, hilft am meisten: EIN Bildschirmfoto einer Seite, die dir gefällt — daran kann ich mich ausrichten, statt zu raten.</li>
+          <li><b>Der Verlauf ist lokal.</b> Die 250 Einträge überleben das Neuladen, aber nur in diesem Browser. Auf einem zweiten Gerät ist der Verlauf leer — kontoübergreifend wäre eine eigene Tabelle nötig (die dauerhafte Protokollierung in „Mein Bereich" hat das schon, die Glocke nicht).</li>
+          <li><b>Der Erfolgs-Nachweis misst die Meldung, nicht die Ausführung.</b> Ob eine Börse den Einsatz wirklich angenommen hätte, weiß nur die Börse.</li>
+          <li><b>Dein Betfair-Konto steht auf SUSPENDED.</b> Kurse lesen geht, Wetten über die API nicht. Für den Handbetrieb egal, für jeden späteren Autopiloten nicht.</li>
+          <li><b>Zwei Bridges, ein Speicher.</b> Deine und die deines Kollegen schreiben abwechselnd in denselben Datensatz — die Anzeige zeigt immer den letzten Stand, egal von wem. Bei sehr unterschiedlichen Fassungen (gerade: seine Build 15, Soll 17) mischen sich alte und neue Feldformate. Deshalb: beide auf die neue exe.</li>
+        </ul>
+      </div>
+    </section>
+
     <section id="verworfen">
       <h3>Bewusst nicht gebaut</h3>
       <div class="kasten">
@@ -387,7 +415,7 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=54"></script>
+<script src="config.js?v=55"></script>
 <script>
 (async function(){
   var auth = await window.arRequireAuth();
