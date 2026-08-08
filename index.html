@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=48"></script>
+<script src="config.js?v=49"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -326,6 +326,9 @@
   .logpop .lh button{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
   .loglist{overflow-y:auto}
   .logitem{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line)}
+  /* Vergangene Chancen im Verlauf: gedimmt, mit Grund im Tooltip */
+  .logitem.weg{opacity:.55}
+  .logitem.weg .lr{color:var(--dim);font-size:10px}
   .logitem .lt{font-family:var(--mono);font-size:10px;color:var(--dim);width:56px;flex:none}
   .logitem .le{flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .logitem .lr{font-family:var(--mono);font-weight:600;color:var(--pos);font-size:13px}
@@ -728,7 +731,7 @@
       </div>
       <button class="iconbtn on" id="soundBtn" title="Ton bei Hit" aria-label="Ton"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></button>
       <button class="iconbtn" id="histBtn" title="Mein Verlauf & Analyse" aria-label="Verlauf"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 3 4-6"/></svg></button>
-      <button class="iconbtn" id="bellBtn" title="Hit-Verlauf" aria-label="Log"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="badge" id="bellBadge">0</span></button>
+      <button class="iconbtn" id="bellBtn" title="Verlauf: Hits und vergangene Chancen" aria-label="Log"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="badge" id="bellBadge">0</span></button>
       <button class="scanbtn" id="scanBtn"><span class="glyph" id="scanGlyph"></span><span id="scanBtnTxt">Pause</span></button>
     </div>
   </header>
@@ -874,7 +877,7 @@
     </main>
   </div>
 
-  <div class="logpop" id="logPop"><div class="lh"><b>Hit-Verlauf</b><button id="logClear">Leeren</button></div><div class="loglist" id="logList"><div class="logempty">Noch keine Hits.</div></div></div>
+  <div class="logpop" id="logPop"><div class="lh"><b>Verlauf — Hits &amp; vergangene Chancen</b><button id="logClear">Leeren</button></div><div class="loglist" id="logList"><div class="logempty">Noch keine Hits.</div></div></div>
   <div class="toasts" id="toasts"></div>
   <div id="srcPanel"></div>
 
@@ -1523,11 +1526,41 @@ function syncBridgeMarkets(){
     if(!ex)mkMap.set(id,m);
   });
 
-  // Was die Bridge nicht mehr meldet, verschwindet auch aus der Liste
+  /* Alte Daten sind keine Chancen.
+     Liefert die Bridge laenger als 15 Minuten nichts, werden die fertig
+     gerechneten Zeilen ENTFERNT statt nur markiert. Vorher standen dieselben
+     Vorschlaege tagelang in der Liste, wenn die Bridge auf dem PC stand —
+     eingefrorene Kurse, die wie bestehende Chancen aussahen. Echte Arbitrage
+     ueberlebt keine zwei Tage. Der Grund (Bridge laeuft nicht) steht ohnehin
+     im Klartext ueber der Liste. */
+  var zuAlt = state.bfAge!=null && state.bfAge>900;
+
+  // Was die Bridge nicht mehr meldet oder was zu alt/abgelaufen ist,
+  // verschwindet aus der Liste — und wandert in den Verlauf (Glocke)
   Array.from(mkMap.keys()).forEach(function(id){
     var m=mkMap.get(id);
-    if(m&&m.fertig&&!gesehen[id])mkMap.delete(id);
+    if(!m||!m.fertig)return;
+    var abgelaufen = m.endet && m.endet < Date.now();
+    if(!gesehen[id] || zuAlt || abgelaufen){
+      merkeVergangen(m, abgelaufen?'aufgelöst':(zuAlt?'Daten veraltet':'nicht mehr gemeldet'));
+      mkMap.delete(id);
+    }
   });
+}
+
+/* Verschwundene Chancen landen im Verlauf hinter der Glocke — mitsamt dem
+   Grund. So stellt sich nichts tot in der Liste, geht aber auch nichts
+   verloren: wer wissen will, was es heute gab, findet es dort. */
+function merkeVergangen(m, grund){
+  try{
+    var roi = m.opp && m.opp.roi!=null ? +m.opp.roi : null;
+    var t = new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+    // Nicht doppelt eintragen, wenn dieselbe Chance mehrfach aufraeumt
+    if(state.log.length && state.log[0].ev===m.ev && state.log[0].weg) return;
+    state.log.unshift({t:t, ev:m.ev, roi:roi, weg:true, grund:grund||''});
+    if(state.log.length>40) state.log.pop();
+    renderLog();
+  }catch(e){}
 }
 
 /* Die Aufschlüsselung einer fertig gerechneten Chance fürs Wett-Ticket:
@@ -2008,6 +2041,18 @@ function renderSchnitt(){
   // Erst das, was gerade am ehesten handelbar ist
   paare.sort(function(a,b){ return (b.vol||0)-(a.vol||0); });
 
+  /* Hoechstens alle 5 Sekunden neu bauen.
+     Diese Liste haengt an updateAccountsUI, und das laeuft bei Echtzeitkursen
+     mehrmals je Sekunde. Bis zu 60 Eintraege wurden dabei jedes Mal komplett
+     neu gezeichnet — einer der Gruende, warum die Seite zaeh wurde und der
+     Rechner warm. Die Gegenprobe ist eine Kontrolle, keine Handelsanzeige;
+     5 Sekunden Stand sind dafuer mehr als frisch genug. Aendert sich die
+     ZAHL der Paare oder wird auf-/zugeklappt, wird sofort gezeichnet. */
+  var sig=paare.length+'|'+(state.schnittZu?1:0);
+  var jetztMs=Date.now();
+  if(state._schnittSig===sig && state._schnittT && (jetztMs-state._schnittT)<5000) return;
+  state._schnittSig=sig; state._schnittT=jetztMs;
+
   var esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
   var q=function(x){ return (Math.round(x*1000)/1000).toFixed(2); };
@@ -2442,7 +2487,17 @@ function fireHit(v){
 function renderLog(){
   var el=$('#logList');
   if(!state.log.length){el.innerHTML='<div class="logempty">Noch keine Hits.</div>';return;}
-  el.innerHTML=state.log.map(function(h){return '<div class="logitem"><span class="lt">'+h.t+'</span><span class="le">'+h.ev+'</span><span class="lr">'+pct(h.roi,2)+'</span></div>';}).join('');
+  var esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  el.innerHTML=state.log.map(function(h){
+    /* Vergangene Chancen stehen gedimmt dazwischen, mit dem Grund, warum sie
+       aus der Liste sind. So ist die Glocke der Verlauf des Tages: was kam,
+       was ging, und weshalb. */
+    if(h.weg) return '<div class="logitem weg" title="'+esc(h.grund)+'">'+
+      '<span class="lt">'+esc(h.t)+'</span><span class="le">◇ '+esc(h.ev)+'</span>'+
+      '<span class="lr">'+(h.roi!=null?('+'+pct(h.roi,2)):'')+' vorbei</span></div>';
+    return '<div class="logitem"><span class="lt">'+esc(h.t)+'</span><span class="le">'+esc(h.ev)+'</span><span class="lr">+'+pct(h.roi,2)+'</span></div>';
+  }).join('');
 }
 
 /* ---- Setzen: Demo simuliert, Live öffnet den Markt zum manuellen Setzen ---- */

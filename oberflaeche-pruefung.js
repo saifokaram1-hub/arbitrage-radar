@@ -29,8 +29,8 @@ function holeFunktion(name) {
   throw new Error('Ende der Funktion nicht gefunden: ' + name);
 }
 
-const quelle = ['buchKuerzel', 'syncBridgeMarkets', 'evalMarket', 'feasibleMax',
-                'paarungsAbdruck', 'gegenrechnung', 'bestaetige',
+const quelle = ['buchKuerzel', 'syncBridgeMarkets', 'merkeVergangen', 'evalMarket',
+                'feasibleMax', 'paarungsAbdruck', 'gegenrechnung', 'bestaetige',
                 'buchName', 'routing', 'dnpRisk', 'beinTiefe', 'endeInfo',
                 'fehlerErklaerung', 'linkWarnung', 'sicherheitsPruefung']
   .map(holeFunktion).join('\n\n');
@@ -41,7 +41,7 @@ const sandbox = {
   mkMap,
   CONFIG: { MAX_PLAUSIBEL: 20 },
   state: { bfOpps: [], oppsVerworfen: 0, balPm: 0, balOb: 0, minRoi: 0,
-           srcOn: { pm: 1, bf: 1, ob: 1 } },
+           log: [], srcOn: { pm: 1, bf: 1, ob: 1 } },
   categorize: q => (/lakers|celtics|spiel/i.test(q) ? 'Basketball' : 'Politik'),
   pmEff: () => 0, effOdds: () => 0, feeOf: () => 0,
   // fuer die Bestaetigungsschleife
@@ -587,6 +587,54 @@ console.log('\n═════ 17. Warnung vor Links, die ins Leere führen ═�
   pruef('bei allem in Ordnung keine Warnung', w === null);
 
   pruef('ohne Markt keine Warnung', sandbox.linkWarnung(null) === null);
+}
+
+console.log('\n═════ 18. Alte Vorschläge verschwinden von selbst ═════');
+/* Dieselben Vorschlaege standen zwei Tage in der Liste, weil die Bridge
+   stand und eingefrorene Daten wie bestehende Chancen aussahen. Jetzt gilt:
+   Daten aelter als 15 Minuten -> Zeilen raus, hinein in den Verlauf. */
+{
+  const chance = () => ({
+    ev: 'Test-Chance', roi: 2.4, maxStake: 340, risk: 'niedrig',
+    legs: [ { book:'Betfair', pick:'A', q:2.10, qEff:2.045, fee:5, size:400, anteil:48.9, link:'b' },
+            { book:'Polymarket', pick:'B', q:2.15, qEff:2.09, fee:4, size:520, anteil:51.1, link:'p' } ]
+  });
+
+  // Frisch: bleibt
+  sandbox.kandidaten = {}; sandbox.state.log = [];
+  sandbox.mkMap.clear();
+  sandbox.state.bfAge = 20;
+  sandbox.state.bfOpps = [chance()];
+  sandbox.syncBridgeMarkets();
+  pruef('frische Daten: Chance bleibt', sandbox.mkMap.size === 1);
+
+  // Veraltet: verschwindet und landet im Verlauf
+  sandbox.state.bfAge = 1200;   // 20 Minuten
+  sandbox.syncBridgeMarkets();
+  pruef('Daten älter als 15 Minuten: Zeile verschwindet', sandbox.mkMap.size === 0);
+  pruef('sie steht im Verlauf, mit Grund',
+        sandbox.state.log.length === 1 && sandbox.state.log[0].weg === true &&
+        /veraltet/.test(sandbox.state.log[0].grund),
+        sandbox.state.log[0] ? sandbox.state.log[0].grund : '—');
+
+  // Abgelaufen (Aufloesungsdatum vorbei): verschwindet ebenfalls
+  sandbox.state.log = []; sandbox.mkMap.clear();
+  sandbox.state.bfAge = 20;
+  const alt = chance(); alt.tage = -1;        // war gestern vorbei
+  sandbox.state.bfOpps = [alt];
+  sandbox.syncBridgeMarkets();
+  pruef('aufgelöster Markt verschwindet sofort', sandbox.mkMap.size === 0);
+  pruef('Grund lautet aufgelöst',
+        sandbox.state.log[0] && /aufgelöst/.test(sandbox.state.log[0].grund),
+        sandbox.state.log[0] ? sandbox.state.log[0].grund : '—');
+
+  // Nicht doppelt in den Verlauf
+  sandbox.state.bfOpps = [alt];
+  sandbox.syncBridgeMarkets();
+  pruef('kein Doppeleintrag im Verlauf', sandbox.state.log.length === 1,
+        sandbox.state.log.length + ' Einträge');
+
+  sandbox.state.bfAge = 20; sandbox.state.bfOpps = []; sandbox.state.log = [];
 }
 
 console.log('\n' + '═'.repeat(46));
