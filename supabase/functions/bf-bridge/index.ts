@@ -93,7 +93,16 @@ Deno.serve(async (req) => {
         geloggt=typeof n==='number'&&n>0?n:0;
       }
     }
-    if(body && body.stats && typeof body.stats==='object') patch.stats=body.stats;
+    // stats uebernehmen, aber nichts, was das Konto verraet. Der GET-Endpunkt hat
+    // bewusst keine Anmeldung, alles hier ist damit oeffentlich lesbar.
+    // key_name ist der frei gewaehlte Betfair-Anwendungsname. Die Website zeigt ihn
+    // nirgends an (dort zaehlt nur key_art), er hat hier also nichts zu suchen.
+    // Serverseitig filtern wirkt auch fuer Bridges, die noch auf altem Build laufen.
+    if(body && body.stats && typeof body.stats==='object'){
+      const st:any={...body.stats};
+      delete st.key_name;
+      patch.stats=st;
+    }
 
     const { error } = await sb.from('bridge_odds').update(patch).eq('id',1);
     if(error) return new Response(JSON.stringify({ok:false,error:error.message}),{status:500,headers:cors});
