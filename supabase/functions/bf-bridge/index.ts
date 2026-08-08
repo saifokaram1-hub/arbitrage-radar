@@ -80,7 +80,12 @@ Deno.serve(async (req) => {
           book:s(l.book,20), pick:s(l.pick,90), q:f(l.q), qEff:f(l.qEff),
           // Gebuehrensatz als null durchreichen, wenn er fehlt — sonst kaeme
           // ein unbekannter Satz als 0 % durch und erzeugte Scheinchancen.
-          fee:fn(l.fee), anteil:f(l.anteil), size:f(l.size), link:s(l.link,300)
+          fee:fn(l.fee), anteil:f(l.anteil), size:f(l.size), link:s(l.link,300),
+          // Link-Pruefmarke der Bridge (ab Build 17): 1 = Link nachweislich
+          // richtig, 0 = gerade nicht pruefbar (Grund in lgrund), null = alte
+          // Bridge ohne Pruefer. Falsche Links erreichen den Server nie —
+          // die Bridge verwirft solche Chancen vor dem Hochladen.
+          lok:fn(l.lok), lgrund:l.lgrund?s(l.lgrund,140):null
         })):[]
       }));
 

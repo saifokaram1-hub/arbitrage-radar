@@ -7,17 +7,17 @@
 <meta name="robots" content="noindex, nofollow">
 <style>
   :root{
-    --void:#E9E7DE;--void2:#E1DED3;--panel:#F4F2EB;--panel2:#EDEAE1;--panelhi:#FBFAF6;--sunken:#D8D4C7;
-    --line:#D2CEC0;--line2:#BCB7A5;--line3:#A19B88;
-    --txt:#22251B;--muted:#575C4C;--dim:#646959;--faint:#989C8B;
-    --gold:#7E6A20;--gold-b:#655611;--gold-d:#BCAC66;--gold-flae:#F0EAD0;
-    --pos:#2F6616;--pos-d:#A9C481;--pos-flae:#E8F0DA;
-    --neg:#B23A28;--neg-d:#DFA79B;--neg-flae:#F7E4DF;
-    --warn:#8C5309;--warn-d:#E0BE86;--warn-flae:#FAEEDC;
-    --info:#1F6699;--info-d:#9EC2DC;--info-flae:#E3EEF6;
-    --pm:#5B3FB0;--pm-d:#BDAEE4;--pm-flae:#EDE8F8;
-    --bf:#1F6699;--bf-d:#9EC2DC;--bf-flae:#E3EEF6;
-    --ob:#0E7263;--ob-d:#93C8BF;--ob-flae:#E0F0EC;
+    --void:#E6E0CF;--void2:#DDD6C2;--panel:#F0EBDB;--panel2:#E8E2D1;--panelhi:#F8F4E7;--sunken:#D2CBB6;
+    --line:#CBC4AE;--line2:#B1A98F;--line3:#948C73;
+    --txt:#22251B;--muted:#575C4C;--dim:#5C6152;--faint:#989C8B;
+    --gold:#7E6A20;--gold-b:#655611;--gold-d:#BCAC66;--gold-flae:#EDE5C6;
+    --pos:#2F6616;--pos-d:#A9C481;--pos-flae:#E2ECCE;
+    --neg:#B23A28;--neg-d:#DFA79B;--neg-flae:#F4DFD6;
+    --warn:#8C5309;--warn-d:#E0BE86;--warn-flae:#F6EAD0;
+    --info:#1F6699;--info-d:#9EC2DC;--info-flae:#DEEAF2;
+    --pm:#5B3FB0;--pm-d:#BDAEE4;--pm-flae:#E8E2F4;
+    --bf:#1F6699;--bf-d:#9EC2DC;--bf-flae:#DEEAF2;
+    --ob:#0E7263;--ob-d:#93C8BF;--ob-flae:#DCEDE6;
     --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
     --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --schatten:0 1px 2px rgba(40,38,25,.07);--schatten-hoch:0 10px 30px rgba(40,38,25,.16)}
@@ -51,7 +51,14 @@
   .g .l{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);margin-top:5px}
   .g .s{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px}
 
-  section{display:flex;flex-direction:column;gap:15px}
+  /* Inhaltsverzeichnis — nummeriert, damit man sich beim Reden auf
+     "Abschnitt 7" beziehen kann statt auf "irgendwo weiter unten" */
+  .inh{display:flex;flex-wrap:wrap;gap:7px}
+  .inh a{display:flex;align-items:center;gap:8px;font-size:12px;text-decoration:none;color:var(--txt);
+    border:1px solid var(--line2);background:var(--panelhi);padding:8px 12px;font-weight:600}
+  .inh a:hover{border-color:var(--gold);color:var(--gold-b);background:var(--gold-flae)}
+  .inh a i{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--gold-b);font-weight:700}
+  section{display:flex;flex-direction:column;gap:15px;scroll-margin-top:70px}
   h3{margin:0;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);font-weight:700;
     padding-bottom:9px;border-bottom:1px solid var(--line2)}
   h4{margin:0;font-size:15.5px;font-weight:650;text-wrap:balance}
@@ -192,8 +199,12 @@
     <div class="intro">
       <h2>Wie der Scanner sucht, wie er rechnet, und warum dabei kein Konto gesperrt wird</h2>
       <p>Diese Seite erklärt das ganze Verfahren von vorn: welche zwei Bücher verglichen werden, in welcher Reihenfolge gesucht wird, wie die Gebühren beider Anbieter je einzelnem Markt in die Rechnung kommen, und wie aus alldem ein konkreter Vorschlag wird — wie viel Geld wohin, was es kostet, was übrig bleibt. Jede Formel steht mit einem durchgerechneten Beispiel dabei.</p>
-      <div class="stamp" id="stamp">Bridge v2 · Endpunkt bf-bridge unverändert</div>
+      <div class="stamp" id="stamp">Bridge 3.7 · Build 17 · Endpunkt bf-bridge unverändert</div>
     </div>
+
+    <!-- Inhaltsverzeichnis: wird beim Laden automatisch aus den Ueberschriften
+         gebaut, kann also nie veralten, wenn Abschnitte dazukommen. -->
+    <nav class="inh" id="inhVerz" aria-label="Inhalt"></nav>
 
     <section>
       <h3>Das Wichtigste zuerst: nur Börsen, nie ein Buchmacher</h3>
@@ -577,21 +588,50 @@ Gewinn in beiden Fällen: rund <b>+3,37 €</b> auf 100 € Einsatz</pre>
     </section>
 
     <section>
+      <h3>Jeder Link wird geprüft, bevor er gemeldet wird <span style="font-size:9px;letter-spacing:.1em;color:var(--pos)">NEU · Build 17</span></h3>
+      <p>Eine Chance ist nur so viel wert wie ihre Links: wer auf „öffnen" drückt, muss auf <strong>genau dem Markt</strong> landen, dessen Kurse gerechnet wurden. Deshalb prüft die Bridge ab Build 17 <strong>beide Links jeder Chance</strong>, bevor sie gemeldet wird — und derselbe Fund trägt bei jedem Klick denselben Link, weil beide Adressen fest aus Kennungen gebaut werden, nie aus einer Suche.</p>
+      <div class="scroll"><table>
+        <tr><th>Buch</th><th>Was geprüft wird</th><th>Wie</th></tr>
+        <tr><td class="k">Betfair</td><td>Der Link trägt exakt die marketId der gerechneten Kurse, diese Id steht im Katalog, der Markt ist nicht geschlossen.</td><td>ohne Netz, bei jedem Fund</td></tr>
+        <tr><td class="k">Polymarket</td><td>Der Markt-Slug aus dem Link wird bei Gamma nachgeschlagen und muss auf denselben Markt auflösen — gleiche Kennung <b>und</b> dasselbe Orderbuch-Token, dessen Preis gerechnet wurde.</td><td>übers Netz, Antwort wird 6 h gemerkt</td></tr>
+      </table></div>
+      <p class="note"><strong>Löst ein Link auf einen fremden Markt auf, wird die ganze Chance verworfen</strong> — lieber keine Meldung als eine mit falschem Link. Ist die Prüfung gerade nicht möglich (Netz), wird die Chance gemeldet und trägt im Wett-Ticket die Marke „Link ungeprüft" mit dem Grund. Geprüfte Beine tragen „✓ Link geprüft".</p>
+
+      <h3 style="margin-top:14px">Zu viel Daten? Teilen statt melden <span style="font-size:9px;letter-spacing:.1em;color:var(--pos)">NEU · Build 17</span></h3>
+      <p>Verlangt eine Katalog-Anfrage zu viel auf einmal, antwortet Betfair mit <strong>TOO_MUCH_DATA</strong> — oft versteckt hinter dem Sammelcode ANGX-0001. Das ist kein Fehler, sondern der Befehl, kleiner zu fragen. Bis Build 16 teilte die Bridge das Zeitfenster höchstens sieben Ebenen tief; reichte das nicht, fiel das Fenster mit sichtbarer Fehlermeldung aus dem Bestand.</p>
+      <p>Ab Build 17 wird <strong>so tief geteilt, wie das Fenster es hergibt</strong> — bis hinunter zu 2 Minuten, beim größten Fenster sind das etwa 20 Halbierungen. Das Teilen ist stiller Normalbetrieb, egal wie viel Betfair liefert. Scheitert ein 2-Minuten-Fenster nach Wartepause und zweitem Versuch immer noch, wird es ehrlich als Verlust verbucht und <em>nur dann</em> erscheint eine Warnung. Anmelde- und Netzfehler werden weiterhin gemeldet — die sind echte Fehler, kein Mengenproblem.</p>
+    </section>
+
+    <section>
       <h3>Selbst nachprüfen</h3>
       <p>Zwei Prüfprogramme rechnen die Logik mit Zahlen durch. Sie melden sich nirgends an und laden nichts hoch.</p>
-      <pre>node bridge/pruefung.js        <span class="c">91 Prüfungen — Suche, Zuordnung, Lay-Rechnung</span>
-node oberflaeche-pruefung.js  <span class="c">32 Prüfungen — Anzeige, Gebühren, Aufteilung</span></pre>
+      <pre>node bridge/pruefung.js        <span class="c">158 Prüfungen — Suche, Zuordnung, Lay-Rechnung, Links, Fensterteilung</span>
+node oberflaeche-pruefung.js  <span class="c">103 Prüfungen — Anzeige, Gebühren, Aufteilung</span></pre>
       <p class="note">Darunter die Gegenprobe, dass bei jeder gemeldeten Chance beide Ausgänge auf den Cent denselben Betrag zurückzahlen, dass die Gebühr beider Bücher aus zwei völlig verschiedenen Regeln dieselbe Formel ergibt, und dass wirklich nur Märkte verglichen werden, die es auf beiden Büchern gibt.</p>
       <div class="call"><b>Diese Seite gehört zum Programm.</b> Ändert sich die Suchlogik, wird zuerst die Datei geändert, die man herunterlädt, und danach diese Erklärung nachgezogen. Was hier steht, gilt für die Fassung, die gerade zum Download bereitliegt.</div>
     </section>
 
-    <div class="foot">Orion Panel · Bridge v2 · Endpunkt bf-bridge und Datenformat unverändert, alle Neuerungen additiv</div>
+    <div class="foot">Orion Panel · Bridge 3.7 / Build 17 · Endpunkt bf-bridge und Datenformat unverändert, alle Neuerungen additiv</div>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=53"></script>
+<script src="config.js?v=54"></script>
 <script src="pdf.js?v=52"></script>
 <script>
+// Inhaltsverzeichnis aus den Ueberschriften bauen — kann nie veralten
+(function(){
+  var nav=document.getElementById('inhVerz'); if(!nav) return;
+  var hs=document.querySelectorAll('.wrap section > h3');
+  var teile=[];
+  hs.forEach(function(h,i){
+    var id='abschnitt-'+(i+1);
+    (h.closest('section')||h).id = h.closest('section').id || id;
+    var ziel=h.closest('section').id;
+    var txt=(h.textContent||'').replace(/NEU · Build \d+/,'').trim();
+    teile.push('<a href="#'+ziel+'"><i>'+(i+1)+'</i>'+txt+'</a>');
+  });
+  nav.innerHTML=teile.join('');
+})();
 // PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.
 document.getElementById('pdfBtn').addEventListener('click', function(){
   var b=this, alt=b.textContent;

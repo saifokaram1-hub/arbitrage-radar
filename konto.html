@@ -7,17 +7,17 @@
 <meta name="robots" content="noindex, nofollow">
 <style>
   :root{
-    --void:#E9E7DE;--void2:#E1DED3;--panel:#F4F2EB;--panel2:#EDEAE1;--panelhi:#FBFAF6;--sunken:#D8D4C7;
-    --line:#D2CEC0;--line2:#BCB7A5;--line3:#A19B88;
-    --txt:#22251B;--muted:#575C4C;--dim:#646959;--faint:#989C8B;
-    --gold:#7E6A20;--gold-b:#655611;--gold-d:#BCAC66;--gold-flae:#F0EAD0;
-    --pos:#2F6616;--pos-d:#A9C481;--pos-flae:#E8F0DA;
-    --neg:#B23A28;--neg-d:#DFA79B;--neg-flae:#F7E4DF;
-    --warn:#8C5309;--warn-d:#E0BE86;--warn-flae:#FAEEDC;
-    --info:#1F6699;--info-d:#9EC2DC;--info-flae:#E3EEF6;
-    --pm:#5B3FB0;--pm-d:#BDAEE4;--pm-flae:#EDE8F8;
-    --bf:#1F6699;--bf-d:#9EC2DC;--bf-flae:#E3EEF6;
-    --ob:#0E7263;--ob-d:#93C8BF;--ob-flae:#E0F0EC;
+    --void:#E6E0CF;--void2:#DDD6C2;--panel:#F0EBDB;--panel2:#E8E2D1;--panelhi:#F8F4E7;--sunken:#D2CBB6;
+    --line:#CBC4AE;--line2:#B1A98F;--line3:#948C73;
+    --txt:#22251B;--muted:#575C4C;--dim:#5C6152;--faint:#989C8B;
+    --gold:#7E6A20;--gold-b:#655611;--gold-d:#BCAC66;--gold-flae:#EDE5C6;
+    --pos:#2F6616;--pos-d:#A9C481;--pos-flae:#E2ECCE;
+    --neg:#B23A28;--neg-d:#DFA79B;--neg-flae:#F4DFD6;
+    --warn:#8C5309;--warn-d:#E0BE86;--warn-flae:#F6EAD0;
+    --info:#1F6699;--info-d:#9EC2DC;--info-flae:#DEEAF2;
+    --pm:#5B3FB0;--pm-d:#BDAEE4;--pm-flae:#E8E2F4;
+    --bf:#1F6699;--bf-d:#9EC2DC;--bf-flae:#DEEAF2;
+    --ob:#0E7263;--ob-d:#93C8BF;--ob-flae:#DCEDE6;
     --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
     --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --schatten:0 1px 2px rgba(40,38,25,.07);--schatten-hoch:0 10px 30px rgba(40,38,25,.16)}
@@ -34,10 +34,17 @@
   .lnk{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);border:1px solid var(--line3);padding:8px 12px;text-decoration:none;background:var(--panelhi)}
   .lnk:hover{color:var(--gold-b);border-color:var(--gold-d)}
   .wrap{padding:20px;max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
-  .period{display:flex;gap:0;border:1px solid var(--line2);background:var(--panelhi);align-self:flex-start}
-  .period button{padding:9px 15px;font:inherit;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border:0;border-right:1px solid var(--line);background:none;cursor:pointer}
+  /* Zeitraumwahl: gross und unmissverstaendlich — das ist DER Schalter der Seite */
+  .period{display:flex;gap:0;border:2px solid var(--gold-d);background:var(--panelhi);align-self:flex-start}
+  .period button{padding:12px 20px;font:inherit;font-size:12.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border:0;border-right:1px solid var(--line);background:none;cursor:pointer}
   .period button:last-child{border-right:0}
-  .period button.active{background:var(--gold);color:var(--void);font-weight:700}
+  .period button.active{background:var(--gold);color:#F8F4E7;font-weight:800}
+  /* Abschnitts-Ueberschriften mit Kennfarbe — dieselbe Sprache wie auf der
+     Startseite: jede Sache traegt ihre Farbe, hier je Themenblock */
+  .gr{display:flex;align-items:baseline;gap:10px;margin:10px 0 -8px;padding:0 2px 7px;border-bottom:2px solid var(--line2)}
+  .gr b{font-size:12px;letter-spacing:.22em;text-transform:uppercase;font-weight:800}
+  .gr small{font-size:11px;color:var(--dim)}
+  .gr .p{width:11px;height:11px;flex:none;align-self:center}
   .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
   .kpi{border:1px solid var(--line2);background:linear-gradient(180deg,var(--panelhi),var(--panel));padding:16px 18px}
   .kpi .l{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
@@ -83,7 +90,7 @@
 <body>
   <div class="cmd">
     <div class="mark"></div>
-    <h1>Arbitrage Radar · <span>Mein Bereich</span></h1>
+    <h1>Orion Panel · <span>Mein Bereich</span></h1>
     <div class="sp"></div>
     <span class="who" id="who">…</span>
     <a class="lnk" href="index.html">Zur App</a>
@@ -91,6 +98,7 @@
   </div>
 
   <div class="wrap">
+    <div class="gr"><span class="p" style="background:var(--gold)"></span><b>Zeitraum</b><small>gilt für alles auf dieser Seite</small></div>
     <div class="period" id="period">
       <button data-p="today">Heute</button>
       <button data-p="7d">7 Tage</button>
@@ -98,6 +106,7 @@
       <button data-p="all">Alles</button>
     </div>
 
+    <div class="gr"><span class="p" style="background:var(--pos)"></span><b>Meine Zahlen</b><small>Demo-Einsätze zählen mit</small></div>
     <div class="kpis">
       <div class="kpi hero"><div class="l">Gewinn (netto)</div><div class="v num" id="kProfit">–</div></div>
       <div class="kpi"><div class="l">Ø Rendite</div><div class="v num" id="kRoi">–</div></div>
@@ -115,6 +124,7 @@
       </div>
     </div>
 
+    <div class="gr"><span class="p" style="background:var(--info)"></span><b>Aufschlüsselung</b><small>wo das Ergebnis herkommt</small></div>
     <div class="two">
       <div class="card">
         <h2>Nach Thema / Sportart</h2>
@@ -126,6 +136,7 @@
       </div>
     </div>
 
+    <div class="gr"><span class="p" style="background:var(--pm)"></span><b>Konto &amp; Bridge</b><small>Zugang, Token, Einrichtung</small></div>
     <div class="two">
       <div class="card">
         <h2>🔑 Mein Passwort ändern</h2>
@@ -183,7 +194,7 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=53"></script>
+<script src="config.js?v=54"></script>
 <script>
 (async function(){
   var auth = await window.arRequireAuth();

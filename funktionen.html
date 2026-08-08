@@ -7,17 +7,17 @@
 <meta name="robots" content="noindex, nofollow">
 <style>
   :root{
-    --void:#E9E7DE;--void2:#E1DED3;--panel:#F4F2EB;--panel2:#EDEAE1;--panelhi:#FBFAF6;--sunken:#D8D4C7;
-    --line:#D2CEC0;--line2:#BCB7A5;--line3:#A19B88;
-    --txt:#22251B;--muted:#575C4C;--dim:#646959;--faint:#989C8B;
-    --gold:#7E6A20;--gold-b:#655611;--gold-d:#BCAC66;--gold-flae:#F0EAD0;
-    --pos:#2F6616;--pos-d:#A9C481;--pos-flae:#E8F0DA;
-    --neg:#B23A28;--neg-d:#DFA79B;--neg-flae:#F7E4DF;
-    --warn:#8C5309;--warn-d:#E0BE86;--warn-flae:#FAEEDC;
-    --info:#1F6699;--info-d:#9EC2DC;--info-flae:#E3EEF6;
-    --pm:#5B3FB0;--pm-d:#BDAEE4;--pm-flae:#EDE8F8;
-    --bf:#1F6699;--bf-d:#9EC2DC;--bf-flae:#E3EEF6;
-    --ob:#0E7263;--ob-d:#93C8BF;--ob-flae:#E0F0EC;
+    --void:#E6E0CF;--void2:#DDD6C2;--panel:#F0EBDB;--panel2:#E8E2D1;--panelhi:#F8F4E7;--sunken:#D2CBB6;
+    --line:#CBC4AE;--line2:#B1A98F;--line3:#948C73;
+    --txt:#22251B;--muted:#575C4C;--dim:#5C6152;--faint:#989C8B;
+    --gold:#7E6A20;--gold-b:#655611;--gold-d:#BCAC66;--gold-flae:#EDE5C6;
+    --pos:#2F6616;--pos-d:#A9C481;--pos-flae:#E2ECCE;
+    --neg:#B23A28;--neg-d:#DFA79B;--neg-flae:#F4DFD6;
+    --warn:#8C5309;--warn-d:#E0BE86;--warn-flae:#F6EAD0;
+    --info:#1F6699;--info-d:#9EC2DC;--info-flae:#DEEAF2;
+    --pm:#5B3FB0;--pm-d:#BDAEE4;--pm-flae:#E8E2F4;
+    --bf:#1F6699;--bf-d:#9EC2DC;--bf-flae:#DEEAF2;
+    --ob:#0E7263;--ob-d:#93C8BF;--ob-flae:#DCEDE6;
     --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
     --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --schatten:0 1px 2px rgba(40,38,25,.07);--schatten-hoch:0 10px 30px rgba(40,38,25,.16)}
@@ -45,8 +45,14 @@
   .stamp{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.05em}
 
   section{display:flex;flex-direction:column;gap:14px;scroll-margin-top:70px}
-  h3{margin:0;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-b);font-weight:700;
-    padding-bottom:9px;border-bottom:1px solid var(--line2)}
+  /* Nummerierte Kapitel: die Zahl kommt aus einem CSS-Zaehler, damit beim
+     Einschieben eines Kapitels nicht zwoelf Ueberschriften von Hand
+     umnummeriert werden muessen. */
+  .wrap{counter-reset:kapitel}
+  section{counter-increment:kapitel}
+  h3::before{content:counter(kapitel,decimal-leading-zero) " · ";font-family:var(--mono);color:var(--gold);letter-spacing:.05em}
+  h3{margin:0;font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-b);font-weight:700;
+    padding-bottom:9px;border-bottom:2px solid var(--gold-d)}
   p{margin:0;max-width:70ch}
   .note{color:var(--muted);font-size:14px}
   strong{color:var(--gold-b);font-weight:650}
@@ -133,19 +139,19 @@
          wissen, dass sie es wirklich tut. Sie ist zum Nachlesen gedacht, nicht zum Auswendiglernen.</p>
       <p class="note">Jede Zeile trägt rechts eine Marke, wie sie geprüft wurde. Das ist bewusst
          unterschiedlich streng, und die Unterschiede sind hier nicht geschönt.</p>
-      <div class="stamp" id="stamp">Fassung 53 · Bridge-Soll Build 16 · Stand 8. August 2026</div>
+      <div class="stamp" id="stamp">Fassung 54 · Bridge-Soll Build 17 · Stand 8. August 2026</div>
     </div>
 
     <section id="pruefstand">
       <h3>Womit das hier belegt ist</h3>
       <div class="zahlen">
-        <div class="z"><div class="v pos">138</div><div class="l">Prüfungen Rechenwerk</div></div>
+        <div class="z"><div class="v pos">158</div><div class="l">Prüfungen Rechenwerk</div></div>
         <div class="z"><div class="v pos">103</div><div class="l">Prüfungen Oberfläche</div></div>
-        <div class="z"><div class="v pos">241</div><div class="l">bestanden</div></div>
+        <div class="z"><div class="v pos">261</div><div class="l">bestanden</div></div>
         <div class="z"><div class="v">0</div><div class="l">fehlgeschlagen</div></div>
       </div>
       <p class="note">Zwei Prüfprogramme laufen auf Befehl durch: <code>node bridge/pruefung.js</code>
-         mit 26 Gruppen zum Rechenwerk, und <code>node oberflaeche-pruefung.js</code> mit 18 Gruppen
+         mit 28 Gruppen zum Rechenwerk, und <code>node oberflaeche-pruefung.js</code> mit 18 Gruppen
          zur Oberfläche. Das zweite schneidet die Funktionen aus der echten <code>index.html</code>
          heraus, statt eine Kopie zu prüfen. Dadurch kann die Prüfung nicht grün bleiben, während
          die Seite selbst kaputt ist.</p>
@@ -200,7 +206,7 @@
         <div class="fn a"><div class="stripe"></div><div class="was"><b>Zustand je Quelle</b><em>.srcstat</em></div><div class="wie">Ein Punkt je Buch. <b>Grün pulsierend</b> heißt: Kurse kommen an. <b>Rot</b> heißt: die Quelle antwortet nicht. <b>Gold</b> heißt Demo. Daneben steht die Fassung der Bridge, und zwar in Warnfarbe, sobald sie veraltet ist.</div><div class="pr"><span class="pruef live">Betrieb</span></div></div>
         <div class="fn a"><div class="stripe"></div><div class="was"><b>Live oder Demo</b><em>.modeseg</em></div><div class="wie">Demo rechnet mit echten Kursen, setzt aber nichts. Der Auto-Pilot ist bewusst nur im Demo-Modus erlaubt, damit kein Automat mit echtem Geld hantiert.</div><div class="pr"><span class="pruef code">Code</span></div></div>
         <div class="fn a"><div class="stripe"></div><div class="was"><b>Scan starten und anhalten</b><em>#scanBtn</em></div><div class="wie">Hält die Suche an, ohne die Seite zu verlassen. Angehalten wird der Knopf grau und der Radarbalken steht still.</div><div class="pr"><span class="pruef code">Code</span></div></div>
-        <div class="fn a"><div class="stripe"></div><div class="was"><b>Glocke, der Verlauf</b><em>#bellBtn</em></div><div class="wie">Sammelt jede gemeldete Chance, auch die längst verschwundenen, jeweils mit dem <b>Grund des Verschwindens</b>: Daten veraltet, Markt aufgelöst, Rendite weg. Die Zahl am Glockensymbol zeigt Ungelesenes.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Glocke, der Verlauf</b><em>#bellBtn</em></div><div class="wie">Sammelt jede gemeldete Chance, auch die längst verschwundenen, jeweils mit dem <b>Grund des Verschwindens</b>: Daten veraltet, Markt aufgelöst, Rendite weg. Die Zahl am Glockensymbol zeigt Ungelesenes. Bis zu 250 Einträge überleben das Neuladen, filterbar nach <b>Letzte Stunde · Heute · Woche</b>, mit Trennlinie zwischen Frischem und Älterem.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
         <div class="fn a"><div class="stripe"></div><div class="was"><b>Ton bei Treffer</b><em>#soundBtn</em></div><div class="wie">Schaltet den Signalton an und aus, für den Fall, dass der Bildschirm nicht im Blick ist.</div><div class="pr"><span class="pruef code">Code</span></div></div>
         <div class="fn a"><div class="stripe"></div><div class="was"><b>Mein Verlauf und Analyse</b><em>#histBtn</em></div><div class="wie">Öffnet eine Auswertung deiner eigenen Tätigkeit: Verlaufskurve, Einsatz gegen Rückfluss, abgezogene Brokergebühr, Fund-Rate pro Tag und der zeitliche Abstand zwischen Funden.</div><div class="pr"><span class="pruef code">Code</span></div></div>
         <div class="fn a"><div class="stripe"></div><div class="was"><b>Neu laden</b><em>#reloadBtn</em></div><div class="wie">Lädt die Seite frisch, ohne den Zwischenspeicher zu bemühen. Der Zwischenspeicher war früher die häufigste Ursache für tote Knöpfe.</div><div class="pr"><span class="pruef code">Code</span></div></div>
@@ -258,7 +264,7 @@
       <h3>Block „Benachrichtigung"</h3>
       <div class="fnlist">
         <div class="fn e"><div class="stripe"></div><div class="was"><b>Alarmschwelle</b><em>#fHitTh</em></div><div class="wie">Ab welcher Rendite eine Meldung erscheint und der Ton spielt.</div><div class="pr"><span class="pruef code">Code</span></div></div>
-        <div class="fn e"><div class="stripe"></div><div class="was"><b>Meldungen</b><em>.toast</em></div><div class="wie">Erscheinen rechts unten, verschwinden von selbst und sind anklickbar: der Klick springt direkt zur Zeile. Was verschwindet, bleibt in der Glocke auffindbar.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn e"><div class="stripe"></div><div class="was"><b>Meldungen</b><em>.toast</em></div><div class="wie">Erscheinen rechts unten, verschwinden von selbst und sind anklickbar: der Klick springt direkt zur Zeile. <b>Höchstens drei gleichzeitig</b> — kommt eine vierte, gleitet die älteste hinaus und ein Zähler sagt „+N weitere in der Glocke". Nichts überlappt, nichts springt.</div><div class="pr"><span class="pruef code">Code</span></div></div>
         <div class="fn e"><div class="stripe"></div><div class="was"><b>Meldung aufs Handy</b><em>Telegram</em></div><div class="wie">Die Bridge kann Funde per Telegram schicken, wenn <code>telegramBotToken</code> und <code>telegramChatId</code> in ihrer Konfiguration stehen. Fehlen die Felder, passiert nichts.</div><div class="pr"><span class="pruef offen">Offen</span></div></div>
         <div class="fn e"><div class="stripe"></div><div class="was"><b>Auto-Pilot</b><em>#tgAuto</em></div><div class="wie">Setzt bei einem Treffer selbsttätig, aber ausschließlich im Demo-Modus. Mit echtem Geld ist er gesperrt.</div><div class="pr"><span class="pruef code">Code</span></div></div>
       </div>
@@ -273,6 +279,8 @@
         <div class="fn c"><div class="stripe"></div><div class="was"><b>Alter der Kurse</b><em>.age</em></div><div class="wie">Sekunden seit dem letzten Kurs, je Buch getrennt. Wird der Kurs zu alt, verschwindet die Zeile, spätestens aber nach zwei Stunden.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
         <div class="fn c"><div class="stripe"></div><div class="was"><b>DNP-Marke</b><em>.dnp</em></div><div class="wie">Warnt bei Märkten, in denen ein Nichtantreten unterschiedlich behandelt wird. Rot heißt hoch, Orange heißt mittel.</div><div class="pr"><span class="pruef code">Code</span></div></div>
         <div class="fn c"><div class="stripe"></div><div class="was"><b>Direktlinks je Zeile</b><em>.rowlink</em></div><div class="wie">Führen genau auf den gemeinten Markt, nicht auf die Übersichtsseite. Ein Polymarket-Ereignis kann bis zu 128 Märkte bündeln, deshalb werden beide Adressteile mitgeführt.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Link-Prüfer</b><em>Bridge Build 17</em></div><div class="wie">Vor jeder Meldung prüft die Bridge <b>beide Links</b>: der Betfair-Link muss die marketId der gerechneten Kurse tragen und im Katalog stehen; der Polymarket-Slug wird bei Gamma nachgeschlagen und muss auf denselben Markt mit demselben Orderbuch auflösen. <b>Löst ein Link auf einen fremden Markt auf, wird die Chance verworfen.</b> Im Ticket steht je Bein „✓ Link geprüft" oder „Link ungeprüft" mit Grund.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Neu und Älter getrennt</b><em>.absch</em></div><div class="wie">Frisches (unter 1 Stunde offen) steht immer oben, Älteres darunter mit sichtbarer Zwischenzeile. Die ersten 5 Minuten trägt eine Zeile die Marke <b>Neu</b>. Nach 2 Stunden wandert eine Chance in den Verlauf — darüber kommt ein anklickbarer Bescheid.</div><div class="pr"><span class="pruef code">Code</span></div></div>
         <div class="fn c"><div class="stripe"></div><div class="was"><b>Warnung vor totem Link</b><em>.linkwarn</em></div><div class="wie">Sind die Daten hinter einem Link nicht mehr frisch, erscheint vor dem Öffnen ein Hinweis statt einer Enttäuschung danach.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
         <div class="fn c"><div class="stripe"></div><div class="was"><b>Noch nicht bestätigt</b><em>.prueftag</em></div><div class="wie">Ein Fund, den erst ein Durchlauf gesehen hat, wird blasser dargestellt und als ungeprüft markiert, bis ihn ein zweiter bestätigt.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
         <div class="fn c"><div class="stripe"></div><div class="was"><b>Pakete innerhalb Polymarkets</b><em>.mfZeile</em></div><div class="wie">Bei Ereignissen, bei denen genau einer gewinnt, kauft man alle Ja-Seiten, wenn ihre Summe unter einem Dollar liegt. Kein zweites Buch, also keine Fehlpaarung möglich. Höchstens sechs Beine.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
@@ -378,7 +386,7 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=53"></script>
+<script src="config.js?v=54"></script>
 <script>
 (async function(){
   var auth = await window.arRequireAuth();
@@ -391,7 +399,7 @@
     if(s.zeit){
       var art = s.key_art==='live' ? 'LIVE' : (s.key_art==='delayed' ? 'DELAYED' : 'unbekannt');
       document.getElementById('stamp').textContent =
-        'Fassung ' + (window.AR_VERSION||53) + ' · Bridge ' + (s.version||'?') + ' Build ' + (s.build||'?')
+        'Fassung ' + (window.AR_VERSION||54) + ' · Bridge ' + (s.version||'?') + ' Build ' + (s.build||'?')
         + ' · Schlüssel ' + art + ' · letzter Lauf ' + (s.bf_gelesen||0) + ' Betfair-Märkte, '
         + (s.pm_handelbar||0) + ' Polymarket handelbar, ' + (s.sweep_s||0) + ' s';
     }

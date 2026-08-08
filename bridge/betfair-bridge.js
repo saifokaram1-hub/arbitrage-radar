@@ -202,8 +202,8 @@ const O = {
    erkennt, ob auf einem PC noch eine veraltete Bridge läuft, und den Nutzer
    auffordern kann, die neue Datei zu holen. BEI JEDER inhaltlichen Änderung
    an der Suchlogik hochzählen — sonst merkt niemand, dass er alt ist. */
-const BRIDGE_BUILD = 16;
-const BRIDGE_VERSION = "3.6";
+const BRIDGE_BUILD = 17;
+const BRIDGE_VERSION = "3.7";
 
 const BF_LOGIN = 'https://identitysso.betfair.com/api/login';
 const BF_KEEP  = 'https://identitysso.betfair.com/api/keepAlive';
@@ -442,7 +442,109 @@ function pmAdresse(pm) {
   return (pm.marktSlug && pm.marktSlug !== pm.slug) ? basis + '/' + pm.marktSlug : basis;
 }
 
-async function katalogFenster(etId, vonMs, bisMs, tiefe) {
+/* ═══════════════ Link-Prüfer ═══════════════
+   Jede gemeldete Chance traegt zwei Links, und beide muessen den Markt
+   treffen, dessen Kurse gerechnet wurden — sonst setzt jemand am falschen
+   Ort. Beide Links sind deterministisch aus Ids und Slugs gebaut, nie aus
+   einer Suche: derselbe Fund traegt bei jedem Klick denselben Link.
+
+   Betfair laesst sich ohne Netz pruefen: der Link muss genau die marketId
+   tragen, unter der die Kurse gelesen wurden, diese Id muss im Katalog
+   stehen, und der Markt darf nicht geschlossen sein.
+
+   Polymarket bekommt die Gegenprobe uebers Netz: der Markt-Slug aus dem
+   Link wird bei Gamma nachgeschlagen und muss auf DENSELBEN Markt aufloesen
+   — gleiche Id und dasselbe Orderbuch-Token, dessen Preis gerechnet wurde.
+   Antworten werden 6 h gemerkt, damit derselbe Slug nicht bei jedem
+   Durchlauf neu gefragt wird.
+
+   Ergebnis je Bein:  lok 1 = geprueft und richtig · lok 0 = gerade nicht
+   pruefbar (Netz), Grund steht in lgrund. Loest ein Link auf einen FREMDEN
+   Markt auf, wird die ganze Chance verworfen — lieber keine Meldung als
+   eine mit falschem Link. */
+const LINK_CACHE = new Map();          // marktSlug -> {id, toks, ts}
+const LINK_TTL = 6 * 3600e3;
+
+function bfLinkPruefen(mid, link) {
+  if (!link || link.indexOf('/market/' + mid) === -1)
+    return { lok: -1, grund: 'Link traegt eine andere marketId als die gerechneten Kurse' };
+  if (!KATALOG.has(mid))
+    return { lok: -1, grund: 'marketId ' + mid + ' steht nicht im Katalog' };
+  const b = BUCH.get(mid);
+  if (b && b.status && b.status !== 'OPEN')
+    return { lok: -1, grund: 'Markt ist ' + b.status };
+  return { lok: 1 };
+}
+
+async function pmLinkPruefen(pmId, marktSlug, tok) {
+  if (!marktSlug) return { lok: -1, grund: 'kein Markt-Slug vorhanden' };
+  let c = LINK_CACHE.get(marktSlug);
+  if (!c || Date.now() - c.ts > LINK_TTL) {
+    try {
+      const r = await fetch(PM_GAMMA + '?slug=' + encodeURIComponent(marktSlug));
+      if (!r.ok) return { lok: 0, grund: 'Gamma antwortet ' + r.status };
+      const j = await r.json();
+      const m0 = Array.isArray(j) && j[0];
+      if (!m0) return { lok: -1, grund: 'Slug "' + marktSlug + '" findet keinen Markt' };
+      let toks = []; try { toks = JSON.parse(m0.clobTokenIds); } catch (e) {}
+      c = { id: String(m0.id), toks: toks, ts: Date.now() };
+      LINK_CACHE.set(marktSlug, c);
+    } catch (e) {
+      return { lok: 0, grund: 'Netz: ' + String(e.message).slice(0, 60) };
+    }
+  }
+  if (c.id !== String(pmId))
+    return { lok: -1, grund: 'Slug loest auf Markt ' + c.id + ' auf, gerechnet wurde ' + pmId };
+  if (tok && c.toks && c.toks.length && c.toks.indexOf(tok) === -1)
+    return { lok: -1, grund: 'Token hinter dem Slug gehoert zu einem anderen Orderbuch' };
+  return { lok: 1 };
+}
+
+async function linksPruefen(opps) {
+  const gut = [];
+  let verworfen = 0;
+  for (const o of opps) {
+    let ok = true;
+    for (const l of (o.legs || [])) {
+      let erg;
+      if (l.book === 'betfair')         erg = bfLinkPruefen(o._mid, l.link);
+      else if (l.book === 'polymarket') erg = await pmLinkPruefen(o._pmId, o._marktSlug, o._tok);
+      else                              erg = { lok: 1 };
+      if (erg.lok === -1) {
+        ok = false; verworfen++;
+        log('🔗 verworfen (' + l.book + '-Link falsch): ' + erg.grund + '  —  ' + String(o.ev).slice(0, 60));
+        break;
+      }
+      l.lok = erg.lok;
+      if (erg.lok === 0 && erg.grund) l.lgrund = erg.grund;
+    }
+    delete o._mid; delete o._pmId; delete o._marktSlug; delete o._tok;
+    if (ok) gut.push(o);
+  }
+  gut.verworfenAlt = opps.verworfenAlt || 0;
+  gut.unplausibel = opps.unplausibel || 0;
+  gut.verworfenLink = verworfen;
+  return gut;
+}
+
+/* Zeitfenster, die trotz kleinster Teilung und Wiederholung nicht lesbar
+   waren. Nur wenn hier am Ende etwas steht, ist wirklich Bestand verloren —
+   und NUR DANN erscheint eine Warnung. Das Teilen selbst ist Normalbetrieb
+   und bleibt still, egal wie viel Betfair liefert. */
+const KAT_VERLUST = [];
+
+/* Die Entscheidung als reine Funktion, damit pruefung.js sie nachrechnen kann:
+   teilen    = Fenster halbieren und beide Haelften lesen
+   nochmal   = kleinstes Fenster nach Wartepause ein zweites Mal versuchen
+   verloren  = auch der zweite Versuch scheiterte — ehrlich verbuchen
+   weiterwerfen = kein Mengenproblem (Anmeldung, Netz) — echter Fehler */
+function fensterEntscheidung(fehlerText, vonMs, bisMs, zweiterVersuch) {
+  if (!/TOO_MUCH_DATA|ANGX-0001/i.test(String(fehlerText || ''))) return 'weiterwerfen';
+  if (bisMs - vonMs > 2 * 60e3) return 'teilen';
+  return zweiterVersuch ? 'verloren' : 'nochmal';
+}
+
+async function katalogFenster(etId, vonMs, bisMs, tiefe, zweiterVersuch) {
   let res;
   try {
     res = await rpc('listMarketCatalogue', {
@@ -451,19 +553,31 @@ async function katalogFenster(etId, vonMs, bisMs, tiefe) {
       marketProjection: ['RUNNER_DESCRIPTION', 'EVENT', 'MARKET_START_TIME', 'MARKET_DESCRIPTION']
     });
   } catch (e) {
-    /* Auch ANGX-0001 aufteilen. Das ist Betfairs Sammelcode; bei einer
-       Katalogabfrage ist die haeufigste Ursache dahinter zu viel verlangte
-       Datenmenge. Ein zu grosses Zeitfenster in zwei Haelften zu zerlegen
-       ist auch dann richtig, wenn ein anderer Grund dahintersteckt: es wird
-       hoechstens sieben Ebenen tief geteilt und am Ende sauber weitergeworfen.
-       Lieber zweimal kleiner fragen als eine ganze Sportart verlieren. */
-    if (/TOO_MUCH_DATA|ANGX-0001/i.test(e.message) && tiefe < 7) {
+    /* Zu viel verlangt (TOO_MUCH_DATA, oft versteckt hinter dem Sammelcode
+       ANGX-0001)? Dann ist das KEIN Fehler, sondern der stille Normalfall:
+       halbieren und beide Haelften lesen. Frueher stand hier eine
+       Tiefengrenze von 7 — reichte die nicht, fiel das Fenster mit sichtbarer
+       Meldung aus dem Bestand. Jetzt teilt die Schleife so tief, wie das
+       Fenster es hergibt (bis hinunter zu 2 Minuten); die Rekursionstiefe
+       begrenzt sich dadurch von selbst (~19 Ebenen beim 900-Tage-Fenster).
+       Erst wenn ein 2-Minuten-Fenster nach Wartepause und zweitem Versuch
+       immer noch scheitert, gilt es als verloren und wird verbucht. */
+    const was = fensterEntscheidung(e.message, vonMs, bisMs, zweiterVersuch);
+    if (was === 'teilen') {
       const m = Math.floor((vonMs + bisMs) / 2);
       await katalogFenster(etId, vonMs, m, tiefe + 1);
       await katalogFenster(etId, m, bisMs, tiefe + 1);
       return;
     }
-    throw e;
+    if (was === 'nochmal') {
+      await schlaf(1500);
+      return katalogFenster(etId, vonMs, bisMs, tiefe, true);
+    }
+    if (was === 'verloren') {
+      KAT_VERLUST.push({ etId: etId, von: vonMs, bis: bisMs });
+      return;
+    }
+    throw e;   // Anmeldung, Netz, Drossel: echter Fehler, gehoert nach oben
   }
   if (!res) return;
   for (const c of res) {
@@ -483,8 +597,10 @@ async function katalogFenster(etId, vonMs, bisMs, tiefe) {
       runners: (c.runners || []).map(r => ({ id: r.selectionId, name: r.runnerName }))
     });
   }
-  // Genau am Deckel = Fenster war voll -> teilen, sonst gehen Maerkte verloren
-  if (res.length >= 1000 && tiefe < 7 && (bisMs - vonMs) > 3600e3) {
+  /* Genau am Deckel = Fenster war voll -> teilen, sonst gehen Maerkte
+     verloren. Auch hier keine Tiefengrenze mehr: die Untergrenze von
+     10 Minuten je Fenster begrenzt die Teilung von selbst. */
+  if (res.length >= 1000 && (bisMs - vonMs) > 10 * 60e3) {
     const m = Math.floor((vonMs + bisMs) / 2);
     await katalogFenster(etId, vonMs, m, tiefe + 1);
     await katalogFenster(etId, m, bisMs, tiefe + 1);
@@ -494,6 +610,7 @@ async function katalogFenster(etId, vonMs, bisMs, tiefe) {
 async function entdecken() {
   const t0 = Date.now();
   KATALOG.clear();
+  KAT_VERLUST.length = 0;
   const typen = await rpc('listEventTypes', { filter: {} });
   const aus = new Set((O.excludeEventTypeIds || []).map(String));
   const liste = typen.filter(t => !aus.has(String(t.eventType.id)))
@@ -514,6 +631,11 @@ async function entdecken() {
   }
   log('🗺  Betfair-Bestand: ' + KATALOG.size + ' Maerkte aus ' + liste.length + ' Sportarten (' +
       ((Date.now() - t0) / 1000).toFixed(0) + 's)' + (aus.size ? '  [ohne Rennsport]' : ''));
+  /* Nur melden, wenn wirklich etwas fehlt. Das blosse Teilen grosser Fenster
+     ist Normalbetrieb und erzeugt keine Zeile mehr. */
+  if (KAT_VERLUST.length) {
+    log('   ⚠ ' + KAT_VERLUST.length + ' Zeitfenster blieben trotz kleinster Teilung und Wiederholung unlesbar — Bestand dort unvollstaendig');
+  }
   return KATALOG.size;
 }
 
@@ -1275,6 +1397,10 @@ function crossBookChancen() {
       alterBf: alterBf,        // Sekunden seit dem Betfair-Kurs
       alterPm: alterPm,        // Sekunden seit dem Polymarket-Kurs
       ts: new Date().toISOString(),
+      /* Nur fuer den Link-Pruefer, wird vor dem Hochladen entfernt:
+         womit die Links verglichen werden muessen, damit "Link" und
+         "gerechneter Kurs" nachweislich denselben Markt meinen. */
+      _mid: m.mid, _pmId: pmId, _marktSlug: pm.marktSlug, _tok: pm.toks[v.pmIdx],
       legs: [
         {
           book: 'polymarket',
@@ -1664,7 +1790,9 @@ async function durchlauf() {
     }
 
     const dauer = Math.round((Date.now() - t0) / 1000);
-    const opps = crossBookChancen();
+    /* Erst rechnen, dann JEDEN Link pruefen. Eine Chance, deren Link auf
+       einen fremden Markt zeigt, wird hier verworfen und nie gemeldet. */
+    const opps = await linksPruefen(crossBookChancen());
     const arbs = O.internalArb ? betfairIntern().concat(polymarketIntern()).concat(polymarketMehrfach()).sort((a, b) => b.roi - a.roi) : [];
     // Telegram-Meldung fuer neue Funde — die Bridge laeuft auch, wenn kein Browser offen ist
     try { telegramMelden(opps, arbs); } catch (e) {}
@@ -1675,8 +1803,14 @@ async function durchlauf() {
       stufe, sweep_s: dauer, hochgeladen: markets.length,
       opps: opps.length, arbs: arbs.length, veraltet: opps.verworfenAlt || 0,
       unplausibel: opps.unplausibel || 0,
+      link_verworfen: opps.verworfenLink || 0,
+      kat_verlust: KAT_VERLUST.length,
       build: BRIDGE_BUILD, version: BRIDGE_VERSION,
-      key_art: KEY_ART, key_name: KEY_NAME,
+      /* key_name wird NICHT mehr mitgeschickt. Der GET-Endpunkt ist
+         oeffentlich, und der frei gewaehlte Betfair-Anwendungsname hat dort
+         nichts zu suchen — die Website zeigt ohnehin nur key_art. Der Server
+         filtert das Feld zusaetzlich fuer aeltere Bridges heraus. */
+      key_art: KEY_ART,
       // Takt mitschicken, damit auf der Website sichtbar ist, wie intensiv
       // gescannt wird — und dass er sich nach der Schluesselart richtet
       takt_heiss: takt().heiss, takt_breit: takt().breit, takt_sweep: takt().sweep,
@@ -1751,6 +1885,9 @@ module.exports = {
   setKeyArt: (a) => { KEY_ART = a; }, getKeyArt: () => KEY_ART, istVerzoegert,
   crossBookChancen, schnittmengeIds, bewerte, bestaetigtRueckwaerts,
   betfairIntern, polymarketIntern,
+  // Link-Pruefer und Fensterteilung — zum Nachpruefen ohne Netz
+  bfLinkPruefen, pmLinkPruefen, linksPruefen, LINK_CACHE,
+  fensterEntscheidung, KAT_VERLUST,
   pmListe, pmKurse, polymarketScan, kategorie, pmAdresse, polymarketMehrfach,
   takt, TAKT,
   // Nur zum Nachpruefen der Drossel- und Erholungslogik

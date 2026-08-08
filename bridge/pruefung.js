@@ -965,7 +965,106 @@ console.log('\n══════════ 26. Quotengrenze greift wirklich �
   pruefe('leeres Bein gilt als unbekannt', hoch({art:'back',runners:[]}) === Infinity);
 }
 
+/* Die letzten zwei Gruppen brauchen await (der Link-Pruefer ist async, auch
+   wenn er mit warmem Speicher nie ins Netz geht) — deshalb ein async-Rahmen,
+   der am Ende auch die Schlussbilanz druckt. */
+(async function () {
+
+/* Die letzten beiden Gruppen laufen in einer async-Klammer, weil der
+   Polymarket-Link-Pruefer ein Promise liefert. Die Zusammenfassung und der
+   Exit-Code ziehen mit hinein — nach hier kommt kein synchroner Code mehr. */
+(async function () {
+
+console.log('\n══════════ 27. Jeder Link wird geprüft, bevor er gemeldet wird ══════════\n');
+{
+  /* Betfair: ohne Netz pruefbar. Der Link muss die marketId der gerechneten
+     Kurse tragen, die Id muss im Katalog stehen, der Markt muss offen sein. */
+  B.KATALOG.set('1.111', { ev: 'A gegen B', mn: 'Match Odds', runners: [] });
+  B.BUCH.set('1.111', { status: 'OPEN', runners: [] });
+
+  pruefe('richtiger Betfair-Link besteht',
+         B.bfLinkPruefen('1.111', 'https://www.betfair.com/exchange/plus/market/1.111').lok === 1);
+  pruefe('Link mit fremder marketId wird verworfen',
+         B.bfLinkPruefen('1.111', 'https://www.betfair.com/exchange/plus/market/1.999').lok === -1);
+  pruefe('marketId ohne Katalogeintrag wird verworfen',
+         B.bfLinkPruefen('1.222', 'https://www.betfair.com/exchange/plus/market/1.222').lok === -1);
+  B.BUCH.set('1.111', { status: 'CLOSED', runners: [] });
+  pruefe('geschlossener Markt wird verworfen',
+         B.bfLinkPruefen('1.111', 'https://www.betfair.com/exchange/plus/market/1.111').lok === -1);
+  B.BUCH.set('1.111', { status: 'OPEN', runners: [] });
+
+  /* Polymarket: die Gegenprobe laeuft uebers Netz und wird gemerkt. Hier wird
+     der Speicher direkt gefuellt — geprueft wird die VERGLEICHSLOGIK, nicht
+     das Netz: loest der Slug auf denselben Markt und dasselbe Orderbuch auf? */
+  const frisch = { id: '4711', toks: ['tokJA', 'tokNEIN'], ts: Date.now() };
+  B.LINK_CACHE.set('wer-gewinnt-x', frisch);
+
+  const p1 = await B.pmLinkPruefen('4711', 'wer-gewinnt-x', 'tokJA');
+  pruefe('richtiger Polymarket-Slug besteht', p1.lok === 1);
+  const p2 = await B.pmLinkPruefen('9999', 'wer-gewinnt-x', 'tokJA');
+  pruefe('Slug eines FREMDEN Marktes wird verworfen', p2.lok === -1, p2.grund);
+  const p3 = await B.pmLinkPruefen('4711', 'wer-gewinnt-x', 'tokFREMD');
+  pruefe('fremdes Orderbuch-Token wird verworfen', p3.lok === -1, p3.grund);
+  const p4 = await B.pmLinkPruefen('4711', '', 'tokJA');
+  pruefe('fehlender Slug wird verworfen', p4.lok === -1);
+
+  /* Ganze Chancen: eine mit falschem Link darf die Liste nie erreichen,
+     eine mit richtigen Links bleibt und traegt die Pruefmarke. */
+  const opp = (mid, pmId, slug, tok) => ({
+    ev: 'Testchance', _mid: mid, _pmId: pmId, _marktSlug: slug, _tok: tok,
+    legs: [
+      { book: 'polymarket', link: 'https://polymarket.com/event/e/' + slug },
+      { book: 'betfair', link: 'https://www.betfair.com/exchange/plus/market/' + mid }
+    ]
+  });
+  const beide = await B.linksPruefen([
+    opp('1.111', '4711', 'wer-gewinnt-x', 'tokJA'),     // beide Links richtig
+    opp('1.999', '4711', 'wer-gewinnt-x', 'tokJA')      // Betfair-Link ohne Katalogeintrag
+  ]);
+  pruefe('Chance mit richtigen Links bleibt', beide.length === 1);
+  pruefe('Chance mit falschem Link ist verworfen', beide.verworfenLink === 1);
+  pruefe('Beine tragen die Pruefmarke lok=1',
+         beide[0] && beide[0].legs.every(l => l.lok === 1));
+  pruefe('Vergleichsfelder sind vor dem Hochladen entfernt',
+         beide[0] && !('_mid' in beide[0]) && !('_pmId' in beide[0]));
+
+  B.KATALOG.delete('1.111'); B.BUCH.delete('1.111'); B.LINK_CACHE.clear();
+}
+
+console.log('\n══════════ 28. Zu viel Daten? Teilen statt melden ══════════\n');
+{
+  /* Betfairs TOO_MUCH_DATA (oft versteckt hinter dem Sammelcode ANGX-0001)
+     ist KEIN Fehler, sondern der Befehl, kleiner zu fragen. Die Entscheidung
+     ist eine reine Funktion und hier vollstaendig nachgerechnet. */
+  const h = 3600e3, jetzt = 1700000000000;
+  const f = B.fensterEntscheidung;
+  pruefe('grosses Fenster wird geteilt, still',
+         f('TOO_MUCH_DATA', jetzt, jetzt + 24 * h, false) === 'teilen');
+  pruefe('Sammelcode ANGX-0001 wird genauso geteilt',
+         f('ANGX-0001', jetzt, jetzt + 24 * h, false) === 'teilen');
+  pruefe('auch ein 3-Minuten-Fenster wird noch geteilt',
+         f('TOO_MUCH_DATA', jetzt, jetzt + 3 * 60e3, false) === 'teilen');
+  pruefe('kleinstes Fenster: erst Wartepause und zweiter Versuch',
+         f('TOO_MUCH_DATA', jetzt, jetzt + 2 * 60e3, false) === 'nochmal');
+  pruefe('kleinstes Fenster nach zweitem Versuch: ehrlich als Verlust verbucht',
+         f('TOO_MUCH_DATA', jetzt, jetzt + 2 * 60e3, true) === 'verloren');
+  pruefe('Anmeldefehler wird NICHT verschluckt, sondern weitergeworfen',
+         f('INVALID_SESSION_INFORMATION', jetzt, jetzt + 24 * h, false) === 'weiterwerfen');
+  pruefe('Netzfehler wird ebenfalls weitergeworfen',
+         f('fetch failed', jetzt, jetzt + 24 * h, false) === 'weiterwerfen');
+  /* Keine Tiefengrenze mehr, aber auch keine Endlosschleife: jede Teilung
+     halbiert das Fenster, unter 2 Minuten wird nicht mehr geteilt. Vom
+     groessten Fenster (900 Tage) bis dorthin sind es ~19 Halbierungen. */
+  let fenster = 900 * 86400e3, ebenen = 0;
+  while (f('TOO_MUCH_DATA', 0, fenster, false) === 'teilen') { fenster = Math.floor(fenster / 2); ebenen++; }
+  pruefe('Teilung endet von selbst', ebenen > 10 && ebenen < 25, ebenen + ' Ebenen bis zum kleinsten Fenster');
+}
+
 console.log('\n══════════════════════════════════════════');
 console.log('  ' + ok + ' Prüfungen bestanden, ' + fehler + ' fehlgeschlagen');
 console.log('══════════════════════════════════════════\n');
 process.exit(fehler ? 1 : 0);
+
+})();
+
+})();
