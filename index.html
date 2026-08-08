@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=47"></script>
+<script src="config.js?v=48"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -498,6 +498,10 @@
   .connZeile .cwarum,.connZeile .ctun{flex-basis:100%;font-size:11px;line-height:1.55;margin-top:4px;color:var(--muted)}
   .connZeile .cwarum b,.connZeile .ctun b{color:var(--gold);font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-right:5px}
   .connZeile .ctun{color:var(--txt)}
+
+  /* Meldungen gehen von selbst — der Hit bleibt in der Glocke auffindbar */
+  .toast .bleibt{margin-top:6px;padding-top:6px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.02em}
 
   /* Hinweis beim Öffnen eines Links, dessen Daten nicht mehr frisch sind */
   .linkwarn{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:120;
@@ -1883,18 +1887,27 @@ function zeigeLinkWarnung(w){
   document.body.appendChild(el);
   setTimeout(function(){ if(el.isConnected) el.remove(); }, 14000);
 }
-/* Ein Handler für alle Markt-Links, egal ob Zeile, Ticket oder Gegenprobe */
-document.addEventListener('click', function(ev){
-  var a=ev.target.closest && ev.target.closest('a[target="_blank"]');
-  if(!a) return;
-  var zeile=a.closest('.r-o');
-  var id = zeile? zeile.getAttribute('data-id')
-                : (a.closest('#tkBody')? state.ticketId : null);
-  if(!id) return;
-  var mk=mkMap.get(id); if(!mk) return;
-  var w=linkWarnung(mk);
-  if(w) zeigeLinkWarnung(w);
-}, true);
+/* Nur dort lauschen, wo Markt-Links wirklich stehen — nicht auf dem ganzen
+   Dokument. Vorher lief bei JEDEM Klick irgendwo auf der Seite eine Suche
+   nach einem Link. Mit capture, damit es auch greift, wenn ein Link die
+   Weitergabe des Klicks unterbindet. */
+(function(){
+  var pruefeKlick=function(ev){
+    var a=ev.target.closest && ev.target.closest('a[target="_blank"]');
+    if(!a) return;
+    var zeile=a.closest('.r-o');
+    var id = zeile? zeile.getAttribute('data-id')
+                  : (a.closest('#tkBody')? state.ticketId : null);
+    if(!id) return;
+    var mk=mkMap.get(id); if(!mk) return;
+    var w=linkWarnung(mk);
+    if(w) zeigeLinkWarnung(w);
+  };
+  ['#rows','#tkBody'].forEach(function(sel){
+    var c=document.querySelector(sel);
+    if(c) c.addEventListener('click', pruefeKlick, true);
+  });
+})();
 
 /* ---- Konten-UI ---- */
 var ACC=[['pm','Polymarket','PM'],['ob','SX Bet','SX'],['bf','Betfair / Orbit','BF']];
@@ -2373,7 +2386,8 @@ function toast(h){
   var wrap=$('#toasts'); var el=document.createElement('div'); el.className='toast klickbar';
   el.innerHTML='<button class="x">✕</button><div class="t1"><span class="lab">◈ Hit</span><span class="roi">+'+pct(h.roi,2)+'</span></div>'+
     '<div class="ev2">'+h.ev+'</div><div class="dt"><span>'+h.cat+'</span><span>Arb '+pct(h.arb,2)+'</span><span>'+(h.cross?'Cross-Book':'Polymarket')+'</span></div>'+
-    '<div class="go">Anzeigen und nachrechnen →</div>';
+    '<div class="go">Anzeigen und nachrechnen →</div>'+
+    '<div class="bleibt">verschwindet nach 10 s · bleibt in der Glocke ◔</div>';
   el.querySelector('.x').onclick=function(e){ e.stopPropagation(); el.remove(); };
   if(h.id){
     el.onclick=function(){
@@ -2387,9 +2401,18 @@ function toast(h){
     };
   }
   wrap.appendChild(el);
-  while(wrap.children.length>4)wrap.firstChild.remove();
-  // Kein automatisches Verschwinden mehr — verpasste Meldungen waren der
-  // häufigste Grund, warum eine Chance nicht nachgeprüft werden konnte.
+  while(wrap.children.length>3)wrap.firstChild.remove();
+  /* Nach zehn Sekunden von selbst weg.
+     Frueher blieben die Meldungen stehen, damit keine Chance verlorengeht —
+     in der Praxis stapelten sie sich am Rand und verdeckten die Liste.
+     Verloren geht dadurch nichts: derselbe Hit steht in der Glocke oben und
+     laesst sich dort jederzeit wiederfinden, mitsamt Uhrzeit und Rendite. */
+  setTimeout(function(){
+    if(!el.isConnected) return;
+    el.style.transition='opacity .35s ease, transform .35s ease';
+    el.style.opacity='0'; el.style.transform='translateX(12px)';
+    setTimeout(function(){ if(el.isConnected) el.remove(); }, 360);
+  }, 10000);
 }
 function actToast(ok,title,sub){
   var wrap=$('#toasts'); var el=document.createElement('div'); el.className='toast'+(ok?'':' warn');
@@ -2439,10 +2462,34 @@ function pmLink(mk){
   return (ms && ms!==mk.slug) ? (basis+'/'+ms) : basis;
 }
 function openMarket(mk){
-  // Alle beteiligten Bücher gleichzeitig öffnen -> nebeneinander setzen
-  window.open(pmLink(mk),'_blank','noopener');
-  if(mk.obLink) window.open(mk.obLink,'_blank','noopener');
-  if(mk.bfLink) window.open(mk.bfLink,'_blank','noopener');
+  /* Browser lassen aus EINEM Klick nur EIN Fenster zu. Vorher standen hier
+     drei window.open hintereinander: das erste ging auf, die anderen wurden
+     stumm blockiert — und weil die Blockade oft unbemerkt bleibt, sah es aus,
+     als tue der Knopf gar nichts.
+     Jetzt wird eines geoeffnet und ausdruecklich gesagt, welches Buch noch
+     fehlt und wo der Knopf dafuer sitzt. Lieber ein Hinweis als ein stiller
+     Verlust. */
+  var ziele=[];
+  var pm=pmLink(mk); if(pm) ziele.push({name:'Polymarket', url:pm});
+  if(mk.bfLink) ziele.push({name:'Betfair', url:mk.bfLink});
+  if(mk.obLink) ziele.push({name:'SX Bet', url:mk.obLink});
+  if(!ziele.length) return;
+
+  var w=null;
+  try{ w=window.open(ziele[0].url,'_blank','noopener'); }catch(e){}
+  if(!w){
+    zeigeLinkWarnung({titel:'Der Browser hat das Fenster blockiert',
+      text:'Erlaube Pop-ups für diese Seite, oder benutze die Knöpfe '+
+           '„'+ziele.map(function(z){return z.name;}).join(' ↗" und „')+' ↗" im Ticket — '+
+           'die öffnen jeweils einzeln.'});
+    return;
+  }
+  if(ziele.length>1){
+    zeigeLinkWarnung({titel:ziele[0].name+' ist offen — es fehlt noch '+ziele[1].name,
+      text:'Aus einem Klick lässt der Browser nur ein Fenster zu. Den zweiten Markt '+
+           'öffnest du mit dem Knopf „'+ziele[1].name+' ↗" im Ticket. '+
+           'Beide Seiten müssen offen sein, bevor du setzt.'});
+  }
 }
 
 /* ---- Wett-Ticket ---- */
@@ -2892,6 +2939,20 @@ function renderTicket(){
   var max=Math.floor(feasibleMax(v)), inp=$('#tkStakeInp');
   if(!state.ticketDirty){ state.ticketStake=Math.min(state.stdStake,max); if(inp&&document.activeElement!==inp)inp.value=state.ticketStake; }
   var S=Math.max(0,Math.floor(state.ticketStake||0)), r=routing(v,S);
+
+  /* Nur neu zeichnen, wenn sich wirklich etwas geaendert hat.
+     renderTicket() haengt an render(), und das feuert bei Echtzeitkursen
+     bis zu dreimal je Sekunde. Dabei liefen jedes Mal die vollstaendige
+     Sicherheitspruefung, die Tiefenpruefung und die Gegenrechnung neu — fuer
+     ein Ticket, an dem sich nichts geaendert hatte. Das war der Grund, warum
+     sich die Seite zaeh anfuehlte und der Rechner warm wurde.
+     Die Kennung umfasst alles, was im Ticket sichtbar ist. */
+  var tkKenn = m.id+'|'+v.s1.odds.toFixed(4)+'|'+v.s2.odds.toFixed(4)+'|'+
+               v.s1.oddsEff.toFixed(4)+'|'+v.s2.oddsEff.toFixed(4)+'|'+S+'|'+
+               (v.ok?1:0)+'|'+(m._sicher?1:0)+'|'+(m._grund||'')+'|'+
+               state.balPm+'|'+state.balOb+'|'+state.mode+'|'+(m.endet||0);
+  if(tkKenn===state._tkKennung && tkBuiltId===m.id) return;
+  state._tkKennung=tkKenn;
   $('#tkEv').textContent=m.ev;
   // Betfair wurde hier faelschlich als "OB" (SX Bet) beschriftet
   var kuerzel=function(s){ return s==='pm'?'PM':(s==='bf'?'BF':'OB'); };
@@ -3297,6 +3358,11 @@ $('#rows').addEventListener('click',function(e){
 });
 $('#tkBody').addEventListener('input',function(e){ if(e.target.id==='tkStakeInp'){ state.ticketStake=Math.max(0,Math.floor(+e.target.value||0)); state.ticketDirty=true; renderTicket(); } });
 $('#tkBody').addEventListener('click',function(e){
+  /* Ein Klick auf einen Link soll den Link oeffnen — sonst nichts.
+     Vorher lief hier bei JEDEM Klick evalMarket() samt Neuaufbau des
+     Tickets, auch wenn nur ein Markt geoeffnet werden sollte. Das war der
+     Grund, warum sich das Oeffnen zaeh anfuehlte. */
+  if(e.target.closest('a[href]')) return;
   var m=state.ticketId&&mkMap.get(state.ticketId); if(!m)return; var v=evalMarket(m);
   var q=e.target.closest('.qchip');
   if(q){ state.ticketDirty=true; if(q.dataset.q==='max')state.ticketStake=Math.floor(feasibleMax(v)); else state.ticketStake=Math.floor((state.ticketStake||0)+ +q.dataset.q); renderTicket(); return; }
