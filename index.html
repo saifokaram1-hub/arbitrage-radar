@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=49"></script>
+<script src="config.js?v=50"></script>
 <style>
   :root{
     --void:#12150e; --void2:#171a11;
@@ -502,6 +502,17 @@
   .connZeile .cwarum b,.connZeile .ctun b{color:var(--gold);font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-right:5px}
   .connZeile .ctun{color:var(--txt)}
 
+  /* Sichere Pakete innerhalb Polymarkets — schmales Band, nur wenn vorhanden */
+  #mehrfachWrap{border-bottom:1px solid var(--line2)}
+  .mfZeile{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:9px 14px;
+    border-left:3px solid var(--pos);background:rgba(159,191,59,.06);border-bottom:1px solid var(--line)}
+  .mfRoi{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--pos);flex:none}
+  .mfEv{color:var(--txt);font-size:12.5px;min-width:160px;flex:1;overflow-wrap:anywhere}
+  .mfInfo{font-family:var(--mono);font-size:10.5px;color:var(--dim);flex:none}
+  .mfZeile a{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--pos);
+    border:1px solid #4a6b22;padding:5px 10px;text-decoration:none;background:#141a0c;white-space:nowrap}
+  .mfZeile a:hover{color:#d3ea9a;border-color:var(--pos)}
+
   /* Meldungen gehen von selbst — der Hit bleibt in der Glocke auffindbar */
   .toast .bleibt{margin-top:6px;padding-top:6px;border-top:1px solid var(--line);
     font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.02em}
@@ -720,7 +731,8 @@
     <div class="srcs">
       <div class="srcstat"><span class="d" id="dPm"></span>Polymarket <b id="sPm">…</b></div>
       <div class="srcstat"><span class="d" id="dBf"></span>Betfair <b id="sBf">…</b><span class="fass" id="fBf"></span></div>
-      <div class="srcstat" id="stOb" style="display:none"><span class="d" id="dOb"></span>SX Bet <b id="sOb">…</b></div>
+<!-- SX Bet entfernt: eine Boerse zwar, aber fast nur NFL — keine nutzbare
+     Ueberschneidung. Gehandelt wird ueber Polymarket und Betfair. -->
     </div>
     <div class="poll" id="pollInfo">verbinde …</div>
     <div class="spacer"></div>
@@ -774,17 +786,13 @@
           <div class="field"><label>Guthaben Polymarket (€)</label><input class="inp num" id="balPm" type="number" step="50" min="0" value="0" placeholder="0"></div>
           <div class="field"><label>Polygon-Wallet (read-only · live USDC)</label><input class="inp" id="walletAddr" placeholder="0x… (deine Polymarket-Einzahl-Adresse)" autocomplete="off" spellcheck="false" style="font-family:var(--mono);font-size:11px"></div>
           <div id="walletBal" style="font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-top:-6px">Adresse eingeben → Live-Guthaben</div>
-          <div class="field"><label>Guthaben SX Bet (€)</label><input class="inp num" id="balOb" type="number" step="50" min="0" value="0" placeholder="0"></div>
           <div class="field"><label>Gebühren</label>
             <div id="feeInfo" style="font-size:10.5px;color:var(--dim);font-family:var(--mono);line-height:1.65;
               border-left:2px solid var(--line3);padding:6px 9px;margin-bottom:8px">
               Polymarket und Betfair melden ihren Satz je Markt selbst —<br>er wird von dort gelesen und mitgerechnet.
             </div>
-            <label style="font-size:10px">SX Bet Gebühr % (fest)</label>
-            <input class="inp num" id="feeOb" type="number" step="0.5" min="0" value="3" title="SX Bet Gebühr %">
             <input type="hidden" id="feePm" value="0">
           </div>
-          <div class="field"><label>Eigener Proxy (optional)</label><input class="inp" id="obProxy" value="https://noexklrgtqveiclijdwp.supabase.co/functions/v1/ob-proxy" autocomplete="off"></div>
           <div class="field"><label>Standard-Einsatz (empfohlen)</label><input class="inp num" id="stdStake" type="number" step="25" min="0" value="100"></div>
           <label class="toggle" id="tgAuto" tabindex="0" role="switch" aria-checked="false"><span>Auto-Pilot<small>nur im Demo-Modus — setzt bei Hit automatisch</small></span><span class="sw"></span></label>
         </div>
@@ -795,7 +803,7 @@
         <div class="body">
           <div class="field search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="inp" id="fSearch" placeholder="Event suchen …" autocomplete="off"></div>
           <div class="field"><label>Kategorie</label><div class="chips" id="catChips"></div></div>
-          <div class="field"><label>Quelle</label><div class="chips" id="srcChips"><button class="chip active" data-src="all">Alle</button><button class="chip" data-src="fertig" title="Von der lokalen Bridge komplett durchgerechnet — beide Beine, beide Gebühren, direkt einsetzbar">◆ Fertig gerechnet</button><button class="chip" data-src="cross">Nur Cross-Book</button><button class="chip" data-src="pm">Nur Polymarket</button><button class="chip" data-src="ob">Nur SX Bet</button><button class="chip" data-src="bf">Nur Betfair</button></div></div>
+          <div class="field"><label>Quelle</label><div class="chips" id="srcChips"><button class="chip active" data-src="all">Alle</button><button class="chip" data-src="fertig" title="Von der lokalen Bridge komplett durchgerechnet — beide Beine, beide Gebühren, direkt einsetzbar">◆ Fertig gerechnet</button><button class="chip" data-src="cross">Nur Cross-Book</button><button class="chip" data-src="pm">Nur Polymarket</button><button class="chip" data-src="bf">Nur Betfair</button></div></div>
           <div class="field rangewrap"><div class="rr"><label>Min. Rendite</label><b id="minRoiVal">0,0 %</b></div><input type="range" id="fMinRoi" min="0" max="8" step="0.1" value="0"></div>
           <label class="toggle" id="tgOpp" tabindex="0" role="switch" aria-checked="false"><span>Nur echte Chancen<small>Arb-% ≥ 100 ausblenden</small></span><span class="sw"></span></label>
           <label class="toggle" id="tgLowRisk" tabindex="0" role="switch" aria-checked="false"><span>Nur risikoarm<small>DNP/Void-anfällige Märkte ausblenden</small></span><span class="sw"></span></label>
@@ -862,6 +870,12 @@
            Punkt in der Kopfzeile. Eine leere Liste ohne Begründung sieht aus
            wie ein Fehler, ist aber meistens eine abgerissene Verbindung. -->
       <div id="connBox" style="display:none"></div>
+
+      <!-- Sichere Pakete INNERHALB Polymarkets: alle Ausgaenge eines
+           Entweder-oder-Events kaufen, genau einer zahlt 1 $. Diese Funde
+           haben N Beine und passen nicht in die Zwei-Ausgaenge-Tabelle —
+           deshalb ein eigenes, bewusst schmales Band, nur wenn es welche gibt. -->
+      <div id="mehrfachWrap" style="display:none"></div>
 
       <div class="tablewrap">
         <div class="thead">
@@ -1396,6 +1410,7 @@ function pollBF(){
     }
     applyBF();
     syncBridgeMarkets();
+    try{ renderMehrfach(); }catch(e){}
     updateAccountsUI();
     try{ pruefeBridgeFassung(); }catch(e){}
   }).catch(function(e){
@@ -1551,6 +1566,61 @@ function syncBridgeMarkets(){
 /* Verschwundene Chancen landen im Verlauf hinter der Glocke — mitsamt dem
    Grund. So stellt sich nichts tot in der Liste, geht aber auch nichts
    verloren: wer wissen will, was es heute gab, findet es dort. */
+/* ── Sichere Pakete innerhalb Polymarkets ───────────────────────────────
+   Von der Bridge gefunden: alle JA-Seiten eines Entweder-oder-Events
+   zusammen unter 1 $. Genau einer gewinnt und zahlt 1 $ — kein zweites
+   Buch, keine Zuordnung, keine Fehlpaarung moeglich. Der Link fuehrt auf
+   die Event-Seite, wo alle Ausgaenge untereinander zum Kaufen stehen. */
+function renderMehrfach(){
+  var el=document.getElementById('mehrfachWrap'); if(!el)return;
+  var alle=(state.bfArbs||[]).filter(function(a){ return a&&a.typ==='pm-mehrfach'; });
+  // Auch hier gilt: alte Daten sind keine Chancen
+  if(state.bfAge!=null && state.bfAge>900) alle=[];
+  if(!alle.length){ el.style.display='none'; el.innerHTML=''; return; }
+  var esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  el.style.display='';
+  el.innerHTML=alle.slice(0,3).map(function(a){
+    return '<div class="mfZeile">'+
+      '<span class="mfRoi">+'+(+a.roi).toFixed(2)+' %</span>'+
+      '<span class="mfEv">'+esc(a.ev)+'</span>'+
+      '<span class="mfInfo">'+(a.legs||[]).length+' Ausgänge · Summe '+
+        Math.round((+a.inv||0)*100)+' ¢ · max ~'+(+a.max||0)+' $</span>'+
+      '<a href="'+esc(a.link)+'" target="_blank" rel="noopener">alle kaufen ↗</a>'+
+    '</div>';
+  }).join('');
+}
+
+/* ── Erfolgs-Nachweis ────────────────────────────────────────────────────
+   Beim Klick auf „setzen" wird festgehalten, was das Programm in DIESEM
+   Moment gemeldet hat — beide Quoten, Rendite, Einsatz. 90 Sekunden spaeter
+   wird derselbe Markt automatisch noch einmal gemessen und die Abweichung
+   dazugeschrieben. So laesst sich nach der Testphase mit Zahlen sagen, ob
+   die gemeldeten Chancen beim Klicken noch da waren — die entscheidende
+   Frage vor echtem Geld. Was die Boerse tatsaechlich ausgefuehrt hat, kann
+   nur sie selbst wissen; dieser Nachweis misst die Meldung, nicht den Fill. */
+function merkeEinsatz(m, v, S){
+  try{
+    var t=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+    var e={t:t, ev:m.ev, einsatz:true, roi:v.roi, S:S,
+           q1:v.s1.odds, q2:v.s2.odds, id:m.id, drift:null};
+    state.log.unshift(e); if(state.log.length>40)state.log.pop();
+    renderLog();
+    setTimeout(function(){
+      var mk=mkMap.get(e.id);
+      if(!mk){ e.drift='weg'; }
+      else {
+        try{
+          var v2=evalMarket(mk);
+          e.drift=+(v2.roi - e.roi).toFixed(2);
+          e.roiNach=+v2.roi.toFixed(2);
+        }catch(x){ e.drift='weg'; }
+      }
+      renderLog();
+    }, 90000);
+  }catch(x){}
+}
+
 function merkeVergangen(m, grund){
   try{
     var roi = m.opp && m.opp.roi!=null ? +m.opp.roi : null;
@@ -1943,7 +2013,7 @@ function zeigeLinkWarnung(w){
 })();
 
 /* ---- Konten-UI ---- */
-var ACC=[['pm','Polymarket','PM'],['ob','SX Bet','SX'],['bf','Betfair / Orbit','BF']];
+var ACC=[['pm','Polymarket','PM'],['bf','Betfair / Orbit','BF']];
 
 /* ── Überwachung ───────────────────────────────────────────────────────────
    Der Status darf sich nicht nur ändern, wenn zufällig eine Antwort eintrifft.
@@ -2161,10 +2231,6 @@ function renderQuellen(){
         ['Bridge',               (function(){ var f=fassungInfo(); if(!f)return '–';
                                    return f.text+(f.stand? ' · '+f.stand:''); })()]
       ]},
-    { k:'ob', name:'SX Bet', zeilen:[
-        ['Märkte erhalten',      (state.sxCount||0)+''],
-        ['davon zugeordnet',     (state.sxMatches||0)+'']
-      ]}
   ];
 
   el.innerHTML=quellen.map(function(q){
@@ -2256,7 +2322,7 @@ function updateAccountsUI(){
      sie können nicht auf einem alten "Live" hängenbleiben. */
   var punkt={live:'live',fehler:'err',tot:'err',alt:'demo',demo:'demo',verbindet:'',off:''};
   var wort={live:'Live',fehler:'Störung',tot:'getrennt',alt:'veraltet',demo:'Demo',verbindet:'…',off:'aus'};
-  [['pm','dPm','sPm'],['bf','dBf','sBf'],['ob','dOb','sOb']].forEach(function(t){
+  [['pm','dPm','sPm'],['bf','dBf','sBf']].forEach(function(t){
     var d=$('#'+t[1]), s=$('#'+t[2]); if(!d||!s)return;
     var z=zustand(t[0]);
     d.className='d '+(punkt[z]||'');
@@ -2264,8 +2330,6 @@ function updateAccountsUI(){
     var g=grundVon(t[0]);
     var box=d.parentNode; if(box) box.title = g || (t[0]==='pm'?'Polymarket':(t[0]==='bf'?'Betfair / 96ex':'SX Bet'))+': '+(wort[z]||'');
   });
-  // SX Bet nur zeigen, wenn es überhaupt eingeschaltet ist
-  var ob=$('#stOb'); if(ob) ob.style.display = state.srcOn.ob? '' : 'none';
 
   // Fassung der Bridge direkt in der Kopfzeile — man soll nicht suchen müssen
   var fb=$('#fBf');
@@ -2493,6 +2557,18 @@ function renderLog(){
     /* Vergangene Chancen stehen gedimmt dazwischen, mit dem Grund, warum sie
        aus der Liste sind. So ist die Glocke der Verlauf des Tages: was kam,
        was ging, und weshalb. */
+    /* Einsaetze: erst der gemeldete Stand, nach 90 s die Nachmessung.
+       Gruen = Chance war noch da oder besser, orange = geschrumpft,
+       „weg" = Markt nicht mehr auffindbar. */
+    if(h.einsatz){
+      var nach='';
+      if(h.drift==='weg') nach=' <span style="color:var(--neg)">→ nach 90 s: Markt weg</span>';
+      else if(h.drift!=null) nach=' <span style="color:'+(h.drift>=-0.1?'var(--pos)':'var(--warn)')+'">→ nach 90 s: '+(h.roiNach>=0?'+':'')+h.roiNach+' % ('+(h.drift>=0?'+':'')+h.drift+')</span>';
+      else nach=' <span style="color:var(--dim)">→ Nachmessung läuft …</span>';
+      return '<div class="logitem" title="Einsatz: '+esc(h.S)+' € · Quoten '+esc(h.q1)+' / '+esc(h.q2)+'">'+
+        '<span class="lt">'+esc(h.t)+'</span><span class="le">➜ '+esc(h.ev)+nach+'</span>'+
+        '<span class="lr">+'+pct(h.roi,2)+'</span></div>';
+    }
     if(h.weg) return '<div class="logitem weg" title="'+esc(h.grund)+'">'+
       '<span class="lt">'+esc(h.t)+'</span><span class="le">◇ '+esc(h.ev)+'</span>'+
       '<span class="lr">'+(h.roi!=null?('+'+pct(h.roi,2)):'')+' vorbei</span></div>';
@@ -3399,10 +3475,7 @@ bindToggle('#tgOpp','onlyOpp',render);
 bindToggle('#tgLowRisk','onlyLowRisk',render);
 bindToggle('#tgAuto','autopilot');
 $('#balPm').addEventListener('input',function(e){state.balPm=Math.max(0,+e.target.value||0);updateAccountsUI();if(!state.ticketDirty)renderTicket();});
-$('#balOb').addEventListener('input',function(e){state.balOb=Math.max(0,+e.target.value||0);updateAccountsUI();if(!state.ticketDirty)renderTicket();});
 $('#feePm').addEventListener('input',function(e){state.feePm=Math.max(0,+e.target.value||0);render();});
-$('#feeOb').addEventListener('input',function(e){state.feeOb=Math.max(0,+e.target.value||0);render();});
-$('#obProxy').addEventListener('change',function(e){state.obProxy=e.target.value.trim();if(!state.obProxy)state.accounts.ob.status='offline';else if(window.__ar)window.__ar.logConn('ob',state.obProxy);});
 $('#stdStake').addEventListener('input',function(e){state.stdStake=Math.max(0,Math.floor(+e.target.value||0));if(!state.ticketDirty)renderTicket();});
 
 $('#rows').addEventListener('click',function(e){
@@ -3421,7 +3494,7 @@ $('#tkBody').addEventListener('click',function(e){
   var m=state.ticketId&&mkMap.get(state.ticketId); if(!m)return; var v=evalMarket(m);
   var q=e.target.closest('.qchip');
   if(q){ state.ticketDirty=true; if(q.dataset.q==='max')state.ticketStake=Math.floor(feasibleMax(v)); else state.ticketStake=Math.floor((state.ticketStake||0)+ +q.dataset.q); renderTicket(); return; }
-  if(e.target.closest('#tkPlace')){ if(state.mode==='demo')placeDemo(v,state.ticketStake,false); else { if(window.__ar){var rr=routing(v,state.ticketStake);window.__ar.logAct('placed',m.ev,rr.profit,v.roi,state.ticketStake,(v.cross?'cross':v.s1.src),feeAmount(v,state.ticketStake),v.m.cat);} openMarket(m); } }
+  if(e.target.closest('#tkPlace')){ if(state.mode==='demo')placeDemo(v,state.ticketStake,false); else { if(window.__ar){var rr=routing(v,state.ticketStake);window.__ar.logAct('placed',m.ev,rr.profit,v.roi,state.ticketStake,(v.cross?'cross':v.s1.src),feeAmount(v,state.ticketStake),v.m.cat);} merkeEinsatz(m,v,state.ticketStake); openMarket(m); } }
 });
 
 $('#soundBtn').addEventListener('click',function(e){state.sound=!state.sound;e.currentTarget.classList.toggle('on',state.sound);if(state.sound){try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();actx.resume();}catch(x){}beep();}});
@@ -3456,7 +3529,8 @@ function cycle(){
   if(state.mode==='demo'){ ensureWS(); demoTick(); processSignals(); render(); return; }
   var chain=Promise.resolve();
   if(state.srcOn.pm){ chain=chain.then(pollPM); } else { mkMap.clear(); state.accounts.pm.status='off'; }
-  chain=chain.then(function(){ if(state.srcOn.ob){ return pollSX(); } state.accounts.ob.status='off'; mkMap.forEach(function(mk){mk.ob=null;}); });
+  // SX Bet entfernt — der Zweig bleibt nur, um alte ob-Reste an Maerkten zu loeschen
+  chain=chain.then(function(){ state.accounts.ob.status='off'; mkMap.forEach(function(mk){ if(mk.ob)mk.ob=null; }); });
   chain=chain.then(function(){ if(state.srcOn.bf){ return pollBF(); } state.accounts.bf.status='off'; mkMap.forEach(function(mk){mk.bf=null;}); });
   chain.then(function(){ processSignals(); render(); ensureWS(); });
 }
@@ -3470,13 +3544,16 @@ window.__applyPrefs=function(p){
   if(p.hitTh!=null){ state.hitTh=+p.hitTh; $('#fHitTh').value=p.hitTh; $('#hitThVal').textContent=pct(state.hitTh,1); $('#kHitsSub').textContent='ab '+pct(state.hitTh,2)+' Rendite'; }
   if(p.stdStake!=null){ state.stdStake=+p.stdStake; $('#stdStake').value=p.stdStake; }
   if(p.feePm!=null){ state.feePm=+p.feePm; $('#feePm').value=p.feePm; }
-  if(p.feeOb!=null){ state.feeOb=+p.feeOb; $('#feeOb').value=p.feeOb; }
+  // SX-Bet-Felder gibt es nicht mehr — gespeicherte Werte nur noch in den
+  // Zustand uebernehmen, nicht in (entfernte) Eingabefelder schreiben
+  if(p.feeOb!=null){ state.feeOb=+p.feeOb; }
   if(p.balPm!=null){ state.balPm=+p.balPm; $('#balPm').value=p.balPm; }
-  if(p.balOb!=null){ state.balOb=+p.balOb; $('#balOb').value=p.balOb; }
-  if(p.obProxy){ state.obProxy=p.obProxy; $('#obProxy').value=p.obProxy; }
+  if(p.balOb!=null){ state.balOb=+p.balOb; }
+  if(p.obProxy){ state.obProxy=p.obProxy; }
   if(p.walletAddr){ state.walletAddr=p.walletAddr; $('#walletAddr').value=p.walletAddr; refreshWallet(); }
   if(typeof p.onlyLowRisk==='boolean'){ state.onlyLowRisk=p.onlyLowRisk; var tlr=$('#tgLowRisk'); tlr.classList.toggle('on',p.onlyLowRisk); tlr.setAttribute('aria-checked',p.onlyLowRisk); }
-  if(p.srcOn&&typeof p.srcOn==='object'){ ['pm','ob','bf'].forEach(function(k){ if(typeof p.srcOn[k]==='boolean')state.srcOn[k]=p.srcOn[k]; }); }
+  if(p.srcOn&&typeof p.srcOn==='object'){ ['pm','bf'].forEach(function(k){ if(typeof p.srcOn[k]==='boolean')state.srcOn[k]=p.srcOn[k]; }); }
+  state.srcOn.ob=false;   // SX Bet ist entfernt — auch alte Speicherstaende schalten es nicht wieder ein
   updateAccountsUI(); render();
 };
 var _saveT; function saveP(){ if(_saveT)clearTimeout(_saveT); _saveT=setTimeout(function(){ if(window.__ar&&window.__ar.savePrefs&&window.__collectPrefs)window.__ar.savePrefs(window.__collectPrefs()); },700); }

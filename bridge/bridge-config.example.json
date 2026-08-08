@@ -18,6 +18,10 @@
   "_liveMaxBookPerSweep": 6000,
   "_polymarketIntervalSeconds": 20,
 
+  "_TELEGRAM": "Optional: Chancen direkt aufs Handy, auch wenn kein Browser offen ist. Bot bei @BotFather anlegen -> Token hier eintragen; Chat-ID z. B. ueber @userinfobot. Ohne beide Felder wird nichts gesendet. Jede Chance hoechstens alle 30 Minuten, hoechstens 3 Nachrichten je Durchlauf.",
+  "_telegramBotToken": "",
+  "_telegramChatId": "",
+
   "_SCHWELLEN": "Ab welcher Rendite eine Chance gemeldet wird. minRoiSchnellPercent gilt fuer laufende und bald startende Spiele, solange der Key verzoegert ist — dort muss mehr Luft sein, weil die gesehene Quote schon Vergangenheit ist.",
   "minRoiPercent": 0.5,
   "minRoiSchnellPercent": 2.5,

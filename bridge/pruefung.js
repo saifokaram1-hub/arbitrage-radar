@@ -889,6 +889,66 @@ console.log('\n══════════ 24. Links treffen den gemeinten Ma
          B.pmAdresse(mehrfach).indexOf('/event/' + mehrfach.marktSlug) < 0);
 }
 
+
+console.log('\n══════════ 25. Mehrfach-Arbitrage innerhalb Polymarkets ══════════\n');
+{
+  /* Ereignis mit mehreren sich ausschliessenden Ausgaengen: summieren sich
+     alle JA-Preise auf unter 1 $, kauft man alle — genau einer zahlt 1 $.
+     Kein zweites Buch, keine Zuordnung: die groesste Fehlerquelle des
+     Scanners existiert hier nicht. Nur negRisk-Events zaehlen. */
+  B.PM.clear();
+  const kandidat = (id, frage, ask, size, extra) => B.PM.set(id, Object.assign({
+    q: frage, outs: ['Yes', 'No'], toks: ['a'+id, 'b'+id],
+    slug: 'wahl-2027', marktSlug: 'm'+id, negRisk: true, evTitel: 'Wahl 2027',
+    ask: [ask, 1 - ask + 0.02], size: [size, size],
+    feeSatz: 0.04, feeExp: 1, liq: 1000, vol: 1000, cat: 'Politik'
+  }, extra || {}));
+
+  kandidat('k1', 'Gewinnt A?', 0.30, 500);
+  kandidat('k2', 'Gewinnt B?', 0.30, 400);
+  kandidat('k3', 'Gewinnt C?', 0.35, 600);
+
+  let f = B.polymarketMehrfach();
+  pruefe('drei Kandidaten unter 1 $ werden gefunden', f.length === 1,
+         f.length + ' Fund(e)');
+  if (f.length) {
+    const a = f[0];
+    // summe .95, Gewinner zahlt 1 abzueglich seiner Gebuehr (max .014)
+    pruefe('Rendite stimmt auf zwei Stellen', Math.abs(a.roi - 3.789) < 0.01,
+           '+' + a.roi + ' %');
+    pruefe('das duennste Bein deckelt den Einsatz', a.max === Math.floor(400 * 0.95),
+           a.max + ' $');
+    pruefe('drei Beine im Ticket', a.legs.length === 3);
+    pruefe('Link fuehrt auf die Event-Seite (alle Ausgaenge auf einer Seite)',
+           a.link === 'https://polymarket.com/event/wahl-2027', a.link);
+    pruefe('als pm-mehrfach gekennzeichnet', a.typ === 'pm-mehrfach');
+  }
+
+  // Ohne negRisk-Garantie ist "alle kaufen" KEINE Absicherung
+  B.PM.forEach(m => { m.negRisk = false; });
+  pruefe('ohne negRisk-Kennzeichnung kein Fund', B.polymarketMehrfach().length === 0);
+  B.PM.forEach(m => { m.negRisk = true; });
+
+  // Summe ueber 1 -> kein Gewinn -> nichts melden
+  B.PM.get('k3').ask[0] = 0.45;
+  pruefe('Summe ueber 1 $ liefert nichts', B.polymarketMehrfach().length === 0);
+  B.PM.get('k3').ask[0] = 0.35;
+
+  // Ein Bein ohne Kurs -> die Garantie faellt -> ganzes Event verwerfen
+  B.PM.get('k2').ask[0] = 0;
+  pruefe('ein Bein ohne Kurs verwirft das ganze Event',
+         B.polymarketMehrfach().length === 0);
+  B.PM.get('k2').ask[0] = 0.30;
+
+  // Mehr als 6 Beine: die Serverseite kuerzt legs auf 6 — ein
+  // unvollstaendiges Ticket waere gefaehrlicher als keines
+  for (let i = 4; i <= 8; i++) kandidat('k'+i, 'Gewinnt '+i+'?', 0.02, 500);
+  pruefe('mehr als sechs Beine werden uebersprungen',
+         B.polymarketMehrfach().length === 0, B.PM.size + ' Maerkte im Event');
+
+  B.PM.clear();
+}
+
 console.log('\n══════════════════════════════════════════');
 console.log('  ' + ok + ' Prüfungen bestanden, ' + fehler + ' fehlgeschlagen');
 console.log('══════════════════════════════════════════\n');

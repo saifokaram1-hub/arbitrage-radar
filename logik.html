@@ -218,6 +218,16 @@
     </section>
 
     <section>
+      <h3>Arbitrage ohne zweites Buch — innerhalb Polymarkets</h3>
+      <p>Ein Ereignis mit vielen Ausgängen — etwa eine Wahl mit acht Kandidaten — führt je Kandidat einen eigenen JA/NEIN-Markt. Summieren sich <strong>alle JA-Preise auf unter 1 $</strong>, kauft man alle: genau einer gewinnt und zahlt 1 $ aus, der Rest ist Gewinn.</p>
+      <pre>Kandidat A: 30 ¢   Kandidat B: 30 ¢   Kandidat C: 35 ¢
+Summe: 95 ¢  →  Auszahlung 1 $ (abzüglich Gebühr des Gewinners)
+Rendite: rund <b>+3,8 %</b> — egal wer gewinnt</pre>
+      <div class="call good"><b>Hier kann die größte Fehlerquelle gar nicht auftreten.</b> Kein zweites Buch, keine Zuordnung zweier Märkte, keine Links, die danebengehen können. Ein Buch, ein Ereignis, eine Rechnung. Gezählt werden nur Events, die Polymarket selbst als <code>negRisk</code> kennzeichnet — dort garantiert die Börse, dass sich die Ausgänge gegenseitig ausschließen und genau einer eintritt. Ohne diese Garantie wäre „alle kaufen" keine Absicherung.</div>
+      <p class="note">Funde erscheinen als eigenes schmales Band über der Liste („alle kaufen ↗" führt auf die Event-Seite, wo alle Ausgänge untereinander stehen). Mehr als sechs Ausgänge werden übersprungen — die Übertragung kürzt die Beine auf sechs, und ein unvollständiges Ticket wäre gefährlicher als keines. Optional meldet die Bridge jeden Fund per <strong>Telegram</strong> aufs Handy (Token und Chat-ID in der Konfiguration) — sie läuft ja auch, wenn kein Browser offen ist.</p>
+    </section>
+
+    <section>
       <h3>Warum bei Betfair angefangen wird</h3>
       <p>Gesucht wird <strong>zuerst bei Betfair</strong>, und dann wird die passende Polymarket-Frage dazu gesucht — nicht umgekehrt.</p>
       <div class="flow">
@@ -557,8 +567,8 @@ node oberflaeche-pruefung.js  <span class="c">32 Prüfungen — Anzeige, Gebühr
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=49"></script>
-<script src="pdf.js?v=49"></script>
+<script src="config.js?v=50"></script>
+<script src="pdf.js?v=50"></script>
 <script>
 // PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.
 document.getElementById('pdfBtn').addEventListener('click', function(){

@@ -202,8 +202,8 @@ const O = {
    erkennt, ob auf einem PC noch eine veraltete Bridge läuft, und den Nutzer
    auffordern kann, die neue Datei zu holen. BEI JEDER inhaltlichen Änderung
    an der Suchlogik hochzählen — sonst merkt niemand, dass er alt ist. */
-const BRIDGE_BUILD = 13;
-const BRIDGE_VERSION = "3.3";
+const BRIDGE_BUILD = 14;
+const BRIDGE_VERSION = "3.4";
 
 const BF_LOGIN = 'https://identitysso.betfair.com/api/login';
 const BF_KEEP  = 'https://identitysso.betfair.com/api/keepAlive';
@@ -591,6 +591,13 @@ async function pmListe() {
       const marktSlug = m.slug || '';
       gefunden.set(String(m.id), {
         q: m.question || '', outs, toks, slug: adresse, marktSlug: marktSlug,
+        /* negRisk heisst: die Maerkte dieses Events schliessen einander aus,
+           GENAU EINER gewinnt. Nur dann ist "alle JA kaufen" eine sichere
+           Auszahlung von 1 $. Ohne diese Kennzeichnung kann ein Event auch
+           lose verwandte Fragen buendeln, bei denen mehrere oder keine
+           eintreten — dann waere die Rechnung wertlos. */
+        negRisk: !!(m.negRisk || (ereignis && ereignis.negRisk)),
+        evTitel: (ereignis && ereignis.title) || '',
         liq: parseFloat(m.liquidity || 0), vol: parseFloat(m.volume || 0),
         cat: kategorie(m.question),
         // Zeitpunkte: gameStartTime steht bei konkreten Spielen, endDate ist
@@ -1342,6 +1349,71 @@ function polymarketIntern() {
   return treffer;
 }
 
+/* ── Mehrfach-Arbitrage innerhalb Polymarkets ────────────────────────────
+   Ein Ereignis mit vielen Ausgaengen — etwa eine Wahl mit acht Kandidaten —
+   fuehrt je Kandidat einen eigenen JA/NEIN-Markt. Summieren sich alle
+   JA-Preise auf unter 1 $, kauft man ALLE: genau einer gewinnt und zahlt
+   1 $ aus, der Rest ist Gewinn. Kein zweites Buch, keine Zuordnung, keine
+   Links zwischen Boersen — die groesste Fehlerquelle des Scanners existiert
+   hier gar nicht.
+   Nur Events mit negRisk-Kennzeichnung: dort garantiert Polymarket, dass
+   sich die Ausgaenge gegenseitig ausschliessen und GENAU EINER eintritt.
+   Ohne diese Garantie waere "alle kaufen" keine Absicherung. */
+function polymarketMehrfach() {
+  const events = new Map();   // event-slug -> [maerkte]
+  PM.forEach(m => {
+    if (!m.negRisk) return;
+    if (!m.slug) return;
+    if (!events.has(m.slug)) events.set(m.slug, []);
+    events.get(m.slug).push(m);
+  });
+
+  const treffer = [];
+  events.forEach((maerkte, slug) => {
+    if (maerkte.length < 2) return;          // ein Markt allein ist das Ja/Nein-Paar
+    if (maerkte.length > 6) return;          // die Serverseite kuerzt legs auf 6 —
+                                             // ein unvollstaendiges Ticket waere gefaehrlicher als keines
+    let summe = 0, gMax = 0, minAnteile = Infinity;
+    const legs = [];
+    for (const m of maerkte) {
+      // Die JA-Seite finden — nicht blind Index 0 nehmen
+      const ji = m.outs.findIndex(o => /^yes$/i.test(String(o||'').trim()));
+      if (ji < 0) return;                    // kein Ja/Nein-Markt -> ganzes Event verwerfen
+      const p = m.ask[ji], sz = m.size[ji];
+      if (!(p > 0 && p < 1) || !(sz > 0)) return;  // ein Bein ohne Kurs -> keine Garantie
+      summe += p;
+      gMax = Math.max(gMax, pmGebuehr(p, m.feeSatz, m.feeExp));
+      minAnteile = Math.min(minAnteile, sz);
+      legs.push({ n: (m.q || m.marktSlug || '').slice(0, 60),
+                  q: +(1 / p).toFixed(4), size: Math.floor(sz),
+                  anteil: +(p * 100).toFixed(2) });
+    }
+    if (!(summe > 0) || summe >= 1) return;
+    // Der Gewinner zahlt 1 $ abzueglich SEINER Gebuehr. Welcher gewinnt,
+    // weiss man nicht — also mit der hoechsten rechnen.
+    const auszahlung = 1 - gMax;
+    if (!(auszahlung > summe)) return;
+    const roi = (auszahlung / summe - 1) * 100;
+    if (roi < O.minInternalRoi) return;
+    if (roi > O.maxPlausibel) return;        // zu schoen um wahr zu sein = Datenfehler
+    const maxStake = Math.floor(minAnteile * summe);
+    if (maxStake < O.minStake) return;
+
+    treffer.push({
+      typ: 'pm-mehrfach', mid: slug.slice(0, 30),
+      ev: (maerkte[0].evTitel || slug).slice(0, 120),
+      roi: +roi.toFixed(3), inv: +summe.toFixed(5), max: maxStake,
+      inplay: false,
+      // Fuers Mehrfach-Paket ist die EVENT-Seite genau richtig:
+      // dort stehen alle Ausgaenge untereinander zum Kaufen
+      link: 'https://polymarket.com/event/' + slug,
+      legs: legs
+    });
+  });
+  treffer.sort((a, b) => b.roi - a.roi);
+  return treffer;
+}
+
 /* ═══════════════ Upload ═══════════════ */
 
 function hochladeMaerkte() {
@@ -1385,6 +1457,61 @@ async function push(markets, arbs, opps, stats) {
   const j = await r.json().catch(() => ({}));
   if (!j.ok) throw new Error('Upload fehlgeschlagen: ' + (j.error || r.status));
   return j;
+}
+
+/* ── Telegram-Meldung ────────────────────────────────────────────────────
+   Die Bridge laeuft rund um die Uhr, der Browser nicht. Wer nachts eine
+   Chance nicht verpassen will, traegt in der Konfiguration telegramBotToken
+   und telegramChatId ein — dann meldet die Bridge jeden neuen Fund direkt
+   aufs Handy. Ohne die beiden Felder passiert hier schlicht nichts.
+   Jede Chance wird hoechstens alle 30 Minuten erneut gemeldet, und je
+   Durchlauf gehen hoechstens drei Nachrichten raus — ein voller Kanal ist
+   so nutzlos wie gar keiner. */
+const gemeldet = new Map();   // ev -> Zeitpunkt der letzten Meldung
+let telegramFehlerGezeigt = false;
+async function telegramMelden(opps, arbs) {
+  const token = CFG.telegramBotToken, chat = CFG.telegramChatId;
+  if (!token || !chat) return;
+  const jetzt = Date.now();
+  const kandidaten = []
+    .concat((opps || []).map(o => ({
+      ev: o.ev, roi: o.roi,
+      text: '◈ Cross-Book +' + o.roi + ' %\n' + o.ev + '\n' +
+            (o.legs || []).map(l => l.book + ': ' + l.link).join('\n')
+    })))
+    .concat((arbs || []).filter(a => a.typ === 'pm-mehrfach').map(a => ({
+      ev: a.ev, roi: a.roi,
+      text: '◆ Alle Ausgänge kaufen +' + a.roi + ' %\n' + a.ev +
+            ' (' + (a.legs || []).length + ' Ausgänge, Summe ' + Math.round(a.inv * 100) + ' ¢)\n' + a.link
+    })));
+
+  let raus = 0;
+  for (const k of kandidaten) {
+    if (raus >= 3) break;
+    const zuletzt = gemeldet.get(k.ev) || 0;
+    if (jetzt - zuletzt < 30 * 60e3) continue;
+    gemeldet.set(k.ev, jetzt);
+    raus++;
+    try {
+      const r = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ chat_id: chat, text: k.text, disable_web_page_preview: true })
+      });
+      if (!r.ok && !telegramFehlerGezeigt) {
+        telegramFehlerGezeigt = true;
+        log('⚠ Telegram meldet ' + r.status + ' — Token und Chat-ID pruefen. Weitere Fehler werden nicht wiederholt.');
+      }
+    } catch (e) {
+      if (!telegramFehlerGezeigt) {
+        telegramFehlerGezeigt = true;
+        log('⚠ Telegram nicht erreichbar (' + String(e.message).slice(0, 60) + ')');
+      }
+    }
+  }
+  // Aufgeraeumt, damit die Merkliste nicht endlos waechst
+  if (gemeldet.size > 200) {
+    for (const [ev, t] of gemeldet) if (jetzt - t > 2 * 3600e3) gemeldet.delete(ev);
+  }
 }
 
 /* ═══════════════ Hauptschleife ═══════════════ */
@@ -1502,7 +1629,9 @@ async function durchlauf() {
 
     const dauer = Math.round((Date.now() - t0) / 1000);
     const opps = crossBookChancen();
-    const arbs = O.internalArb ? betfairIntern().concat(polymarketIntern()).sort((a, b) => b.roi - a.roi) : [];
+    const arbs = O.internalArb ? betfairIntern().concat(polymarketIntern()).concat(polymarketMehrfach()).sort((a, b) => b.roi - a.roi) : [];
+    // Telegram-Meldung fuer neue Funde — die Bridge laeuft auch, wenn kein Browser offen ist
+    try { telegramMelden(opps, arbs); } catch (e) {}
     const markets = hochladeMaerkte();
 
     const stats = {
@@ -1586,7 +1715,7 @@ module.exports = {
   setKeyArt: (a) => { KEY_ART = a; }, getKeyArt: () => KEY_ART, istVerzoegert,
   crossBookChancen, schnittmengeIds, bewerte, bestaetigtRueckwaerts,
   betfairIntern, polymarketIntern,
-  pmListe, pmKurse, polymarketScan, kategorie, pmAdresse,
+  pmListe, pmKurse, polymarketScan, kategorie, pmAdresse, polymarketMehrfach,
   takt, TAKT,
   // Nur zum Nachpruefen der Drossel- und Erholungslogik
   rateErholen,

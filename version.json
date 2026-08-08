@@ -1,16 +1,15 @@
 {
   "_hinweis": "Zentrale Fassungsangabe. Bei jeder inhaltlichen Aenderung an der Bridge bridgeBuild hochzaehlen — Website und Bridge pruefen sich beide dagegen.",
-  "bridgeBuild": 13,
-  "bridgeVersion": "3.3",
+  "bridgeBuild": 14,
+  "bridgeVersion": "3.4",
   "exe": "https://github.com/saifokaram1-hub/orion-panel/releases/download/bridge-v1/betfair-bridge.exe",
   "anleitung": "https://saifokaram1-hub.github.io/orion-panel/bridge-setup.html",
   "aenderungen": [
-    "LINKS TREFFEN JETZT: ein Polymarket-Event buendelt oft zwanzig Maerkte (bei einer Wahl einen je Kandidat). Der Link fuehrte nur auf die Uebersicht — jetzt direkt zum gemeinten Markt",
-    "FEHLPAARUNG BEHOBEN: reine Zahlen galten als Namensmerkmal — \"Bitcoin $200,000\" wurde mit dem Betfair-Ausgang \"200 - 250m\" gepaart, weil beide \"200\" enthielten",
-    "FEHLPAARUNG BEHOBEN: extreme Aussenseiter werden aussortiert (Quote ueber 20 = unter 5 % Wahrscheinlichkeit) — dort ist die Rendite ein Rundungsartefakt",
-    "Anfragerate 10 je Sekunde: ganzer Betfair-Bestand in rund 11 statt 27 Sekunden",
-    "Drosselt Betfair, wird entschaerft und danach wieder herangetastet",
-    "Takt richtet sich nach dem Schluessel, Live-Profil ist hinterlegt",
-    "Bis zu 12 000 Betfair-Maerkte je Durchlauf, Polymarket im eigenen 20-Sekunden-Takt"
+    "NEU: Arbitrage INNERHALB Polymarkets — bei Entweder-oder-Events mit mehreren Ausgaengen (negRisk) wird geprueft, ob alle JA-Preise zusammen unter 1 $ liegen. Alle kaufen, genau einer zahlt 1 $. Kein zweites Buch, keine Zuordnung, keine Fehlpaarung moeglich",
+    "NEU: Telegram-Meldung aufs Handy (optional, telegramBotToken + telegramChatId in der Konfiguration) — die Bridge laeuft auch, wenn kein Browser offen ist",
+    "SX Bet aus der Website entfernt — fast nur NFL, keine nutzbare Ueberschneidung",
+    "LINKS TREFFEN: /event/<event>/<markt> fuehrt direkt zum gemeinten Markt statt zur Uebersicht",
+    "Fehlpaarungen behoben: Zahlen zaehlen nicht als Namensmerkmal, Quoten ueber 20 werden verworfen",
+    "Anfragerate 10 je Sekunde, Erholung nach Drosselung, Takt je Schluesselart"
   ]
 }
