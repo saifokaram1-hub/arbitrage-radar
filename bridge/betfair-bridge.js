@@ -202,8 +202,8 @@ const O = {
    erkennt, ob auf einem PC noch eine veraltete Bridge läuft, und den Nutzer
    auffordern kann, die neue Datei zu holen. BEI JEDER inhaltlichen Änderung
    an der Suchlogik hochzählen — sonst merkt niemand, dass er alt ist. */
-const BRIDGE_BUILD = 15;
-const BRIDGE_VERSION = "3.5";
+const BRIDGE_BUILD = 16;
+const BRIDGE_VERSION = "3.6";
 
 const BF_LOGIN = 'https://identitysso.betfair.com/api/login';
 const BF_KEEP  = 'https://identitysso.betfair.com/api/keepAlive';
@@ -411,7 +411,17 @@ async function rpc(method, params, versuch) {
       await schlaf(1200 * (versuch + 1));
       return rpc(method, params, versuch + 1);
     }
-    throw new Error(s.slice(0, 220));
+    /* Den eigentlichen Grund NACH VORNE holen.
+       Betfair meldet als message nur den Sammelcode "ANGX-0001"; der wahre
+       Grund steht als errorCode tief im APINGException — hinter der
+       requestUUID, also jenseits der 220 Zeichen, auf die hier gekuerzt wird.
+       Dadurch fand die Pruefung weiter oben ihr "TOO_MUCH_DATA" nie, das
+       Zeitfenster wurde nicht halbiert, und die betroffene Sportart fiel
+       stillschweigend aus dem Bestand — bei Fussball, der groessten
+       Kategorie, faellt das besonders ins Gewicht. */
+    const detail = (first.error && first.error.data && first.error.data.APINGException) || {};
+    const grund = detail.errorCode || detail.errorDetails || '';
+    throw new Error((grund ? grund + ' — ' : '') + s.slice(0, 200));
   }
   rateErholen();   // stoerungsfrei durchgekommen -> ggf. wieder beschleunigen
   return first.result;
@@ -441,7 +451,13 @@ async function katalogFenster(etId, vonMs, bisMs, tiefe) {
       marketProjection: ['RUNNER_DESCRIPTION', 'EVENT', 'MARKET_START_TIME', 'MARKET_DESCRIPTION']
     });
   } catch (e) {
-    if (/TOO_MUCH_DATA/i.test(e.message) && tiefe < 7) {
+    /* Auch ANGX-0001 aufteilen. Das ist Betfairs Sammelcode; bei einer
+       Katalogabfrage ist die haeufigste Ursache dahinter zu viel verlangte
+       Datenmenge. Ein zu grosses Zeitfenster in zwei Haelften zu zerlegen
+       ist auch dann richtig, wenn ein anderer Grund dahintersteckt: es wird
+       hoechstens sieben Ebenen tief geteilt und am Ende sauber weitergeworfen.
+       Lieber zweimal kleiner fragen als eine ganze Sportart verlieren. */
+    if (/TOO_MUCH_DATA|ANGX-0001/i.test(e.message) && tiefe < 7) {
       const m = Math.floor((vonMs + bisMs) / 2);
       await katalogFenster(etId, vonMs, m, tiefe + 1);
       await katalogFenster(etId, m, bisMs, tiefe + 1);

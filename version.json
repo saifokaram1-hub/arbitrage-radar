@@ -1,14 +1,14 @@
 {
   "_hinweis": "Zentrale Fassungsangabe. Bei jeder inhaltlichen Aenderung an der Bridge bridgeBuild hochzaehlen — Website und Bridge pruefen sich beide dagegen.",
-  "bridgeBuild": 15,
-  "bridgeVersion": "3.5",
+  "bridgeBuild": 16,
+  "bridgeVersion": "3.6",
   "exe": "https://github.com/saifokaram1-hub/orion-panel/releases/download/bridge-v1/betfair-bridge.exe",
   "anleitung": "https://saifokaram1-hub.github.io/orion-panel/bridge-setup.html",
   "aenderungen": [
-    "WICHTIG: die Quotengrenze griff nie — sie las ein Feld, das es nicht gibt (NaN>20 ist immer falsch). Deshalb stand \"Conservatives @ 30\" tagelang in der Liste. Jetzt wird die hoechste wirklich beteiligte Quote geprueft",
-    "Fehlpaarung behoben: \"will\", \"does\", \"did\" zaehlen nicht mehr als Namenstreffer — \"Will the Republican Party win\" paarte sich mit dem Cricketspieler \"Will Jacks\"",
-    "Arbitrage INNERHALB Polymarkets (Mehrfach-Events, negRisk) und Telegram-Meldung aufs Handy",
-    "Links treffen den einzelnen Markt statt der Uebersicht",
-    "Anfragerate 10 je Sekunde, Erholung nach Drosselung, Takt je Schluesselart"
+    "ANGX-0001 wird jetzt behandelt: Betfair meldet nur diesen Sammelcode, der wahre Grund (meist TOO_MUCH_DATA) stand hinter der gekuerzten Fehlermeldung. Dadurch wurde das Zeitfenster nicht halbiert und einzelne Fussball-Zeitraeume fielen aus dem Bestand",
+    "Fehlermeldungen nennen den Grund jetzt VORNE statt am abgeschnittenen Ende",
+    "Quotengrenze griff nie (falscher Feldname, NaN>20 ist immer falsch) — behoben, deshalb ist \"Conservatives @ 30\" verschwunden",
+    "will/does/did zaehlen nicht mehr als Namenstreffer (\"Will Jacks\"-Fehlpaarung)",
+    "Arbitrage innerhalb Polymarkets (negRisk-Mehrfachevents) und Telegram-Meldung aufs Handy"
   ]
 }
