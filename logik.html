@@ -6,17 +6,28 @@
 <title>Orion Panel — Suchlogik</title>
 <meta name="robots" content="noindex, nofollow">
 <style>
-  :root{--void:#12150e;--void2:#171a11;--panel:#1a1d13;--panel2:#12150e;--line:#353425;--line2:#45412e;--line3:#4e4630;
-    --txt:#f2f1e7;--muted:#a3a494;--dim:#8f9180;--gold:#c7b24c;--gold-b:#e7d882;--gold-d:#7f7130;
-    --pos:#b0d150;--neg:#d05a44;--warn:#d98c4a;
-    --mono:ui-monospace,"Cascadia Code",Consolas,monospace;--sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Arial,sans-serif}
+  :root{
+    --void:#E9E7DE;--void2:#E1DED3;--panel:#F4F2EB;--panel2:#EDEAE1;--panelhi:#FBFAF6;--sunken:#D8D4C7;
+    --line:#D2CEC0;--line2:#BCB7A5;--line3:#A19B88;
+    --txt:#22251B;--muted:#575C4C;--dim:#646959;--faint:#989C8B;
+    --gold:#7E6A20;--gold-b:#655611;--gold-d:#BCAC66;--gold-flae:#F0EAD0;
+    --pos:#2F6616;--pos-d:#A9C481;--pos-flae:#E8F0DA;
+    --neg:#B23A28;--neg-d:#DFA79B;--neg-flae:#F7E4DF;
+    --warn:#8C5309;--warn-d:#E0BE86;--warn-flae:#FAEEDC;
+    --info:#1F6699;--info-d:#9EC2DC;--info-flae:#E3EEF6;
+    --pm:#5B3FB0;--pm-d:#BDAEE4;--pm-flae:#EDE8F8;
+    --bf:#1F6699;--bf-d:#9EC2DC;--bf-flae:#E3EEF6;
+    --ob:#0E7263;--ob-d:#93C8BF;--ob-flae:#E0F0EC;
+    --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --schatten:0 1px 2px rgba(40,38,25,.07);--schatten-hoch:0 10px 30px rgba(40,38,25,.16)}
   *{box-sizing:border-box}html,body{margin:0;padding:0}
   body{background:var(--void);color:var(--txt);font-family:var(--sans);font-size:15px;line-height:1.62;
-    background-image:radial-gradient(120% 50% at 100% 0%,rgba(199,178,76,.05),transparent 55%)}
+    background-image:radial-gradient(120% 50% at 100% 0%,rgba(138,117,38,.05),transparent 55%)}
 
   .cmd{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:14px;padding:12px 20px;
-    background:linear-gradient(180deg,#1a1d13,#15180f);border-bottom:1px solid var(--line2)}
-  .mark{width:30px;height:30px;position:relative;border:1px solid var(--gold-d);background:#181b12;flex:none}
+    background:linear-gradient(180deg,var(--panelhi),var(--panel));border-bottom:1px solid var(--line2)}
+  .mark{width:30px;height:30px;position:relative;border:1px solid var(--gold-d);background:var(--panelhi);flex:none}
   .mark::before,.mark::after{content:"";position:absolute;background:var(--gold)}
   .mark::before{left:8px;top:14px;width:13px;height:1px;box-shadow:0 -5px 0 var(--gold-d),0 5px 0 var(--gold-d)}
   .mark::after{left:14px;top:8px;width:1px;height:13px;box-shadow:-5px 0 0 var(--gold-d),5px 0 0 var(--gold-d)}
@@ -24,11 +35,11 @@
   h1 span{color:var(--gold-b)}
   .cmd .sp{flex:1}
   .lnk{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);border:1px solid var(--line3);
-    padding:8px 12px;text-decoration:none;background:#181b12;white-space:nowrap}
+    padding:8px 12px;text-decoration:none;background:var(--panelhi);white-space:nowrap}
   .lnk:hover{color:var(--gold-b);border-color:var(--gold-d)}
 
   .wrap{max-width:900px;margin:0 auto;padding:28px 20px 80px;display:flex;flex-direction:column;gap:32px}
-  .intro{border:1px solid var(--line2);background:linear-gradient(180deg,#12150e,#15180f);padding:22px 24px;display:flex;flex-direction:column;gap:10px}
+  .intro{border:1px solid var(--line2);background:linear-gradient(180deg,var(--void),var(--panel));padding:22px 24px;display:flex;flex-direction:column;gap:10px}
   .intro h2{margin:0;font-size:19px;color:var(--gold-b);text-wrap:balance}
   .intro p{margin:0;color:var(--muted);font-size:14.5px;max-width:66ch}
   .stamp{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.05em}
@@ -102,13 +113,13 @@
   .ba .lab{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}
   .ba .vor .lab{color:var(--neg)}
   .ba .jetzt .lab{color:var(--pos)}
-  .ba .jetzt{background:rgba(159,191,59,.07)}
+  .ba .jetzt{background:rgba(60,122,30,.07)}
   @media(max-width:600px){.ba{grid-template-columns:1fr}}
 
   .call{border-left:3px solid var(--gold-d);background:var(--panel2);padding:13px 16px;font-size:14px;color:var(--muted)}
-  .call.warn{border-left-color:var(--warn);background:rgba(217,140,74,.07)}
-  .call.bad{border-left-color:var(--neg);background:rgba(176,64,46,.07)}
-  .call.good{border-left-color:var(--pos);background:rgba(159,191,59,.07)}
+  .call.warn{border-left-color:var(--warn);background:rgba(169,102,12,.07)}
+  .call.bad{border-left-color:var(--neg);background:rgba(178,58,40,.07)}
+  .call.good{border-left-color:var(--pos);background:rgba(60,122,30,.07)}
   .call b{color:var(--txt)}
   code{font-family:var(--mono);font-size:12.5px;color:var(--gold-b);background:var(--void2);padding:1px 5px;border:1px solid var(--line)}
   a{color:var(--gold)}
@@ -122,11 +133,21 @@
      im Satz umzubrechen. */
   @media print{
     @page{margin:14mm 12mm}
-    :root{--void:#fff;--void2:#fff;--panel:#fff;--panel2:#fafaf5;
+    /* Auf Papier gilt eine eigene Palette: echtes Weiss und volles Schwarz,
+       weil Tinte anders traegt als ein Bildschirm. Alle Kennfarben sind
+       hier zusaetzlich abgedunkelt, damit sie im Ausdruck nicht ausbleichen. */
+    :root{--void:#fff;--void2:#fff;--panel:#fff;--panel2:#fafaf5;--panelhi:#fff;--sunken:#f0efe8;
       --line:#ccc;--line2:#999;--line3:#777;
-      --txt:#000;--muted:#333;--dim:#666;
-      --gold:#6b5c10;--gold-b:#403708;--gold-d:#8a7c3a;
-      --pos:#2f5c00;--neg:#8a2c14;--warn:#7d4a00}
+      --txt:#000;--muted:#333;--dim:#666;--faint:#888;
+      --gold:#6b5c10;--gold-b:#403708;--gold-d:#8a7c3a;--gold-flae:#f7f4e6;
+      --pos:#2f5c00;--pos-d:#8aa863;--pos-flae:#f2f6ea;
+      --neg:#8a2c14;--neg-d:#c08a7e;--neg-flae:#faf0ed;
+      --warn:#7d4a00;--warn-d:#c9a468;--warn-flae:#faf4e8;
+      --info:#124a70;--info-d:#8fb0c8;--info-flae:#eef4f8;
+      --pm:#3f2a80;--pm-d:#a596d0;--pm-flae:#f2eefa;
+      --bf:#124a70;--bf-d:#8fb0c8;--bf-flae:#eef4f8;
+      --ob:#0a5449;--ob-d:#7fb5ab;--ob-flae:#eaf5f2;
+      --schatten:none;--schatten-hoch:none}
     body{background:#fff;color:#000;font-size:10.5pt;line-height:1.45}
     .cmd,.noprint{display:none!important}
     .wrap{max-width:none;padding:0;gap:14px}
@@ -162,6 +183,7 @@
     <div class="sp"></div>
     <button class="lnk" id="pdfBtn" style="cursor:pointer;font-family:inherit">⤓ PDF herunterladen</button>
     <a class="lnk" href="bridge-setup.html">Einrichtung</a>
+    <a class="lnk" href="funktionen.html">Alle Funktionen</a>
     <a class="lnk" href="index.html">← Zurück zur App</a>
   </div>
 
@@ -567,7 +589,7 @@ node oberflaeche-pruefung.js  <span class="c">32 Prüfungen — Anzeige, Gebühr
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=52"></script>
+<script src="config.js?v=53"></script>
 <script src="pdf.js?v=52"></script>
 <script>
 // PDF wird direkt erzeugt und heruntergeladen — kein Druckdialog.

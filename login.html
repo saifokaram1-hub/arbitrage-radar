@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="de">
 <head>
 <meta charset="utf-8">
@@ -7,13 +7,27 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Internes Dashboard — Zugang nur für berechtigte Nutzer.">
 <style>
-  :root{--void:#12150e;--panel:#12150e;--line:#353425;--line2:#45412e;--line3:#4e4630;--txt:#f2f1e7;--muted:#a3a494;--dim:#8f9180;--gold:#c7b24c;--gold-b:#e7d882;--gold-d:#7f7130;--pos:#b0d150;--neg:#d05a44;--mono:ui-monospace,"Cascadia Code",Consolas,monospace;--sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Arial,sans-serif}
+  :root{
+    --void:#E9E7DE;--void2:#E1DED3;--panel:#F4F2EB;--panel2:#EDEAE1;--panelhi:#FBFAF6;--sunken:#D8D4C7;
+    --line:#D2CEC0;--line2:#BCB7A5;--line3:#A19B88;
+    --txt:#22251B;--muted:#575C4C;--dim:#646959;--faint:#989C8B;
+    --gold:#7E6A20;--gold-b:#655611;--gold-d:#BCAC66;--gold-flae:#F0EAD0;
+    --pos:#2F6616;--pos-d:#A9C481;--pos-flae:#E8F0DA;
+    --neg:#B23A28;--neg-d:#DFA79B;--neg-flae:#F7E4DF;
+    --warn:#8C5309;--warn-d:#E0BE86;--warn-flae:#FAEEDC;
+    --info:#1F6699;--info-d:#9EC2DC;--info-flae:#E3EEF6;
+    --pm:#5B3FB0;--pm-d:#BDAEE4;--pm-flae:#EDE8F8;
+    --bf:#1F6699;--bf-d:#9EC2DC;--bf-flae:#E3EEF6;
+    --ob:#0E7263;--ob-d:#93C8BF;--ob-flae:#E0F0EC;
+    --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --schatten:0 1px 2px rgba(40,38,25,.07);--schatten-hoch:0 10px 30px rgba(40,38,25,.16)}
   *{box-sizing:border-box}html,body{margin:0;padding:0}
   body{background:var(--void);color:var(--txt);font-family:var(--sans);min-height:100vh;display:grid;place-items:center;
-    background-image:radial-gradient(120% 80% at 100% 0%, rgba(199,178,76,.06), transparent 55%)}
-  .card{width:380px;max-width:calc(100vw - 32px);border:1px solid var(--line2);background:linear-gradient(180deg,#1a1d13,#15180f)}
+    background-image:radial-gradient(120% 80% at 100% 0%, rgba(138,117,38,.06), transparent 55%)}
+  .card{width:380px;max-width:calc(100vw - 32px);border:1px solid var(--line2);background:linear-gradient(180deg,var(--panelhi),var(--panel))}
   .top{padding:24px 26px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
-  .mark{width:36px;height:36px;position:relative;border:1px solid var(--gold-d);background:#181b12;flex:none}
+  .mark{width:36px;height:36px;position:relative;border:1px solid var(--gold-d);background:var(--panelhi);flex:none}
   .mark::before,.mark::after{content:"";position:absolute;background:var(--gold)}
   .mark::before{left:11px;top:17px;width:14px;height:1px;box-shadow:0 -5px 0 var(--gold-d),0 5px 0 var(--gold-d)}
   .mark::after{left:17px;top:11px;width:1px;height:14px;box-shadow:-5px 0 0 var(--gold-d),5px 0 0 var(--gold-d)}
@@ -25,15 +39,15 @@
   .tabs button.active{color:var(--gold-b);border-bottom-color:var(--gold)}
   form{padding:22px 26px 26px;display:flex;flex-direction:column;gap:14px}
   label{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block}
-  input{width:100%;height:40px;padding:0 12px;background:#1a1d13;border:1px solid var(--line2);color:var(--txt);font-size:14px;font-family:var(--mono)}
+  input{width:100%;height:40px;padding:0 12px;background:var(--panelhi);border:1px solid var(--line2);color:var(--txt);font-size:14px;font-family:var(--mono)}
   input:focus{outline:2px solid var(--gold);outline-offset:1px}
-  .btn{height:44px;border:1px solid var(--gold-d);background:linear-gradient(180deg,#1a1808,#100e05);color:var(--gold-b);font:inherit;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:.12s}
-  .btn:hover{background:#24200a;box-shadow:0 0 20px rgba(199,178,76,.2)}
+  .btn{height:44px;border:1px solid var(--gold-d);background:linear-gradient(180deg,var(--gold-flae),var(--gold-flae));color:var(--gold-b);font:inherit;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:.12s}
+  .btn:hover{background:#E7DFBE;box-shadow:0 0 20px rgba(138,117,38,.2)}
   .btn:disabled{opacity:.5;cursor:not-allowed}
   .msg{font-size:12px;font-family:var(--mono);padding:10px 12px;border:1px solid var(--line2);display:none}
   .msg.show{display:block}
-  .msg.err{border-color:#6e2c22;color:#d98c7c;background:rgba(176,64,46,.06)}
-  .msg.ok{border-color:#5e7420;color:var(--pos);background:rgba(159,191,59,.06)}
+  .msg.err{border-color:var(--neg-d);color:#8E3524;background:rgba(178,58,40,.06)}
+  .msg.ok{border-color:var(--pos-d);color:var(--pos);background:rgba(60,122,30,.06)}
   .hint{font-size:10px;color:var(--dim);text-align:center;line-height:1.5}
   a{color:var(--gold)}
 </style>
@@ -52,7 +66,7 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=32"></script>
+<script src="config.js?v=53"></script>
 <script>
 (function(){
   if(!window.arGate()) return;              // Sperrbildschirm vor dem Login

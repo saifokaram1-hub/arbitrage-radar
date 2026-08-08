@@ -1,0 +1,402 @@
+﻿<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orion Panel — Alle Funktionen</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{
+    --void:#E9E7DE;--void2:#E1DED3;--panel:#F4F2EB;--panel2:#EDEAE1;--panelhi:#FBFAF6;--sunken:#D8D4C7;
+    --line:#D2CEC0;--line2:#BCB7A5;--line3:#A19B88;
+    --txt:#22251B;--muted:#575C4C;--dim:#646959;--faint:#989C8B;
+    --gold:#7E6A20;--gold-b:#655611;--gold-d:#BCAC66;--gold-flae:#F0EAD0;
+    --pos:#2F6616;--pos-d:#A9C481;--pos-flae:#E8F0DA;
+    --neg:#B23A28;--neg-d:#DFA79B;--neg-flae:#F7E4DF;
+    --warn:#8C5309;--warn-d:#E0BE86;--warn-flae:#FAEEDC;
+    --info:#1F6699;--info-d:#9EC2DC;--info-flae:#E3EEF6;
+    --pm:#5B3FB0;--pm-d:#BDAEE4;--pm-flae:#EDE8F8;
+    --bf:#1F6699;--bf-d:#9EC2DC;--bf-flae:#E3EEF6;
+    --ob:#0E7263;--ob-d:#93C8BF;--ob-flae:#E0F0EC;
+    --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --schatten:0 1px 2px rgba(40,38,25,.07);--schatten-hoch:0 10px 30px rgba(40,38,25,.16)}
+  *{box-sizing:border-box}html,body{margin:0;padding:0}
+  body{background:var(--void);color:var(--txt);font-family:var(--sans);font-size:15px;line-height:1.62;
+    background-image:radial-gradient(120% 50% at 100% 0%,rgba(138,117,38,.05),transparent 55%)}
+
+  .cmd{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:14px;padding:12px 20px;flex-wrap:wrap;
+    background:linear-gradient(180deg,var(--panelhi),var(--panel));border-bottom:1px solid var(--line2);box-shadow:var(--schatten)}
+  .mark{width:30px;height:30px;position:relative;border:1px solid var(--gold);background:var(--gold-flae);flex:none}
+  .mark::before,.mark::after{content:"";position:absolute;background:var(--gold)}
+  .mark::before{left:8px;top:14px;width:13px;height:1px;box-shadow:0 -5px 0 var(--gold-d),0 5px 0 var(--gold-d)}
+  .mark::after{left:14px;top:8px;width:1px;height:13px;box-shadow:-5px 0 0 var(--gold-d),5px 0 0 var(--gold-d)}
+  h1{margin:0;font-size:12.5px;letter-spacing:.24em;text-transform:uppercase;font-weight:700}
+  h1 span{color:var(--gold-b)}
+  .cmd .sp{flex:1}
+  .lnk{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-b);border:1px solid var(--line3);
+    padding:8px 12px;text-decoration:none;background:var(--panelhi);white-space:nowrap}
+  .lnk:hover{border-color:var(--gold);background:var(--gold-flae)}
+
+  .wrap{max-width:940px;margin:0 auto;padding:28px 20px 80px;display:flex;flex-direction:column;gap:34px}
+  .intro{border:1px solid var(--line2);border-left:4px solid var(--gold);background:var(--panel);padding:22px 24px;display:flex;flex-direction:column;gap:10px}
+  .intro h2{margin:0;font-size:19px;color:var(--gold-b);text-wrap:balance}
+  .intro p{margin:0;color:var(--muted);font-size:14.5px;max-width:68ch}
+  .stamp{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.05em}
+
+  section{display:flex;flex-direction:column;gap:14px;scroll-margin-top:70px}
+  h3{margin:0;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-b);font-weight:700;
+    padding-bottom:9px;border-bottom:1px solid var(--line2)}
+  p{margin:0;max-width:70ch}
+  .note{color:var(--muted);font-size:14px}
+  strong{color:var(--gold-b);font-weight:650}
+  code{font-family:var(--mono);font-size:12.5px;background:var(--panelhi);border:1px solid var(--line2);padding:1px 5px}
+
+  /* Inhaltsverzeichnis */
+  .toc{display:flex;flex-wrap:wrap;gap:7px}
+  .toc a{font-size:11.5px;letter-spacing:.06em;text-decoration:none;color:var(--muted);
+    border:1px solid var(--line2);background:var(--panelhi);padding:6px 10px;display:flex;align-items:center;gap:7px}
+  .toc a:hover{border-color:var(--gold);color:var(--gold-b);background:var(--gold-flae)}
+  .toc a i{width:9px;height:9px;display:block;flex:none;font-style:normal}
+
+  /* Eine Funktion = eine Zeile im Verzeichnis */
+  .fnlist{display:flex;flex-direction:column;border:1px solid var(--line2);background:var(--panel)}
+  .fn{display:grid;grid-template-columns:4px 200px 1fr 104px;border-bottom:1px solid var(--line);align-items:stretch}
+  .fn:last-child{border-bottom:0}
+  .fn .stripe{background:var(--line3)}
+  .fn.a .stripe{background:var(--gold)}
+  .fn.b .stripe{background:var(--info)}
+  .fn.c .stripe{background:var(--pos)}
+  .fn.d .stripe{background:var(--pm)}
+  .fn.e .stripe{background:var(--warn)}
+  .fn.f .stripe{background:var(--ob)}
+  .fn .was{padding:12px 14px;border-right:1px solid var(--line);background:var(--panelhi)}
+  .fn .was b{font-size:13.5px;font-weight:650;display:block}
+  .fn .was em{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--dim);display:block;margin-top:3px;overflow-wrap:anywhere}
+  .fn .wie{padding:12px 15px;font-size:13.5px;color:var(--muted)}
+  .fn .wie b{color:var(--txt);font-weight:600}
+  .fn .pr{padding:12px 12px;border-left:1px solid var(--line);display:flex;align-items:flex-start;justify-content:flex-end}
+  .pruef{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 6px;
+    border:1px solid;white-space:nowrap;text-align:center;line-height:1.3}
+  .pruef.auto{color:var(--pos);border-color:var(--pos-d);background:var(--pos-flae)}
+  .pruef.code{color:var(--info);border-color:var(--info-d);background:var(--info-flae)}
+  .pruef.live{color:var(--gold-b);border-color:var(--gold-d);background:var(--gold-flae)}
+  .pruef.offen{color:var(--warn);border-color:var(--warn-d);background:var(--warn-flae)}
+  @media(max-width:820px){
+    .fn{grid-template-columns:4px 1fr}
+    .fn .was{border-right:0;border-bottom:1px solid var(--line)}
+    .fn .pr{border-left:0;justify-content:flex-start;padding-top:0}
+  }
+
+  /* Farbschluessel */
+  .legende{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1px;background:var(--line);border:1px solid var(--line2)}
+  .lg{background:var(--panelhi);padding:11px 13px;display:flex;align-items:center;gap:10px}
+  .lg .sw{width:16px;height:16px;flex:none;border:1px solid rgba(34,37,27,.22)}
+  .lg .tx{font-size:12.5px;line-height:1.4}
+  .lg .tx b{display:block;font-size:13px}
+  .lg .tx span{color:var(--dim);font-family:var(--mono);font-size:10px}
+
+  .kasten{border:1px solid var(--line2);background:var(--panel);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+  .kasten.warn{border-color:var(--warn-d);border-left:4px solid var(--warn);background:var(--warn-flae)}
+  .kasten.gut{border-color:var(--pos-d);border-left:4px solid var(--pos);background:var(--pos-flae)}
+  .kasten b{color:var(--txt)}
+  ul{margin:0;padding-left:19px;display:flex;flex-direction:column;gap:6px}
+  li{font-size:14px;color:var(--muted)}
+  li b{color:var(--txt);font-weight:600}
+
+  .zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));border:1px solid var(--line2);background:var(--panel)}
+  .z{padding:13px 15px;border-right:1px solid var(--line)}
+  .z:last-child{border-right:0}
+  .z .v{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--gold-b);line-height:1.1;font-variant-numeric:tabular-nums}
+  .z .v.pos{color:var(--pos)}
+  .z .l{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);margin-top:5px}
+
+  .foot{border-top:1px solid var(--line2);padding-top:16px;font-size:12px;color:var(--dim);font-family:var(--mono);line-height:1.7}
+</style>
+</head>
+<body>
+  <div class="cmd">
+    <div class="mark"></div>
+    <h1>Alle&nbsp;<span>Funktionen</span></h1>
+    <div class="sp"></div>
+    <a class="lnk" href="bridge-setup.html">Schritt für Schritt</a>
+    <a class="lnk" href="logik.html">Suchlogik</a>
+    <a class="lnk" href="index.html">← Zurück zur App</a>
+  </div>
+
+  <div class="wrap">
+
+    <div class="intro">
+      <h2>Was dieses Programm alles kann, Stück für Stück</h2>
+      <p>Diese Seite ist das Verzeichnis aller Funktionen des Orion Panels. Sie beschreibt jede
+         Schaltfläche, jeden Filter und jede Anzeige: was sie tut, wie sie es tut, und woher wir
+         wissen, dass sie es wirklich tut. Sie ist zum Nachlesen gedacht, nicht zum Auswendiglernen.</p>
+      <p class="note">Jede Zeile trägt rechts eine Marke, wie sie geprüft wurde. Das ist bewusst
+         unterschiedlich streng, und die Unterschiede sind hier nicht geschönt.</p>
+      <div class="stamp" id="stamp">Fassung 53 · Bridge-Soll Build 16 · Stand 8. August 2026</div>
+    </div>
+
+    <section id="pruefstand">
+      <h3>Womit das hier belegt ist</h3>
+      <div class="zahlen">
+        <div class="z"><div class="v pos">138</div><div class="l">Prüfungen Rechenwerk</div></div>
+        <div class="z"><div class="v pos">103</div><div class="l">Prüfungen Oberfläche</div></div>
+        <div class="z"><div class="v pos">241</div><div class="l">bestanden</div></div>
+        <div class="z"><div class="v">0</div><div class="l">fehlgeschlagen</div></div>
+      </div>
+      <p class="note">Zwei Prüfprogramme laufen auf Befehl durch: <code>node bridge/pruefung.js</code>
+         mit 26 Gruppen zum Rechenwerk, und <code>node oberflaeche-pruefung.js</code> mit 18 Gruppen
+         zur Oberfläche. Das zweite schneidet die Funktionen aus der echten <code>index.html</code>
+         heraus, statt eine Kopie zu prüfen. Dadurch kann die Prüfung nicht grün bleiben, während
+         die Seite selbst kaputt ist.</p>
+      <div class="legende">
+        <div class="lg"><span class="sw" style="background:var(--pos-flae);border-color:var(--pos)"></span><span class="tx"><b>Automatisch geprüft</b><span>Teil der 241 Prüfungen</span></span></div>
+        <div class="lg"><span class="sw" style="background:var(--info-flae);border-color:var(--info)"></span><span class="tx"><b>Im Code nachgelesen</b><span>Verdrahtung geprüft, nicht geklickt</span></span></div>
+        <div class="lg"><span class="sw" style="background:var(--gold-flae);border-color:var(--gold)"></span><span class="tx"><b>Im Betrieb gesehen</b><span>lief nachweislich mit echten Daten</span></span></div>
+        <div class="lg"><span class="sw" style="background:var(--warn-flae);border-color:var(--warn)"></span><span class="tx"><b>Nicht abschließend geprüft</b><span>braucht deine Anmeldung oder Betfair</span></span></div>
+      </div>
+      <div class="kasten warn">
+        <b>Ehrlich dazugesagt</b>
+        <p class="note">Ich konnte mich nicht als du anmelden, denn dein Supabase-Passwort gebe ich
+           nirgends ein. Alles hinter der Anmeldung ist deshalb aus dem Code gelesen und, wo möglich,
+           über die Prüfprogramme belegt, aber nicht von mir angeklickt. Was Betfair betrifft, kommt
+           dazu: dein Konto steht auf <code>SUSPENDED</code>, Kurse lesen geht, Wetten setzen nicht.</p>
+      </div>
+    </section>
+
+    <section id="inhalt">
+      <h3>Inhalt</h3>
+      <div class="toc">
+        <a href="#zugang"><i style="background:var(--info)"></i>Zugang</a>
+        <a href="#kopf"><i style="background:var(--gold)"></i>Kopfzeile</a>
+        <a href="#kennzahlen"><i style="background:var(--pos)"></i>Kennzahlen</a>
+        <a href="#scanleiste"><i style="background:var(--pm)"></i>Scan-Leiste</a>
+        <a href="#konten"><i style="background:var(--info)"></i>Konten</a>
+        <a href="#filter"><i style="background:var(--gold)"></i>Filter</a>
+        <a href="#alarm"><i style="background:var(--warn)"></i>Benachrichtigung</a>
+        <a href="#liste"><i style="background:var(--pos)"></i>Chancenliste</a>
+        <a href="#ticket"><i style="background:var(--pm)"></i>Wett-Ticket</a>
+        <a href="#rechner"><i style="background:var(--ob)"></i>Einsatz-Rechner</a>
+        <a href="#bridge"><i style="background:var(--warn)"></i>Bridge</a>
+        <a href="#seiten"><i style="background:var(--info)"></i>Weitere Seiten</a>
+        <a href="#farben"><i style="background:var(--gold)"></i>Farbschlüssel</a>
+      </div>
+    </section>
+
+    <section id="zugang">
+      <h3>Zugang</h3>
+      <div class="fnlist">
+        <div class="fn b"><div class="stripe"></div><div class="was"><b>Sperrbildschirm</b><em>arGate()</em></div><div class="wie">Vor allem anderen liegt ein gemeinsames Zugangswort. Es hält Suchmaschinen und Zufallsbesucher fern. Änderbar im Adminbereich. Die Seite trägt zusätzlich <code>noindex</code> und eine <code>robots.txt</code>.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn b"><div class="stripe"></div><div class="was"><b>Anmelden und Registrieren</b><em>login.html</em></div><div class="wie">E-Mail und Passwort über Supabase. Ein Reiter schaltet zwischen Anmelden und Konto erstellen. Wer schon angemeldet ist, wird sofort zur App durchgereicht. Gesperrte Konten fliegen nach dem Anmelden wieder raus.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn b"><div class="stripe"></div><div class="was"><b>Türsteher auf jeder Seite</b><em>arRequireAuth()</em></div><div class="wie">Jede Unterseite fragt beim Laden nach, ob eine gültige Anmeldung vorliegt, und schickt sonst zurück zum Anmelden. Der Adminbereich verlangt zusätzlich die Rolle <b>admin</b>.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn b"><div class="stripe"></div><div class="was"><b>Abmelden</b><em>#arLogout</em></div><div class="wie">Beendet die Sitzung und kehrt zum Anmeldebildschirm zurück.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+      </div>
+    </section>
+
+    <section id="kopf">
+      <h3>Kopfzeile</h3>
+      <div class="fnlist">
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Marke, zugleich Heimknopf</b><em>#brandHome</em></div><div class="wie">Ein Klick auf das Zeichen links oben bringt dich zurück auf die Übersicht.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Zustand je Quelle</b><em>.srcstat</em></div><div class="wie">Ein Punkt je Buch. <b>Grün pulsierend</b> heißt: Kurse kommen an. <b>Rot</b> heißt: die Quelle antwortet nicht. <b>Gold</b> heißt Demo. Daneben steht die Fassung der Bridge, und zwar in Warnfarbe, sobald sie veraltet ist.</div><div class="pr"><span class="pruef live">Betrieb</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Live oder Demo</b><em>.modeseg</em></div><div class="wie">Demo rechnet mit echten Kursen, setzt aber nichts. Der Auto-Pilot ist bewusst nur im Demo-Modus erlaubt, damit kein Automat mit echtem Geld hantiert.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Scan starten und anhalten</b><em>#scanBtn</em></div><div class="wie">Hält die Suche an, ohne die Seite zu verlassen. Angehalten wird der Knopf grau und der Radarbalken steht still.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Glocke, der Verlauf</b><em>#bellBtn</em></div><div class="wie">Sammelt jede gemeldete Chance, auch die längst verschwundenen, jeweils mit dem <b>Grund des Verschwindens</b>: Daten veraltet, Markt aufgelöst, Rendite weg. Die Zahl am Glockensymbol zeigt Ungelesenes.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Ton bei Treffer</b><em>#soundBtn</em></div><div class="wie">Schaltet den Signalton an und aus, für den Fall, dass der Bildschirm nicht im Blick ist.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Mein Verlauf und Analyse</b><em>#histBtn</em></div><div class="wie">Öffnet eine Auswertung deiner eigenen Tätigkeit: Verlaufskurve, Einsatz gegen Rückfluss, abgezogene Brokergebühr, Fund-Rate pro Tag und der zeitliche Abstand zwischen Funden.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Neu laden</b><em>#reloadBtn</em></div><div class="wie">Lädt die Seite frisch, ohne den Zwischenspeicher zu bemühen. Der Zwischenspeicher war früher die häufigste Ursache für tote Knöpfe.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Seitenleiste einklappen</b><em>#railBtn</em></div><div class="wie">Nimmt die linke Spalte weg, wenn du dich ganz auf die Liste konzentrieren willst. Jeder Block darin lässt sich auch einzeln zuklappen, dann bleiben Filter und Ticket erhalten.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Alle Filter aus</b><em>#allDeals</em></div><div class="wie">Setzt sämtliche Filter mit einem Griff zurück und zeigt wirklich jeden Fund, auch die schwachen.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+      </div>
+    </section>
+
+    <section id="kennzahlen">
+      <h3>Die fünf Kennzahlen oben</h3>
+      <p class="note">Jede trägt seit dem Redesign ihren eigenen Farbstreifen, damit man sie im
+         Augenwinkel auseinanderhält, ohne die Beschriftung zu lesen.</p>
+      <div class="fnlist">
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Chancen aktiv</b></div><div class="wie">Wie viele Märkte gerade eine Rendite über der Schwelle zeigen, gemessen an allen betrachteten Märkten.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Hits in dieser Sitzung</b></div><div class="wie">Zählt, wie oft die Alarmschwelle seit dem Öffnen überschritten wurde.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Beste Rendite</b></div><div class="wie">Der höchste Wert, der gerade in der Liste steht.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Durchschnittliche Rendite</b></div><div class="wie">Mittelwert über alle aktiven Chancen. Ordnet ein, ob ein einzelner Ausreißer glaubwürdig ist.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Fenster geschlossen</b></div><div class="wie">Wie viele Chancen wieder verschwunden sind, bevor jemand zugegriffen hat. Die ehrlichste Zahl auf der Seite.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+      </div>
+    </section>
+
+    <section id="scanleiste">
+      <h3>Scan-Leiste</h3>
+      <div class="fnlist">
+        <div class="fn d"><div class="stripe"></div><div class="was"><b>Radar</b><em>.radar</em></div><div class="wie">Der wandernde Balken zeigt an, dass wirklich gescannt wird. Ein Aufblitzen bedeutet einen Fund. Steht der Balken, läuft nichts.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn d"><div class="stripe"></div><div class="was"><b>Laufzeile</b><em>.scanline</em></div><div class="wie">Nennt in Klartext, welcher Markt gerade geprüft wird und in welcher Stufe der Scanner läuft: <b>heiss</b>, <b>breit</b> oder <b>voll</b>.</div><div class="pr"><span class="pruef live">Betrieb</span></div></div>
+        <div class="fn d"><div class="stripe"></div><div class="was"><b>Zähler rechts</b><em>.scanstats</em></div><div class="wie">Gelesene Betfair-Märkte, handelbare Polymarket-Märkte und die Dauer des letzten Durchlaufs. Zuletzt gemessen: 4552 von 4552 Betfair-Märkten, 1259 handelbar bei Polymarket, Durchlauf 25 Sekunden.</div><div class="pr"><span class="pruef live">Betrieb</span></div></div>
+        <div class="fn d"><div class="stripe"></div><div class="was"><b>Klartext bei Störung</b><em>.connZeile</em></div><div class="wie">Fällt eine Quelle aus, steht dort nicht "Fehler", sondern der Grund, die Folge und was zu tun ist. Betfairs Sammelcode <code>ANGX-0001</code> wird aufgelöst, der wahre Grund steht vorne.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+      </div>
+    </section>
+
+    <section id="konten">
+      <h3>Block „Konten"</h3>
+      <div class="fnlist">
+        <div class="fn b"><div class="stripe"></div><div class="was"><b>Guthaben Polymarket</b><em>#balPm</em></div><div class="wie">Von Hand eintragbar, damit die Einsatzvorschläge nicht größer werden als dein Geld.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn b"><div class="stripe"></div><div class="was"><b>Polygon-Wallet</b><em>#walletAddr</em></div><div class="wie">Nur lesend. Trägst du deine Einzahl-Adresse ein, wird der USDC-Bestand live gelesen. Es wird nichts unterschrieben und nichts bewegt.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn b"><div class="stripe"></div><div class="was"><b>Was jede Quelle gerade tut</b><em>.srcCard</em></div><div class="wie">Eine Karte je Buch mit Zustand, gelesenen Märkten, Fassung der Bridge und, im Fehlerfall, dem Grund im Klartext.</div><div class="pr"><span class="pruef live">Betrieb</span></div></div>
+        <div class="fn b"><div class="stripe"></div><div class="was"><b>Gegenprobe von Hand</b><em>.schnitt</em></div><div class="wie">Listet die Märkte, die auf beiden Büchern gefunden wurden, mit beiden Quoten nebeneinander und Direktlinks. Damit lässt sich jede Meldung selbst nachschlagen.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+      </div>
+    </section>
+
+    <section id="filter">
+      <h3>Block „Filter"</h3>
+      <div class="fnlist">
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Suche</b><em>#fSearch</em></div><div class="wie">Freitext über die Ereignisnamen.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Kategorie</b><em>#catChips, #catTabs</em></div><div class="wie">Zehn Kategorien, jede mit eigener Kennfarbe und laufendem Zähler. Chips in der Leiste und Reiter über der Liste sind synchron.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Quelle</b><em>#srcChips</em></div><div class="wie">Auf ein einzelnes Buch einschränken oder alle zusammen betrachten.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Mindestrendite</b><em>#fMinRoi</em></div><div class="wie">Blendet schwache Funde aus. Wichtig: der Filter <b>blendet aus, er löscht nicht</b>. Drehst du zurück, sind sie wieder da.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Nur echte Chancen</b><em>#tgOnlyArb</em></div><div class="wie">Versteckt alles mit Arb-Wert ab 100 Prozent, also alles, was rechnerisch keine sichere Sache ist.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn a"><div class="stripe"></div><div class="was"><b>Nur risikoarm</b><em>#tgLowRisk</em></div><div class="wie">Blendet Märkte aus, die bei Nichtantreten eines Spielers nicht zurückgezahlt werden. Polymarket zahlt bei Spielerwetten meist <b>nicht</b> zurück, Betfair schon, und genau daraus entsteht ein einseitiges Risiko.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+      </div>
+    </section>
+
+    <section id="alarm">
+      <h3>Block „Benachrichtigung"</h3>
+      <div class="fnlist">
+        <div class="fn e"><div class="stripe"></div><div class="was"><b>Alarmschwelle</b><em>#fHitTh</em></div><div class="wie">Ab welcher Rendite eine Meldung erscheint und der Ton spielt.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn e"><div class="stripe"></div><div class="was"><b>Meldungen</b><em>.toast</em></div><div class="wie">Erscheinen rechts unten, verschwinden von selbst und sind anklickbar: der Klick springt direkt zur Zeile. Was verschwindet, bleibt in der Glocke auffindbar.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn e"><div class="stripe"></div><div class="was"><b>Meldung aufs Handy</b><em>Telegram</em></div><div class="wie">Die Bridge kann Funde per Telegram schicken, wenn <code>telegramBotToken</code> und <code>telegramChatId</code> in ihrer Konfiguration stehen. Fehlen die Felder, passiert nichts.</div><div class="pr"><span class="pruef offen">Offen</span></div></div>
+        <div class="fn e"><div class="stripe"></div><div class="was"><b>Auto-Pilot</b><em>#tgAuto</em></div><div class="wie">Setzt bei einem Treffer selbsttätig, aber ausschließlich im Demo-Modus. Mit echtem Geld ist er gesperrt.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+      </div>
+    </section>
+
+    <section id="liste">
+      <h3>Die Chancenliste</h3>
+      <div class="fnlist">
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Spalten</b></div><div class="wie">Ereignis, Ausgang 1 mit bester Quote, Ausgang 2 mit bester Quote, Alter der Kurse, Arb-Wert und Rendite, dazu die Aktionsspalte.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Sortieren</b><em>.sortseg</em></div><div class="wie">Nach Arb-Wert, Rendite, Liquidität oder Ereignisname.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Wann die Wette vorbei ist</b><em>.endet</em></div><div class="wie">Zeigt das Auflösungsdatum. Fehlt es, wird es aus den gemeldeten Tagen gerechnet und ausdrücklich als <b>ungefähr</b> gekennzeichnet. Eine bereits abgelaufene Wette wird abgewiesen.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Alter der Kurse</b><em>.age</em></div><div class="wie">Sekunden seit dem letzten Kurs, je Buch getrennt. Wird der Kurs zu alt, verschwindet die Zeile, spätestens aber nach zwei Stunden.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>DNP-Marke</b><em>.dnp</em></div><div class="wie">Warnt bei Märkten, in denen ein Nichtantreten unterschiedlich behandelt wird. Rot heißt hoch, Orange heißt mittel.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Direktlinks je Zeile</b><em>.rowlink</em></div><div class="wie">Führen genau auf den gemeinten Markt, nicht auf die Übersichtsseite. Ein Polymarket-Ereignis kann bis zu 128 Märkte bündeln, deshalb werden beide Adressteile mitgeführt.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Warnung vor totem Link</b><em>.linkwarn</em></div><div class="wie">Sind die Daten hinter einem Link nicht mehr frisch, erscheint vor dem Öffnen ein Hinweis statt einer Enttäuschung danach.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Noch nicht bestätigt</b><em>.prueftag</em></div><div class="wie">Ein Fund, den erst ein Durchlauf gesehen hat, wird blasser dargestellt und als ungeprüft markiert, bis ihn ein zweiter bestätigt.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn c"><div class="stripe"></div><div class="was"><b>Pakete innerhalb Polymarkets</b><em>.mfZeile</em></div><div class="wie">Bei Ereignissen, bei denen genau einer gewinnt, kauft man alle Ja-Seiten, wenn ihre Summe unter einem Dollar liegt. Kein zweites Buch, also keine Fehlpaarung möglich. Höchstens sechs Beine.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+      </div>
+    </section>
+
+    <section id="ticket">
+      <h3>Wett-Ticket</h3>
+      <div class="fnlist">
+        <div class="fn d"><div class="stripe"></div><div class="was"><b>Aufteilung des Einsatzes</b><em>#tkStakeInp</em></div><div class="wie">Rechnet aus, wie viel auf welche Seite gehört. <b>Nicht halbe-halbe</b>, sondern so, dass bei beiden Ausgängen derselbe Betrag zurückkommt.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn d"><div class="stripe"></div><div class="was"><b>Gebühren je Buch</b><em>.gebBox</em></div><div class="wie">Betfair nimmt Kommission auf den <b>Gewinn</b>, der Satz steht je Markt in den Marktdaten und liegt zwischen 2 und 7 Prozent. Polymarket nimmt eine Gebühr je <b>Anteil</b>, die vom Preis abhängt und bei etwa 0,50 am höchsten ist. Beide Sätze werden aus der Quelle gelesen, nie geschätzt.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn d"><div class="stripe"></div><div class="was"><b>Unbekannte Gebühr</b></div><div class="wie">Wird ein Satz nicht gemeldet, gilt er <b>nicht</b> als null, sondern es wird der ungünstigste bekannte Satz von 7 Prozent angenommen und die Lücke benannt. Genau hier entstanden früher reihenweise Scheinchancen.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn d"><div class="stripe"></div><div class="was"><b>Sicherheitsprüfung</b><em>.chkBox</em></div><div class="wie">Vor dem Setzen läuft eine Liste einzeln sichtbarer Bedingungen durch: Kursalter, Auszahlungsregeln, Tiefe des Buchs, Gebührenlage, Laufzeit. Fällt eine durch, wird gesperrt statt gewarnt.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn d"><div class="stripe"></div><div class="was"><b>Gegenprobe der Zuordnung</b><em>.sameBox</em></div><div class="wie">Zeigt beide Marktnamen nebeneinander und fragt: meinen die zwei Links wirklich dasselbe Ereignis? Damit wurden Fehlpaarungen wie der Cricketspieler „Will Jacks" gegen „Will the Republican Party win" gefunden.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn d"><div class="stripe"></div><div class="was"><b>Zweiter Rechenweg</b></div><div class="wie">Dieselbe Chance wird unabhängig ein zweites Mal gerechnet. Weichen die Ergebnisse ab, wird nicht gemeldet.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn d"><div class="stripe"></div><div class="was"><b>Setzen</b><em>#tkPlace</em></div><div class="wie">Im Demo-Modus wird gebucht und mitgeschrieben. Im Live-Modus öffnet es die beiden Märkte zum Setzen von Hand. Danach wird 90 Sekunden später nachgemessen und die Abweichung in den Verlauf geschrieben.</div><div class="pr"><span class="pruef offen">Offen</span></div></div>
+      </div>
+    </section>
+
+    <section id="rechner">
+      <h3>Einsatz-Rechner</h3>
+      <div class="fnlist">
+        <div class="fn f"><div class="stripe"></div><div class="was"><b>Von Hand nachrechnen</b><em>#cQ1 #cQ2 #cS #cFee1 #cFee2</em></div><div class="wie">Zwei Quoten, ein Gesamteinsatz, je Seite eine eigene Gebühr. Der Rechner sagt sofort, ob es Arbitrage ist, und mit welcher Aufteilung.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn f"><div class="stripe"></div><div class="was"><b>Beispiel laden</b><em>#cExample</em></div><div class="wie">Füllt die Felder mit einem echten Zahlenpaar, damit man die Bedienung nicht raten muss.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn f"><div class="stripe"></div><div class="was"><b>Die Formel</b></div><div class="wie"><code>qE = 1 + (q − 1) × (1 − Gebühr)</code>, dann <code>inv = 1/qE1 + 1/qE2</code>. Arbitrage liegt vor, wenn <code>inv &lt; 1</code>. Ausgezahlt wird <code>S / inv</code>, und zwar bei <b>beiden</b> Ausgängen.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+      </div>
+    </section>
+
+    <section id="bridge">
+      <h3>Die Bridge auf deinem PC</h3>
+      <p class="note">Betfair sperrt Anfragen aus Rechenzentren aus. Deshalb läuft das Programm bei
+         dir zu Hause und schickt nur Quoten weiter, niemals Zugangsdaten.</p>
+      <div class="fnlist">
+        <div class="fn e"><div class="stripe"></div><div class="was"><b>Beide Seiten selbst lesen</b></div><div class="wie">Die Bridge holt den vollen Betfair-Katalog und alle Polymarket-Märkte, rechnet die Arbitrage örtlich und schreibt die Funde mit. Der Verlauf füllt sich dadurch auch ohne offenen Tab.</div><div class="pr"><span class="pruef live">Betrieb</span></div></div>
+        <div class="fn e"><div class="stripe"></div><div class="was"><b>Drei Takte</b></div><div class="wie">Heiss für das, was gleich beginnt, breit für den Rest, voll für den kompletten Katalog. Der Takt richtet sich nach der Art des Schlüssels.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+        <div class="fn e"><div class="stripe"></div><div class="was"><b>Verzögert oder Echtzeit</b></div><div class="wie">Die Bridge fragt Betfair selbst, welche Art dein Schlüssel hat. Gemessen: mit verzögertem Schlüssel dauert es 72 bis 132 Sekunden bis zum Bildschirm, mit Echtzeit-Schlüssel 12 bis 47. Der teure Schlüssel spart also rund 73 Sekunden, nicht Scangeschwindigkeit.</div><div class="pr"><span class="pruef live">Betrieb</span></div></div>
+        <div class="fn e"><div class="stripe"></div><div class="was"><b>Update-Meldung</b><em>version.json</em></div><div class="wie">Website und Bridge vergleichen sich beide gegen <code>version.json</code>. Ist deine Bridge älter als der Soll-Build, erscheint ein Hinweis in der App und Klartext im Bridge-Fenster. Eine Bridge ohne Build-Feld gilt automatisch als veraltet.</div><div class="pr"><span class="pruef live">Betrieb</span></div></div>
+        <div class="fn e"><div class="stripe"></div><div class="was"><b>Was nie gespeichert wird</b></div><div class="wie">Betfair-Anmeldung, App-Key und Token bleiben ausschließlich auf deinem Rechner, in der <code>bridge-config.json</code> neben dem Programm. Zum Server gehen nur Quoten und Funde.</div><div class="pr"><span class="pruef auto">Automatisch</span></div></div>
+      </div>
+    </section>
+
+    <section id="seiten">
+      <h3>Die übrigen Seiten</h3>
+      <div class="fnlist">
+        <div class="fn b"><div class="stripe"></div><div class="was"><b>Schritt für Schritt</b><em>bridge-setup.html</em></div><div class="wie">Die Einrichtung der Bridge von vorne bis hinten. Erreichbar über den Knopf unten links auf der Startseite.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn b"><div class="stripe"></div><div class="was"><b>Suchlogik</b><em>logik.html</em></div><div class="wie">Erklärt, wonach gesucht wird und warum. Trennt ausdrücklich zwischen <b>gemessenen</b> und <b>gerechneten</b> Zahlen. Lässt sich als PDF herunterladen.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn b"><div class="stripe"></div><div class="was"><b>Mein Bereich</b><em>konto.html</em></div><div class="wie">Deine eigenen Zahlen über die Zeit, mit Monatsfilter und Balken je Tag.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+        <div class="fn b"><div class="stripe"></div><div class="was"><b>Adminbereich</b><em>admin.html</em></div><div class="wie">Nur für die Rolle admin. Nutzer verwalten, sperren, Zugangswort ändern, Bridge-Token einsehen.</div><div class="pr"><span class="pruef code">Code</span></div></div>
+      </div>
+    </section>
+
+    <section id="farben">
+      <h3>Farbschlüssel</h3>
+      <p class="note">Seit der hellen Fassung trägt jede Sache ihre eigene Farbe. Wer den Schlüssel
+         einmal kennt, liest die Seite schneller, als er sie lesen kann.</p>
+      <h4 style="margin-top:6px">Bücher</h4>
+      <div class="legende">
+        <div class="lg"><span class="sw" style="background:var(--pm)"></span><span class="tx"><b>Polymarket</b><span>violett</span></span></div>
+        <div class="lg"><span class="sw" style="background:var(--bf)"></span><span class="tx"><b>Betfair</b><span>blau</span></span></div>
+        <div class="lg"><span class="sw" style="background:var(--ob)"></span><span class="tx"><b>weitere Börse</b><span>türkis</span></span></div>
+      </div>
+      <h4 style="margin-top:10px">Bedeutung</h4>
+      <div class="legende">
+        <div class="lg"><span class="sw" style="background:var(--pos)"></span><span class="tx"><b>gut, sicher, verdient</b><span>grün</span></span></div>
+        <div class="lg"><span class="sw" style="background:var(--warn)"></span><span class="tx"><b>Achtung, veraltet</b><span>orange</span></span></div>
+        <div class="lg"><span class="sw" style="background:var(--neg)"></span><span class="tx"><b>Fehler, gesperrt, Verlust</b><span>rot</span></span></div>
+        <div class="lg"><span class="sw" style="background:var(--gold)"></span><span class="tx"><b>Leitfarbe, Auswahl</b><span>oliv-gold</span></span></div>
+        <div class="lg"><span class="sw" style="background:var(--info)"></span><span class="tx"><b>sachlicher Hinweis</b><span>blau</span></span></div>
+      </div>
+      <h4 style="margin-top:10px">Kategorien</h4>
+      <div class="legende">
+        <div class="lg"><span class="sw" style="background:#925409"></span><span class="tx"><b>Krypto</b></span></div>
+        <div class="lg"><span class="sw" style="background:#B23A28"></span><span class="tx"><b>Politik</b></span></div>
+        <div class="lg"><span class="sw" style="background:#1F6699"></span><span class="tx"><b>Wirtschaft</b></span></div>
+        <div class="lg"><span class="sw" style="background:#6E5F00"></span><span class="tx"><b>Tennis</b></span></div>
+        <div class="lg"><span class="sw" style="background:#A65418"></span><span class="tx"><b>Basketball</b></span></div>
+        <div class="lg"><span class="sw" style="background:#29713F"></span><span class="tx"><b>Fußball</b></span></div>
+        <div class="lg"><span class="sw" style="background:#0E7263"></span><span class="tx"><b>Sport allgemein</b></span></div>
+        <div class="lg"><span class="sw" style="background:#5B3FB0"></span><span class="tx"><b>Über/Unter</b></span></div>
+        <div class="lg"><span class="sw" style="background:#5F6354"></span><span class="tx"><b>Markt</b></span></div>
+        <div class="lg"><span class="sw" style="background:#7E6A20"></span><span class="tx"><b>Alle</b></span></div>
+      </div>
+    </section>
+
+    <section id="verworfen">
+      <h3>Bewusst nicht gebaut</h3>
+      <div class="kasten">
+        <ul>
+          <li><b>The Odds API</b> liefert überwiegend Buchmacher, und Buchmacher sperren Gewinner. Polymarket fehlt dort ohnehin.</li>
+          <li><b>Kalshi</b> handelt nur mit US-Personen.</li>
+          <li><b>SX Bet</b> wurde wieder entfernt, weil dort fast nur NFL läuft.</li>
+          <li><b>KI im laufenden Scanner.</b> Ein Modell antwortet nicht reproduzierbar und braucht Sekunden gegen Kurse, die in Sekunden veralten. Stattdessen: harte Regeln, mehrfaches unabhängiges Nachrechnen und die Bereitschaft, lieber nichts zu melden.</li>
+        </ul>
+      </div>
+    </section>
+
+    <div class="foot">
+      Orion Panel · Fassung 53 · diese Seite gehört zum Programm und wird bei jeder Änderung an
+      der Suchlogik mitgezogen. Steht hier etwas anderes als das Programm tut, ist das ein Fehler
+      und kein Auslegungsspielraum.
+    </div>
+
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js?v=53"></script>
+<script>
+(async function(){
+  var auth = await window.arRequireAuth();
+  if(!auth) return;
+  // Wenn eine Bridge laeuft, den echten Stand in die Kopfzeile schreiben
+  try{
+    var r = await fetch('https://noexklrgtqveiclijdwp.supabase.co/functions/v1/bf-bridge?meta=1');
+    var j = await r.json();
+    var s = (j && j.stats) || {};
+    if(s.zeit){
+      var art = s.key_art==='live' ? 'LIVE' : (s.key_art==='delayed' ? 'DELAYED' : 'unbekannt');
+      document.getElementById('stamp').textContent =
+        'Fassung ' + (window.AR_VERSION||53) + ' · Bridge ' + (s.version||'?') + ' Build ' + (s.build||'?')
+        + ' · Schlüssel ' + art + ' · letzter Lauf ' + (s.bf_gelesen||0) + ' Betfair-Märkte, '
+        + (s.pm_handelbar||0) + ' Polymarket handelbar, ' + (s.sweep_s||0) + ' s';
+    }
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
